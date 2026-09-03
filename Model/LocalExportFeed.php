@@ -16,9 +16,10 @@ use Psr\Log\LoggerInterface;
  *
  * Routes feed batches into the product document store. Each feed owns a slice
  * of the per-store-view product document:
- *   products           -> the base document (feed row as-is)
- *   prices             -> prices.<customerGroupCode>, fanned out per website
+ *   products             -> the base document (feed row as-is)
+ *   prices               -> prices.<customerGroupCode>, fanned out per website
  *   inventoryStockStatus -> stock
+ *   variants             -> variantIds on the configurable parent document
  * Other feeds are accepted and only persisted in their feed tables. A storage
  * failure reports status 500, so the feed machinery retries the batch by cron.
  */
@@ -42,6 +43,7 @@ class LocalExportFeed implements ExportFeedInterface
                 'products' => $this->applyProducts($data),
                 'prices' => $this->applyPrices($data),
                 'inventoryStockStatus' => $this->applyStock($data),
+                'variants' => $this->applyVariants($data),
                 default => null,
             };
         } catch (\Throwable $e) {
@@ -81,11 +83,36 @@ class LocalExportFeed implements ExportFeedInterface
     {
         $upserts = [];
         foreach ($rows as $row) {
+            $group = 'g' . $row['customerGroupCode'];
             foreach ($this->storeViewCodesForWebsite($row['websiteCode']) as $store) {
                 // A string prefix keeps the group map a JSON object; a bare "0" key
                 // serializes as an array, and the doc merge replaces arrays wholesale.
-                $group = 'g' . $row['customerGroupCode'];
                 $upserts[$store][(int)$row['productId']]['prices'][$group] = $row;
+            }
+        }
+        foreach ($upserts as $store => $documents) {
+            $this->storage->upsert($store, $documents);
+        }
+    }
+
+    /**
+     * Records each configurable variant on its parent document, keyed by variant
+     * id. The parentId comes straight from the ProductVariantDataExporter feed,
+     * so the read side can gather variant documents without a product load.
+     */
+    private function applyVariants(array $rows): void
+    {
+        $stores = array_map(static fn($store) => $store->getCode(), $this->storeManager->getStores());
+
+        $upserts = [];
+        foreach ($rows as $row) {
+            if (empty($row['parentId']) || empty($row['productId'])) {
+                continue;
+            }
+            $parentId = (int)$row['parentId'];
+            $variantKey = 'v' . $row['productId'];
+            foreach ($stores as $store) {
+                $upserts[$store][$parentId]['variantIds'][$variantKey] = (int)$row['productId'];
             }
         }
         foreach ($upserts as $store => $documents) {

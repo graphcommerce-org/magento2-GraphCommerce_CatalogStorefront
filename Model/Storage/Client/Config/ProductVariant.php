@@ -26,18 +26,10 @@ class ProductVariant implements EntityConfigInterface
      */
     public function getSettings() : array
     {
+        // Keep unmapped fields in _source only; index just the keys the variant
+        // match aggregation needs.
         return [
-            'dynamic_templates' => [
-                [
-                    'default_mapping' => [
-                        'match' => '*',
-                        'match_mapping_type' => '*',
-                        'mapping' => [
-                            'index' => false,
-                        ],
-                    ],
-                ]
-            ],
+            'dynamic' => false,
             'properties' => [
                 'id' => [
                     'type' => 'keyword'

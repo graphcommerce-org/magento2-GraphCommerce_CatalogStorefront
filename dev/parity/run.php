@@ -64,7 +64,9 @@ function gql(string $endpoint, string $query): array
 function setFlag(int $value): void
 {
     exec(sprintf('bin/magento config:set graphcommerce/catalog_storefront/serve_reads %d 2>/dev/null', $value));
-    exec('bin/magento cache:clean config 2>/dev/null');
+    // The GraphQL resolver cache must be cleared too, or a result cached under one
+    // path is served under the other and parity passes falsely.
+    exec('bin/magento cache:clean config graphql_query_resolver_result 2>/dev/null');
 }
 
 /**

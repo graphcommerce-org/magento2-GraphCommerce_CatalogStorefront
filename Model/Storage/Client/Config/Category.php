@@ -23,18 +23,10 @@ class Category implements EntityConfigInterface
      */
     public function getSettings() : array
     {
+        // A document store: keep every field in _source, map none, so the
+        // 1000-field mapping limit never applies to rich product documents.
         return [
-            'dynamic_templates' => [
-                [
-                    'default_mapping' => [
-                        'match' => '*',
-                        'match_mapping_type' => '*',
-                        'mapping' => [
-                            'index' => false,
-                        ],
-                    ],
-                ]
-            ],
+            'dynamic' => false,
         ];
     }
 }
