@@ -17,10 +17,32 @@
             <using field="storeViewCode"/>
         </field>
     </record>
+    <record name="ProductAttributeOption">
+        <field name="id" type="ID"/>
+        <field name="label" type="String"/>
+    </record>
+    <record name="ProductAttributeMetadata">
+        <field name="options" type="ProductAttributeOption" repeated="true" provider="GraphCommerce\CatalogStorefront\Model\Feed\AttributeOptionsProvider">
+            <using field="id"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="position" type="Int" provider="GraphCommerce\CatalogStorefront\Model\Feed\AttributeLayerProvider">
+            <using field="id"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="filterableMode" type="Int" provider="GraphCommerce\CatalogStorefront\Model\Feed\AttributeLayerProvider">
+            <using field="id"/>
+            <using field="storeViewCode"/>
+        </field>
+    </record>
     <record name="Export">
         <field name="reviews" type="Review" repeated="true"
                provider="GraphCommerce\CatalogStorefront\Model\Feed\ReviewsDataProcessor">
             <using field="review_id"/>
+        </field>
+        <field name="ratingMetadata" type="RatingMetadata" repeated="true"
+               provider="GraphCommerce\CatalogStorefront\Model\Feed\RatingMetadataDataProcessor">
+            <using field="rating_id"/>
         </field>
     </record>
 </config>

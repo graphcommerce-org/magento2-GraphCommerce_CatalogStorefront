@@ -7,7 +7,8 @@
             "status": true,
             "feed_hash": true,
             "errors": true,
-            "metadata": true
+            "metadata": true,
+            "id": true
         },
         "index": {
             "CAT_DATA_EXPORTER_PRD_REVIEWS_SOURCE_ENTT_ID_MODIFIED_AT": true,
@@ -15,6 +16,26 @@
         },
         "constraint": {
             "CATALOG_DATA_EXPORTER_PRODUCT_REVIEWS_FEED_ID": true
+        }
+    },
+    "catalog_data_exporter_rating_metadata": {
+        "column": {
+            "id": true,
+            "store_view_code": true,
+            "source_entity_id": true,
+            "feed_id": true,
+            "status": true,
+            "feed_hash": true,
+            "errors": true,
+            "metadata": true
+        },
+        "index": {
+            "CAT_DATA_EXPORTER_RATING_METADATA_SOURCE_ENTT_ID_MODIFIED_AT": true,
+            "CATALOG_DATA_EXPORTER_RATING_METADATA_STATUS": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "CATALOG_DATA_EXPORTER_RATING_METADATA_FEED_ID": true
         }
     }
 }

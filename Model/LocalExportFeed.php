@@ -5,7 +5,7 @@ namespace GraphCommerce\CatalogStorefront\Model;
 
 use GraphCommerce\CatalogStorefront\Model\Feed\CompositeLinks;
 use GraphCommerce\CatalogStorefront\Model\Feed\ConfigurableOptionsBuilder;
-use GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage;
+use GraphCommerce\CatalogStorefront\Model\Storage\MetadataDocumentStorage;
 use GraphCommerce\CatalogStorefront\Model\Storage\ProductDocumentStorage;
 use Magento\Customer\Api\GroupManagementInterface;
 use Magento\Customer\Model\Group;
@@ -39,7 +39,9 @@ class LocalExportFeed implements ExportFeedInterface
     public function __construct(
         private readonly FeedExportStatusBuilder $feedExportStatusBuilder,
         private readonly ProductDocumentStorage $storage,
-        private readonly CategoryDocumentStorage $categoryStorage,
+        private readonly MetadataDocumentStorage $categoryStorage,
+        private readonly MetadataDocumentStorage $attributeStorage,
+        private readonly MetadataDocumentStorage $ratingStorage,
         private readonly StoreManagerInterface $storeManager,
         private readonly GroupManagementInterface $groupManagement,
         private readonly ProductPrice $productPrice,
@@ -59,6 +61,8 @@ class LocalExportFeed implements ExportFeedInterface
                 'variants' => $this->applyVariants($data),
                 'reviews' => $this->applyReviews($data),
                 'categories' => $this->applyCategories($data),
+                'productAttributes' => $this->applyAttributes($data),
+                'ratingMetadata' => $this->applyRatings($data),
                 default => null,
             };
         } catch (\Throwable $e) {
@@ -220,13 +224,13 @@ class LocalExportFeed implements ExportFeedInterface
             if (empty($row['reviewId']) || empty($row['productId'])) {
                 continue;
             }
-            $percents = array_map(
-                static fn(array $rating) => (float)$rating['value'] / 5 * 100,
-                (array)($row['ratings'] ?? [])
-            );
+            $votes = [];
+            foreach ((array)($row['ratings'] ?? []) as $rating) {
+                $votes[$this->ratingId((string)$rating['ratingId'])] = (int)$rating['value'];
+            }
             foreach ($stores as $store) {
                 $visible = empty($row['deleted']) && in_array($store, (array)($row['visibility'] ?? []), true);
-                $upserts[$store][(int)$row['productId']]['reviews']['r' . $row['reviewId']] = $visible ? $percents : null;
+                $upserts[$store][(int)$row['productId']]['reviews']['r' . $row['reviewId']] = $visible ? $votes : null;
             }
         }
         foreach ($upserts as $store => $documents) {
@@ -257,6 +261,48 @@ class LocalExportFeed implements ExportFeedInterface
         foreach ($deletes as $store => $ids) {
             $this->categoryStorage->delete($store, $ids);
         }
+    }
+
+    private function applyAttributes(array $rows): void
+    {
+        $upserts = [];
+        $deletes = [];
+        foreach ($rows as $row) {
+            if (empty($row['attributeCode']) || empty($row['storeViewCode'])) {
+                continue;
+            }
+            if (!empty($row['deleted'])) {
+                $deletes[$row['storeViewCode']][] = $row['attributeCode'];
+            } else {
+                $upserts[$row['storeViewCode']][$row['attributeCode']] = $row;
+            }
+        }
+        foreach ($upserts as $store => $documents) {
+            $this->attributeStorage->upsert($store, $documents);
+        }
+        foreach ($deletes as $store => $codes) {
+            $this->attributeStorage->delete($store, $codes);
+        }
+    }
+
+    private function applyRatings(array $rows): void
+    {
+        $upserts = [];
+        foreach ($rows as $row) {
+            if (empty($row['ratingId']) || empty($row['storeViewCode'])) {
+                continue;
+            }
+            $upserts[$row['storeViewCode']][$this->ratingId((string)$row['ratingId'])] = $row;
+        }
+        foreach ($upserts as $store => $documents) {
+            $this->ratingStorage->upsert($store, $documents);
+        }
+    }
+
+    // The exporter base64-encodes rating ids in stored feeds and hands them over plain when exporting immediately.
+    private function ratingId(string $ratingId): int
+    {
+        return (int)(is_numeric($ratingId) ? $ratingId : base64_decode($ratingId));
     }
 
     private function storeViewCodesForWebsite(string $websiteCode): array

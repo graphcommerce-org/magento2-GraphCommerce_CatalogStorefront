@@ -7,16 +7,15 @@ use GraphCommerce\CatalogStorefront\Model\Storage\Client\CommandInterface;
 use GraphCommerce\CatalogStorefront\Model\Storage\Client\Config;
 use GraphCommerce\CatalogStorefront\Model\Storage\Client\DataDefinitionInterface;
 use GraphCommerce\CatalogStorefront\Model\Storage\Client\QueryInterface;
-use GraphCommerce\CatalogStorefront\Model\Storage\Data\EntryIteratorInterface;
 
 /**
- * One category document per store view, keyed by category id, as the
- * categories feed delivers it: name, path, direct children ids, activity.
- * The documents are read by id only, so the index maps nothing.
+ * Documents of one metadata feed per store view, keyed as the feed keys them:
+ * categories by id, attributes by code, ratings by id. They are read by id or
+ * all at once, so the index maps nothing. One instance per entity (di.xml).
  */
-class CategoryDocumentStorage
+class MetadataDocumentStorage
 {
-    private const ENTITY = 'category';
+    private const ALL_LIMIT = 1000;
 
     private array $ensured = [];
 
@@ -26,6 +25,7 @@ class CategoryDocumentStorage
         private readonly DataDefinitionInterface $dataDefinition,
         private readonly CommandInterface $command,
         private readonly QueryInterface $query,
+        private readonly string $entity,
     ) {
     }
 
@@ -39,7 +39,7 @@ class CategoryDocumentStorage
         foreach ($documents as $id => $document) {
             $entries[] = ['id' => $id] + $document;
         }
-        $this->command->bulkUpdate($this->aliasName($storeViewCode), self::ENTITY, $entries);
+        $this->command->bulkUpdate($this->aliasName($storeViewCode), $this->entity, $entries);
     }
 
     public function delete(string $storeViewCode, array $ids): void
@@ -48,11 +48,11 @@ class CategoryDocumentStorage
             return;
         }
         $this->ensureIndex($storeViewCode);
-        $this->command->bulkDelete($this->aliasName($storeViewCode), self::ENTITY, $ids);
+        $this->command->bulkDelete($this->aliasName($storeViewCode), $this->entity, $ids);
     }
 
     /**
-     * @return array[] documents keyed by category id, only those that exist
+     * @return array[] documents keyed by id, only those that exist
      */
     public function get(string $storeViewCode, array $ids, array $fields = ['*']): array
     {
@@ -61,8 +61,26 @@ class CategoryDocumentStorage
         }
         $this->ensureIndex($storeViewCode);
         $documents = [];
-        foreach ($this->query->getEntries($this->aliasName($storeViewCode), self::ENTITY, array_values($ids), $fields) as $entry) {
-            $documents[(int)$entry->getId()] = $entry->getData();
+        foreach ($this->query->getEntries($this->aliasName($storeViewCode), $this->entity, array_values($ids), $fields) as $entry) {
+            $documents[$entry->getId()] = $entry->getData();
+        }
+
+        return $documents;
+    }
+
+    /**
+     * @return array[] every document of the store view keyed by id
+     */
+    public function all(string $storeViewCode): array
+    {
+        $this->ensureIndex($storeViewCode);
+        $responses = $this->query->multiSearch(
+            $this->aliasName($storeViewCode),
+            [['size' => self::ALL_LIMIT, 'query' => ['match_all' => new \stdClass()]]]
+        );
+        $documents = [];
+        foreach ($responses[0]['hits']['hits'] ?? [] as $hit) {
+            $documents[$hit['_id']] = $hit['_source'];
         }
 
         return $documents;
@@ -70,7 +88,7 @@ class CategoryDocumentStorage
 
     private function aliasName(string $storeViewCode): string
     {
-        return $this->config->getAliasName() . '_category_' . $storeViewCode;
+        return $this->config->getAliasName() . '_' . $this->entity . '_' . $storeViewCode;
     }
 
     private function ensureIndex(string $storeViewCode): void
@@ -80,10 +98,10 @@ class CategoryDocumentStorage
         }
         $alias = $this->aliasName($storeViewCode);
         if (!$this->dataDefinition->existsDataSource($alias)) {
-            $dataSource = $this->state->getCurrentDataSourceName([self::ENTITY, $storeViewCode]);
+            $dataSource = $this->state->getCurrentDataSourceName([$this->entity, $storeViewCode]);
             if (!$this->dataDefinition->existsDataSource($dataSource)) {
                 $this->dataDefinition->createDataSource($dataSource, []);
-                $this->dataDefinition->createEntity($dataSource, self::ENTITY, []);
+                $this->dataDefinition->createEntity($dataSource, $this->entity, []);
             }
             $this->dataDefinition->createAlias($alias, $dataSource);
         }

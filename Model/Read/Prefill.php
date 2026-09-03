@@ -46,6 +46,7 @@ class Prefill
         private readonly WeeeHelper $weeeHelper,
         private readonly ProductPrice $productPrice,
         private readonly BundlePriceRange $bundlePriceRange,
+        private readonly RatingMetadata $ratingMetadata,
     ) {
     }
 
@@ -91,7 +92,15 @@ class Prefill
             }
             if ($selected('rating_summary') || $selected('review_count')) {
                 $reviews = $reviewsEnabled ? array_filter((array)($document['reviews'] ?? [])) : [];
-                $percents = array_merge([], ...array_values($reviews));
+                $percents = [];
+                foreach ($reviews as $votes) {
+                    foreach ((array)$votes as $ratingId => $value) {
+                        $scale = $this->ratingMetadata->scale($store->getCode(), (int)$ratingId);
+                        if ($scale) {
+                            $percents[] = (int)$value / $scale * 100;
+                        }
+                    }
+                }
                 $filled['rating_summary'] = $percents ? (float)round(array_sum($percents) / count($percents)) : 0.0;
                 $filled['review_count'] = count($reviews);
             }

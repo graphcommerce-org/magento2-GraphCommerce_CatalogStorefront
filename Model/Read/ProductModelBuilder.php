@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefront\Model\Read;
 
 use Magento\Catalog\Model\Product;
+use Magento\Store\Model\StoreManagerInterface;
 use Magento\Catalog\Model\Product\Attribute\Source\Status;
 use Magento\Catalog\Model\Product\Visibility;
 use Magento\Catalog\Model\ProductFactory;
@@ -38,6 +39,8 @@ class ProductModelBuilder
         private readonly ProductFactory $productFactory,
         private readonly EavConfig $eavConfig,
         private readonly TaxClassCollectionFactory $taxClassCollectionFactory,
+        private readonly AttributeMetadata $attributeMetadata,
+        private readonly StoreManagerInterface $storeManager,
     ) {
     }
 
@@ -50,6 +53,7 @@ class ProductModelBuilder
         if (!isset($document['sku'], $document['productId'])) {
             return null;
         }
+        $storeViewCode = $this->storeManager->getStore($storeId)->getCode();
 
         $data = [
             'entity_id' => (int)$document['productId'],
@@ -121,7 +125,8 @@ class ProductModelBuilder
             }
             $data[$attribute['attributeCode']] = $this->attributeValue(
                 $attribute['attributeCode'],
-                (array)($attribute['value'] ?? [])
+                (array)($attribute['value'] ?? []),
+                $storeViewCode
             );
         }
 
@@ -162,13 +167,13 @@ class ProductModelBuilder
      * Select and multiselect attributes come as option labels; the model holds
      * option ids. Attributes without a source keep the raw value.
      */
-    private function attributeValue(string $code, array $labels): ?string
+    private function attributeValue(string $code, array $labels, string $storeViewCode): ?string
     {
         $ids = [];
         foreach ($labels as $label) {
-            $key = $code . ':' . $label;
+            $key = $storeViewCode . ':' . $code . ':' . $label;
             if (!array_key_exists($key, $this->optionIdCache)) {
-                $this->optionIdCache[$key] = $this->lookupOptionId($code, (string)$label);
+                $this->optionIdCache[$key] = $this->lookupOptionId($code, (string)$label, $storeViewCode);
             }
             $ids[] = $this->optionIdCache[$key] ?? $label;
         }
@@ -176,8 +181,11 @@ class ProductModelBuilder
         return $ids ? implode(',', $ids) : null;
     }
 
-    private function lookupOptionId(string $code, string $label): ?string
+    private function lookupOptionId(string $code, string $label, string $storeViewCode): ?string
     {
+        if ($this->attributeMetadata->get($storeViewCode, $code) !== null) {
+            return $this->attributeMetadata->optionId($storeViewCode, $code, $label);
+        }
         try {
             $attribute = $this->eavConfig->getAttribute(Product::ENTITY, $code);
             if (!$attribute->getId() || !$attribute->usesSource()) {

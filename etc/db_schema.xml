@@ -27,4 +27,28 @@
             <column name="status"/>
         </index>
     </table>
+    <table name="catalog_data_exporter_rating_metadata" resource="default" engine="innodb" comment="Product Ratings Metadata Feed">
+        <column xsi:type="int" name="id" padding="10" unsigned="true" nullable="false" identity="true" comment="Autoincrement ID"/>
+        <column xsi:type="varchar" name="store_view_code" nullable="false" length="64" default="" comment="Store View Code (legacy layout)"/>
+        <column xsi:type="int" name="source_entity_id" padding="10" unsigned="true" nullable="false" default="0" comment="Rating Id"/>
+        <column xsi:type="varchar" name="feed_id" nullable="true" length="64" comment="Feed Item Identifier"/>
+        <column xsi:type="smallint" name="status" nullable="false" default="0" comment="Feed item status"/>
+        <column xsi:type="varchar" name="feed_hash" nullable="false" length="64" default="" comment="Hash of feed_data"/>
+        <column xsi:type="text" name="errors" nullable="true" comment="Errors"/>
+        <column xsi:type="text" name="metadata" nullable="true" comment="Metadata"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+            <column name="store_view_code"/>
+        </constraint>
+        <constraint referenceId="CATALOG_DATA_EXPORTER_RATING_METADATA_FEED_ID" xsi:type="unique">
+            <column name="feed_id"/>
+        </constraint>
+        <index referenceId="CATALOG_DATA_EXPORTER_RATING_METADATA_SOURCE_ENTITY_ID_MODIFIED_AT" indexType="btree">
+            <column name="source_entity_id"/>
+            <column name="modified_at"/>
+        </index>
+        <index referenceId="CATALOG_DATA_EXPORTER_RATING_METADATA_STATUS" indexType="btree">
+            <column name="status"/>
+        </index>
+    </table>
 </schema>

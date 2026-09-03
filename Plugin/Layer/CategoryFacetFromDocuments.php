@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Plugin\Layer;
 
-use GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage;
+use GraphCommerce\CatalogStorefront\Model\Storage\MetadataDocumentStorage;
 use Magento\Catalog\Model\Config\LayerCategoryConfig;
 use Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\Builder\Aggregations\Category\IncludeDirectChildrenOnly;
 use Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\Builder\Category;
@@ -33,7 +33,7 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
     private array $filter = [];
 
     public function __construct(
-        private readonly CategoryDocumentStorage $storage,
+        private readonly MetadataDocumentStorage $categoryStorage,
         private readonly StoreManagerInterface $storeManager,
         private readonly LayerFormatter $layerFormatter,
         private readonly Uid $uidEncoder,
@@ -69,7 +69,7 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
         try {
             $storeCode = $this->storeManager->getStore($storeId)->getCode();
             $requested = array_map('intval', is_array($requested) ? $requested : [$requested]);
-            $parents = $this->storage->get($storeCode, $requested, ['children']);
+            $parents = $this->categoryStorage->get($storeCode, $requested, ['children']);
             if (count($parents) !== count($requested)) {
                 return $proceed($aggregation, $storeId);
             }
@@ -78,7 +78,7 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
                 array_values($parents)
             )));
             $active = array_filter(
-                $this->storage->get($storeCode, $childIds, ['isActive']),
+                $this->categoryStorage->get($storeCode, $childIds, ['isActive']),
                 static fn(array $child) => !empty($child['isActive'])
             );
         } catch (\Throwable $e) {
@@ -106,7 +106,7 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
                 return [];
             }
             $ids = array_map(static fn(AggregationValueInterface $value) => (int)$value->getValue(), $bucket->getValues());
-            $documents = $this->storage->get($store->getCode(), $ids, ['name', 'path']);
+            $documents = $this->categoryStorage->get($store->getCode(), $ids, ['name', 'path']);
         } catch (\Throwable $e) {
             $this->logger->warning('catalog-storefront category facet fallback: ' . $e->getMessage());
 

@@ -18,11 +18,12 @@ Catalog read model: feed documents in OpenSearch serve the catalog GraphQL read 
 
 ## Boundary note
 
-`ProductModelBuilder` decodes feed labels back to ids for status, visibility, tax
-class and select-attribute options using process-cached metadata maps (EAV and
-tax config, loaded once per process, not per product or per request). These are
-metadata, not catalog data. If this must also leave the request path, carry the
-ids in the feed instead of the labels.
+`ProductModelBuilder` decodes feed labels back to ids: select-attribute options
+through the attribute documents (`Model/Read/AttributeMetadata`, the product
+attributes feed extended with options), status and visibility through static
+maps, and the tax class through a map loaded once per process from the tax
+class table, because no feed carries tax classes. That map is the one
+metadata lookup left on the request path.
 
 ## Shape
 
@@ -39,8 +40,17 @@ ids in the feed instead of the labels.
   bundle price type into the product type `bundle_fixed`;
   `Model/Feed/BundleAttributesProvider` adds the sku and shipment type the
   exporter lacks. The categories feed lands as one category document per
-  store view (`Model/Storage/CategoryDocumentStorage`, index
-  `<alias>_category_<store view>`, read by id only).
+  store view (`Model/Storage/MetadataDocumentStorage`, one instance per feed
+  entity in di.xml, index `<alias>_<entity>_<store view>`, read by id or all
+  at once). The product attributes feed lands the same way, keyed by attribute
+  code and extended with the options in store view labels, the layer position
+  and the filterable mode (`Model/Feed/AttributeOptionsProvider`,
+  `AttributeLayerProvider`); the rating metadata feed lands keyed by rating id,
+  exported during indexing like the reviews (`Model/Feed/RatingMetadataDataProcessor`,
+  `etc/db_schema.xml` adds the modern columns to its table, di.xml gives its
+  indexer the generic serializer). The reviews slice keeps each review's votes
+  as rating id to value; the read side turns them into percents with the
+  rating's value scale for the store view.
 - Facet layer: `Plugin/Layer/CategoryFacetFromDocuments` builds the category
   bucket from the category documents (store tree membership by path, store
   view names, direct children and their activity for a category-filtered
@@ -94,8 +104,10 @@ ids in the feed instead of the labels.
   aggregation after the index refresh (one second by default); the fetch by id
   is immediate.
 - Per-process memos, allowed because they hold metadata or pure derivations:
-  `Model/Read/ImageUrl` (image URL per store, type and file), `FacetLabelsMemo`
-  (facet attribute and option labels), `Plugin/Search/FieldNameMemo` (search
+  `Model/Read/ImageUrl` (image URL per store, type and file),
+  `Model/Read/AttributeMetadata` and `RatingMetadata` (the store view's
+  attribute and rating documents, loaded once; the facet labels come from them
+  through `Plugin/Layer/AttributeOptionsFromDocuments`), `Plugin/Search/FieldNameMemo` (search
   index field name per attribute code and context; the core mapper otherwise
   loads the attribute for each of the 24 facet buckets on every request). A
   changed label, attribute or media configuration reaches a worker at its next
@@ -129,8 +141,9 @@ ids in the feed instead of the labels.
   `inventory_data_exporter_stock_status_feed` and
   `catalog_data_exporter_product_reviews`, then reindex the products, stock,
   prices, variants and reviews feeds. A mapping change needs this too. The
-  category documents rebuild the same way: drop the category index, truncate
-  `cde_categories_feed`, reindex the categories feed.
+  metadata documents rebuild the same way: drop the category, attribute or
+  rating index, truncate `cde_categories_feed`, `cde_product_attributes_feed`
+  or `catalog_data_exporter_rating_metadata`, reindex that feed.
 - The parity set needs the fixed bundle `GC-BUNDLE-FIXED`
   (`dev/parity/fixtures/bundle-fixed.json`, POST it to `/rest/V1/products`
   with an admin token, then reindex stock, price, search and the feeds): the

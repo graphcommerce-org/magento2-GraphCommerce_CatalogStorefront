@@ -47,6 +47,35 @@
         </arguments>
     </virtualType>
 
+    <virtualType name="Magento\ProductReviewDataExporter\Model\Indexer\RatingFeedIndexMetadata"
+                 type="Magento\DataExporter\Model\Indexer\FeedIndexMetadata">
+        <arguments>
+            <argument name="feedTableField" xsi:type="string">source_entity_id</argument>
+            <argument name="feedTableMutableColumns" xsi:type="array">
+                <item name="feed_data" xsi:type="string">feed_data</item>
+                <item name="is_deleted" xsi:type="string">is_deleted</item>
+            </argument>
+            <argument name="exportImmediately" xsi:type="boolean">true</argument>
+            <argument name="persistExportedFeed" xsi:type="init_parameter">Magento\DataExporter\Model\ExportFeedInterface::PERSIST_EXPORTED_FEED</argument>
+            <argument name="minimalPayload" xsi:type="array">
+                <item name="ratingId" xsi:type="string">ratingId</item>
+                <item name="storeViewCode" xsi:type="string">storeViewCode</item>
+            </argument>
+            <argument name="feedItemIdentifiers" xsi:type="array">
+                <item name="ratingId" xsi:type="string">ratingId</item>
+                <item name="storeViewCode" xsi:type="string">storeViewCode</item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <!-- The legacy rating serializer reads the plain row; immediate export hands over the generic shape. -->
+    <virtualType name="Magento\ProductReviewDataExporter\Model\Indexer\RatingFeedIndexer"
+                 type="Magento\DataExporter\Model\Indexer\FeedIndexer">
+        <arguments>
+            <argument name="serializer" xsi:type="object">Magento\DataExporter\Model\Indexer\DataSerializer</argument>
+        </arguments>
+    </virtualType>
+
     <type name="Magento\CatalogDataExporter\Model\Provider\Product\Links">
         <plugin name="graphcommerce_catalog_storefront_link_position"
                 type="GraphCommerce\CatalogStorefront\Plugin\Feed\LinkPosition"/>
@@ -82,8 +111,8 @@
                 type="GraphCommerce\CatalogStorefront\Plugin\Resolver\DownloadableSamplesFromDocument"/>
     </type>
     <type name="Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\AttributeOptionProvider">
-        <plugin name="graphcommerce_catalog_storefront_facet_labels_memo"
-                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\FacetLabelsMemo"/>
+        <plugin name="graphcommerce_catalog_storefront_attribute_options"
+                type="GraphCommerce\CatalogStorefront\Plugin\Layer\AttributeOptionsFromDocuments"/>
     </type>
     <type name="Magento\Elasticsearch\Model\Adapter\FieldMapper\FieldMapperResolver">
         <plugin name="graphcommerce_catalog_storefront_field_name_memo"
@@ -137,6 +166,38 @@
     <type name="Magento\Deploy\Model\DeploymentConfig\ChangeDetector">
         <plugin name="graphcommerce_catalog_storefront_config_change_memo"
                 type="GraphCommerce\CatalogStorefront\Plugin\Deploy\ConfigChangeMemo"/>
+    </type>
+    <!-- One metadata document store per feed entity. -->
+    <virtualType name="GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage" type="GraphCommerce\CatalogStorefront\Model\Storage\MetadataDocumentStorage">
+        <arguments><argument name="entity" xsi:type="string">category</argument></arguments>
+    </virtualType>
+    <virtualType name="GraphCommerce\CatalogStorefront\Model\Storage\AttributeDocumentStorage" type="GraphCommerce\CatalogStorefront\Model\Storage\MetadataDocumentStorage">
+        <arguments><argument name="entity" xsi:type="string">attribute</argument></arguments>
+    </virtualType>
+    <virtualType name="GraphCommerce\CatalogStorefront\Model\Storage\RatingDocumentStorage" type="GraphCommerce\CatalogStorefront\Model\Storage\MetadataDocumentStorage">
+        <arguments><argument name="entity" xsi:type="string">rating</argument></arguments>
+    </virtualType>
+    <type name="GraphCommerce\CatalogStorefront\Model\LocalExportFeed">
+        <arguments>
+            <argument name="categoryStorage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage</argument>
+            <argument name="attributeStorage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\AttributeDocumentStorage</argument>
+            <argument name="ratingStorage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\RatingDocumentStorage</argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Plugin\Layer\CategoryFacetFromDocuments">
+        <arguments>
+            <argument name="categoryStorage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage</argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Read\AttributeMetadata">
+        <arguments>
+            <argument name="storage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\AttributeDocumentStorage</argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Read\RatingMetadata">
+        <arguments>
+            <argument name="storage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\RatingDocumentStorage</argument>
+        </arguments>
     </type>
     <type name="Magento\Framework\GraphQl\Schema\SchemaGeneratorInterface">
         <plugin name="graphcommerce_catalog_storefront_reuse_schema"
@@ -202,6 +263,8 @@
             <argument name="configs" xsi:type="array">
                 <item name="product" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\Product</item>
                 <item name="category" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\Category</item>
+                <item name="attribute" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\Attribute</item>
+                <item name="rating" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\Rating</item>
                 <item name="product_variant" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\ProductVariant</item>
             </argument>
         </arguments>
