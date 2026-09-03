@@ -1,5 +1,5 @@
 {
-  products(filter: { sku: { like: "240-LV%" } }) {
+  products(filter: { sku: { in: ["240-LV04", "240-LV05", "240-LV06", "240-LV07", "240-LV08", "240-LV09"] } }) {
     items {
       uid sku name __typename
       ... on DownloadableProduct {

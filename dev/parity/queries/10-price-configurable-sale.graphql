@@ -1,5 +1,5 @@
 {
-  products(filter: { sku: { like: "WP1%" } }, pageSize: 60) {
+  products(filter: { category_id: { eq: "27" } }, pageSize: 100) {
     items {
       sku __typename stock_status
       price_range {

@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+    <!-- Feed table in the layout immediate export requires; the reviews exporter ships the legacy layout. -->
+    <table name="gc_product_reviews_feed" resource="default" engine="innodb" comment="Product Reviews Feed">
+        <column xsi:type="int" name="id" unsigned="true" nullable="false" identity="true" comment="Autoincrement ID"/>
+        <column xsi:type="int" name="source_entity_id" padding="10" unsigned="true" nullable="false" comment="Review Id"/>
+        <column xsi:type="varchar" name="feed_id" nullable="false" length="64" comment="Feed Item Identifier"/>
+        <column xsi:type="timestamp" name="modified_at" on_update="true" nullable="false" default="CURRENT_TIMESTAMP" comment="Modified At"/>
+        <column xsi:type="tinyint" name="is_deleted" nullable="false" default="0" comment="Feed item deletion flag"/>
+        <column xsi:type="smallint" name="status" nullable="false" default="0" comment="Feed item status"/>
+        <column xsi:type="mediumtext" name="feed_data" nullable="false" comment="Feed Data"/>
+        <column xsi:type="varchar" name="feed_hash" nullable="false" length="64" comment="Hash of feed_data"/>
+        <column xsi:type="text" name="errors" nullable="true" comment="Errors"/>
+        <column xsi:type="text" name="metadata" nullable="true" comment="Metadata"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="id"/>
+        </constraint>
+        <constraint referenceId="GC_PRODUCT_REVIEWS_FEED_FEED_ID" xsi:type="unique">
+            <column name="feed_id"/>
+        </constraint>
+        <index referenceId="GC_PRODUCT_REVIEWS_FEED_SOURCE_ENTITY_ID_MODIFIED_AT" indexType="btree">
+            <column name="source_entity_id"/>
+            <column name="modified_at"/>
+        </index>
+        <index referenceId="GC_PRODUCT_REVIEWS_FEED_STATUS" indexType="btree">
+            <column name="status"/>
+        </index>
+    </table>
+</schema>

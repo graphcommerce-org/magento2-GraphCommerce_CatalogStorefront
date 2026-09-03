@@ -4,6 +4,8 @@
         <sequence>
             <module name="Magento_DataExporter"/>
             <module name="Magento_CatalogDataExporter"/>
+            <module name="Magento_ConfigurableProductDataExporter"/>
+            <module name="Magento_ProductReviewDataExporter"/>
         </sequence>
     </module>
 </config>

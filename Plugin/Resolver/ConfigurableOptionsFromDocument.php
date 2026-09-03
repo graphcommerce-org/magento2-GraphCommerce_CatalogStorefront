@@ -16,20 +16,19 @@ use Magento\Swatches\Model\Swatch;
  * Serves configurable_options from the optionsV2 slice of the document.
  *
  * The feed value id already is the core value uid ("configurable/<attribute
- * id>/<value index>"), so attribute ids come from decoding it. Color and image
- * swatches travel with the values and are handed to the swatch_data resolver
- * through SwatchDataFromDocument; the feed carries no textual swatch values,
- * so those keep the core resolver.
+ * id>/<value index>"), so attribute ids come from decoding it. Swatch data
+ * travels with the values and is handed to the swatch_data resolver through
+ * SwatchDataFromDocument. Core returns the admin label as both default_label
+ * and store_label, with use_default_value always true.
  *
- * The feed carries no super attribute id, use_default flags or admin labels,
- * so a selection of those fields keeps the core resolver.
+ * The feed carries no super attribute id or use_default flag, so a selection
+ * of those fields keeps the core resolver.
  */
 class ConfigurableOptionsFromDocument
 {
     public const SWATCH_KEY = '_gc_swatch';
 
     private const UNSERVED_OPTION_FIELDS = ['id', 'use_default'];
-    private const UNSERVED_VALUE_FIELDS = ['default_label', 'store_label', 'use_default_value'];
 
     public function __construct(
         private readonly Uid $uidEncoder,
@@ -47,11 +46,9 @@ class ConfigurableOptionsFromDocument
         ?array $args = null
     ) {
         $document = ($value['model'] ?? null)?->getData(ProductModelBuilder::DOCUMENT_KEY);
-        $selection = $info->getFieldSelection(1);
         if (!is_array($document)
             || ($value['type_id'] ?? null) !== Configurable::TYPE_CODE
-            || array_intersect(array_keys($selection), self::UNSERVED_OPTION_FIELDS)
-            || array_intersect(array_keys((array)($selection['values'] ?? [])), self::UNSERVED_VALUE_FIELDS)
+            || array_intersect(array_keys($info->getFieldSelection(1)), self::UNSERVED_OPTION_FIELDS)
         ) {
             return $proceed($field, $context, $info, $value, $args);
         }
@@ -67,23 +64,29 @@ class ConfigurableOptionsFromDocument
             $values = [];
             foreach ((array)($option['values'] ?? []) as $optionValue) {
                 [, $attributeId, $valueIndex] = explode('/', $this->uidEncoder->decode((string)$optionValue['id']));
-                // Core hands these through as the strings the database returns.
-                $entry = [
-                    'value_index' => $valueIndex,
-                    'label' => $optionValue['label'] ?? null,
-                    'attribute_id' => $attributeId,
-                ];
+                $swatch = null;
                 if (!empty($optionValue['colorHex'])) {
-                    $entry[self::SWATCH_KEY] = ['type' => Swatch::SWATCH_TYPE_VISUAL_COLOR, 'value' => $optionValue['colorHex']];
+                    $swatch = ['type' => Swatch::SWATCH_TYPE_VISUAL_COLOR, 'value' => $optionValue['colorHex']];
                 } elseif (!empty($optionValue['imageUrl'])) {
                     $file = substr((string)$optionValue['imageUrl'], strlen($swatchMediaUrl));
-                    $entry[self::SWATCH_KEY] = [
+                    $swatch = [
                         'type' => Swatch::SWATCH_TYPE_VISUAL_IMAGE,
                         'value' => $file,
                         'thumbnail' => $this->swatchMedia->getSwatchAttributeImage(Swatch::SWATCH_THUMBNAIL_NAME, $file),
                     ];
+                } elseif (isset($optionValue['textSwatchValue'])) {
+                    $swatch = ['type' => Swatch::SWATCH_TYPE_TEXTUAL, 'value' => $optionValue['textSwatchValue']];
                 }
-                $values[] = $entry;
+                // Core hands ids through as the strings the database returns.
+                $values[] = [
+                    'value_index' => $valueIndex,
+                    'label' => $optionValue['label'] ?? null,
+                    'default_label' => $optionValue['defaultLabel'] ?? $optionValue['label'] ?? null,
+                    'store_label' => $optionValue['defaultLabel'] ?? $optionValue['label'] ?? null,
+                    'use_default_value' => true,
+                    'attribute_id' => $attributeId,
+                    self::SWATCH_KEY => $swatch,
+                ];
             }
             if ($attributeId === null) {
                 return $proceed($field, $context, $info, $value, $args);
@@ -101,9 +104,10 @@ class ConfigurableOptionsFromDocument
                 'values' => $values,
             ];
         }
-        // The core attribute collection has no ORDER BY, so it lists the super
-        // attributes in the (product_id, attribute_id) index order.
-        usort($options, static fn(array $a, array $b) => $a['attribute_id_v2'] <=> $b['attribute_id_v2']);
+        // The core attribute collection has no ORDER BY, so its order changes
+        // with the query plan. The merchant's position order is served instead.
+        usort($options, static fn(array $a, array $b) =>
+            [$a['position'], $a['attribute_id_v2']] <=> [$b['position'], $b['attribute_id_v2']]);
 
         return $options;
     }

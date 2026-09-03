@@ -1,0 +1,5 @@
+{
+  products(filter: { category_id: { eq: "3" } }, pageSize: 100) {
+    items { sku rating_summary review_count }
+  }
+}

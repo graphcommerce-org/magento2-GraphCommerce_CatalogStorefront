@@ -20,6 +20,7 @@ use Psr\Log\LoggerInterface;
  *   prices               -> prices.<customerGroupCode>, fanned out per website
  *   inventoryStockStatus -> stock
  *   variants             -> variantIds on the configurable parent document
+ *   reviews              -> reviews.r<reviewId> (vote percents where visible)
  * Other feeds are accepted and only persisted in their feed tables. A storage
  * failure reports status 500, so the feed machinery retries the batch by cron.
  */
@@ -44,6 +45,7 @@ class LocalExportFeed implements ExportFeedInterface
                 'prices' => $this->applyPrices($data),
                 'inventoryStockStatus' => $this->applyStock($data),
                 'variants' => $this->applyVariants($data),
+                'reviews' => $this->applyReviews($data),
                 default => null,
             };
         } catch (\Throwable $e) {
@@ -130,6 +132,36 @@ class LocalExportFeed implements ExportFeedInterface
         foreach ($rows as $row) {
             foreach ($stores as $store) {
                 $upserts[$store][(int)$row['productId']]['stock'] = $row;
+            }
+        }
+        foreach ($upserts as $store => $documents) {
+            $this->storage->upsert($store, $documents);
+        }
+    }
+
+    /**
+     * Keeps one entry per review on the product document of every store view:
+     * the vote percents (value / 5 * 100, as core counts them) where the review
+     * is visible in that store view, null where it is not or once it is
+     * deleted. The read side aggregates, so batches need not carry all reviews
+     * of a product.
+     */
+    private function applyReviews(array $rows): void
+    {
+        $stores = array_map(static fn($store) => $store->getCode(), $this->storeManager->getStores());
+
+        $upserts = [];
+        foreach ($rows as $row) {
+            if (empty($row['reviewId']) || empty($row['productId'])) {
+                continue;
+            }
+            $percents = array_map(
+                static fn(array $rating) => (float)$rating['value'] / 5 * 100,
+                (array)($row['ratings'] ?? [])
+            );
+            foreach ($stores as $store) {
+                $visible = empty($row['deleted']) && in_array($store, (array)($row['visibility'] ?? []), true);
+                $upserts[$store][(int)$row['productId']]['reviews']['r' . $row['reviewId']] = $visible ? $percents : null;
             }
         }
         foreach ($upserts as $store => $documents) {

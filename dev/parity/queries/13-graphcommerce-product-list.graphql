@@ -1,0 +1,207 @@
+query ProductList(
+  $pageSize: Int = 24
+  $currentPage: Int = 1
+  $filters: ProductAttributeFilterInput = {}
+  $sort: ProductAttributeSortInput = {}
+  $search: String = ""
+  $onlyItems: Boolean = false
+  $quickSearch: Boolean = false
+) {
+  products(
+    pageSize: $pageSize
+    currentPage: $currentPage
+    filter: $filters
+    sort: $sort
+    search: $search
+  ) {
+    ...ProductListSuggestions @skip(if: $onlyItems)
+    ...ProductListFilters @skip(if: $onlyItems)
+    ...ProductListCount @skip(if: $onlyItems) @include(if: $quickSearch)
+    ...ProductListPagination @skip(if: $onlyItems)
+    ...ProductListSort @skip(if: $onlyItems)
+    ...ProductListItems
+  }
+}
+
+fragment ProductListSuggestions on Products {
+  suggestions {
+    ...ProductListSearchSuggestion
+  }
+}
+
+fragment ProductListSearchSuggestion on SearchSuggestion {
+  search
+}
+
+fragment ProductListFilters on Products {
+  aggregations(filter: { category: { includeDirectChildrenOnly: true } }) {
+    __typename
+    label
+    attribute_code
+    count
+    options {
+      __typename
+      label
+      value
+      count
+    }
+  }
+}
+
+fragment ProductListCount on Products {
+  total_count
+}
+
+fragment ProductListPagination on Products {
+  page_info {
+    current_page
+    total_pages
+  }
+}
+
+fragment ProductListSort on Products {
+  total_count
+  sort_fields {
+    default
+    options {
+      label
+      value
+    }
+  }
+}
+
+fragment ProductListItems on Products {
+  items {
+    __typename
+    uid
+    ...ProductListItem
+  }
+}
+
+fragment ProductListItem on ProductInterface {
+  uid
+  ...ProductLink
+  sku
+  name
+  new_to_date
+  new_from_date
+  small_image {
+    ...ProductImage
+  }
+  price_range {
+    minimum_price {
+      ...ProductListPrice
+    }
+  }
+  ...ProductListItemVirtual
+  ...CompareProductIdInternal
+  ...ProductListItemGrouped
+  ...ProductListItemSimple
+  ...ProductListItemBundle
+  ...ProductReviewSummaryChip
+  ...ProductReviewSummary
+  ...ProductListItemConfigurable
+  ...ProductListItemDownloadable
+}
+
+fragment ProductLink on ProductInterface {
+  __typename
+  uid
+  url_key
+}
+
+fragment ProductImage on ProductImage {
+  url
+  label
+  disabled
+}
+
+fragment ProductListPrice on ProductPrice {
+  regular_price {
+    ...Money
+  }
+  discount {
+    amount_off
+    percent_off
+  }
+  final_price {
+    ...Money
+  }
+}
+
+fragment Money on Money {
+  currency
+  value
+}
+
+fragment ProductListItemVirtual on VirtualProduct {
+  uid
+}
+
+fragment CompareProductIdInternal on ProductInterface {
+  __typename
+  id
+  name
+}
+
+fragment ProductListItemGrouped on GroupedProduct {
+  uid
+}
+
+fragment ProductListItemSimple on SimpleProduct {
+  uid
+}
+
+fragment ProductListItemBundle on BundleProduct {
+  __typename
+  uid
+}
+
+fragment ProductReviewSummaryChip on ProductInterface {
+  rating_summary
+}
+
+fragment ProductReviewSummary on ProductInterface {
+  rating_summary
+}
+
+fragment ProductListItemConfigurable on ConfigurableProduct {
+  __typename
+  uid
+  configurable_options {
+    attribute_code
+    uid
+    label
+    values {
+      store_label
+      uid
+      swatch_data {
+        ...SwatchData
+      }
+    }
+  }
+}
+
+fragment SwatchData on SwatchDataInterface {
+  __typename
+  ...TextSwatchData
+  ...ColorSwatchData
+  ...ImageSwatchData
+}
+
+fragment TextSwatchData on TextSwatchData {
+  value
+}
+
+fragment ColorSwatchData on ColorSwatchData {
+  value
+}
+
+fragment ImageSwatchData on ImageSwatchData {
+  value
+  thumbnail
+}
+
+fragment ProductListItemDownloadable on DownloadableProduct {
+  uid
+}

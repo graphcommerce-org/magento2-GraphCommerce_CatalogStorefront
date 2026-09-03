@@ -1,0 +1,24 @@
+{
+    "gc_product_reviews_feed": {
+        "column": {
+            "id": true,
+            "source_entity_id": true,
+            "feed_id": true,
+            "modified_at": true,
+            "is_deleted": true,
+            "status": true,
+            "feed_data": true,
+            "feed_hash": true,
+            "errors": true,
+            "metadata": true
+        },
+        "index": {
+            "GC_PRODUCT_REVIEWS_FEED_SOURCE_ENTITY_ID_MODIFIED_AT": true,
+            "GC_PRODUCT_REVIEWS_FEED_STATUS": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "GC_PRODUCT_REVIEWS_FEED_FEED_ID": true
+        }
+    }
+}

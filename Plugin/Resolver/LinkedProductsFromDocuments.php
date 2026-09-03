@@ -8,7 +8,6 @@ use GraphCommerce\CatalogStorefront\Model\Read\ProductModelBuilder;
 use GraphCommerce\CatalogStorefront\Model\Storage\ProductDocumentStorage;
 use Magento\Catalog\Model\Product\Attribute\Source\Status;
 use Magento\Catalog\Model\Product\Visibility;
-use Magento\CatalogGraphQl\Model\Resolver\Product\ProductFieldsSelector;
 use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Query\Resolver\BatchResponse;
 use Magento\Framework\GraphQl\Query\Resolver\ContextInterface;
@@ -36,7 +35,6 @@ class LinkedProductsFromDocuments
     public function __construct(
         private readonly DocumentHydration $hydration,
         private readonly ProductDocumentStorage $storage,
-        private readonly ProductFieldsSelector $productFieldsSelector,
         private readonly Visibility $visibility,
         private readonly LoggerInterface $logger,
     ) {
@@ -62,10 +60,7 @@ class LinkedProductsFromDocuments
         try {
             $store = $context->getExtensionAttributes()->getStore();
             $requestedFields = array_unique(array_merge([], ...array_map(
-                fn($request) => $this->productFieldsSelector->getProductFieldsFromInfo(
-                    $request->getInfo(),
-                    $field->getName()
-                ),
+                static fn($request) => array_keys($request->getInfo()->getFieldSelection(1)),
                 $requests
             )));
 

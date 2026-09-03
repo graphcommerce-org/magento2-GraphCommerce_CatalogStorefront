@@ -3,4 +3,14 @@
     <record name="Link">
         <field name="position" type="Int"/>
     </record>
+    <record name="ProductOptionValue">
+        <field name="defaultLabel" type="String"/>
+        <field name="textSwatchValue" type="String"/>
+    </record>
+    <record name="Export">
+        <field name="reviews" type="Review" repeated="true"
+               provider="GraphCommerce\CatalogStorefront\Model\Feed\ReviewsDataProcessor">
+            <using field="review_id"/>
+        </field>
+    </record>
 </config>

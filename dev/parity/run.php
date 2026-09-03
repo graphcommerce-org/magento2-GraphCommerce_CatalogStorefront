@@ -26,9 +26,13 @@ if (!$queryFiles) {
 }
 
 /**
- * Aggregation option order is a search-engine tie-break between equal-count
- * options, not a document difference. Sort options by value so the diff sees
- * the set, not the order.
+ * Orders that core leaves undefined are not document differences: aggregation
+ * options tie-break in the search engine, and configurable_options come from a
+ * collection without ORDER BY. Sort both so the diff sees the set, not the order.
+ * Zero-count aggregation options are dropped: core's option provider joins
+ * attributes by code across entity types, so an option of a same-named
+ * attribute of another entity shows up on some runs. Aggregations are core on
+ * both paths, so this hides no document difference.
  */
 function normalize(mixed $node): mixed
 {
@@ -38,10 +42,18 @@ function normalize(mixed $node): mixed
     if (isset($node['aggregations']) && is_array($node['aggregations'])) {
         foreach ($node['aggregations'] as &$aggregation) {
             if (isset($aggregation['options']) && is_array($aggregation['options'])) {
+                $aggregation['options'] = array_values(array_filter(
+                    $aggregation['options'],
+                    static fn($option) => ($option['count'] ?? 1) !== 0
+                ));
+                $aggregation['count'] = count($aggregation['options']);
                 usort($aggregation['options'], static fn($a, $b) => ($a['value'] ?? '') <=> ($b['value'] ?? ''));
             }
         }
         unset($aggregation);
+    }
+    if (isset($node['configurable_options']) && is_array($node['configurable_options'])) {
+        usort($node['configurable_options'], static fn($a, $b) => ($a['attribute_code'] ?? '') <=> ($b['attribute_code'] ?? ''));
     }
 
     return array_map(normalize(...), $node);
@@ -108,6 +120,14 @@ foreach ($queryFiles as $file) {
 $failed = 0;
 foreach ($queryFiles as $file) {
     $name = basename($file, '.graphql');
+    // An error on either path is never parity, even when both paths fail alike.
+    foreach (['stock' => $stock[$file], 'document' => $document[$file]] as $path => $response) {
+        if (isset($response['errors'])) {
+            $failed++;
+            printf("ERROR %s (%s path): %s\n", $name, $path, substr(json_encode($response['errors'][0]['message'] ?? $response['errors']), 0, 200));
+            continue 2;
+        }
+    }
     $diffs = diffPaths(normalize($stock[$file]), normalize($document[$file]));
     if (!$diffs) {
         printf("PASS  %s\n", $name);

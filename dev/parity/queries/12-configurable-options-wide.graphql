@@ -1,11 +1,11 @@
 {
-  products(filter: { sku: { like: "M%" } }, pageSize: 50) {
+  products(filter: { category_id: { eq: "12" } }, pageSize: 100) {
     items {
-      sku __typename stock_status
+      sku __typename stock_status rating_summary review_count
       ... on ConfigurableProduct {
         configurable_options {
           uid attribute_code label position
-          values { value_index uid label swatch_data { __typename value } }
+          values { value_index uid label store_label default_label use_default_value swatch_data { __typename value } }
         }
       }
     }
