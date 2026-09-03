@@ -62,8 +62,12 @@ ids in the feed instead of the labels.
   is immediate.
 - Per-process memos, allowed because they hold metadata or pure derivations:
   `ImageUrlMemo` (image URL per type, file and store), `FacetLabelsMemo`
-  (facet attribute and option labels). A changed label or media configuration
-  reaches a worker at its next restart.
+  (facet attribute and option labels), `Plugin/Search/FieldNameMemo` (search
+  index field name per attribute code and context; the core mapper otherwise
+  loads the attribute for each of the 24 facet buckets on every request). A
+  changed label, attribute or media configuration reaches a worker at its next
+  restart. `etc/config.xml` turns on `dev/caching/cache_user_defined_attributes`
+  so the EAV config serves user-defined attributes from cache instead of SQL.
 - `Plugin/GraphQl/ValidateOncePerProcess` validates a query document once per
   process and executes repeats with an empty rule set. `Plugin/GraphQl/ReuseSchema`
   keeps one built schema per query shape: Magento prunes every type to the
@@ -95,6 +99,21 @@ ids in the feed instead of the labels.
 - After di.xml changes: `setup:di:compile`, `cache:flush` on the host and in
   the worker container, then restart the worker. After `et_schema.xml` changes
   every feed row changes hash, so the next reindex re-exports everything.
+- The worker runs 25 PHP threads, each with its own process state (memos,
+  kept schemas, validated documents). Sequential requests alternate between
+  two threads, so the first two hits of a query shape after a restart are cold
+  (about 250ms and 170ms for the 200-item listing); a variable change costs
+  nothing. Under concurrent load every thread pays that once per shape: warm
+  the worker after a deploy, or set `num` on the web-worker in the Caddyfile.
+- Measure server side, not only over the wire: the proxy chain and a TLS
+  handshake add 10 to 20ms, and the first request after a few idle seconds
+  pays 40 to 60ms of wake-up over the wire (15 to 25ms inside PHP, spread
+  evenly over OpenSearch, MySQL and Redis). Steady state for the 200-item
+  GraphCommerce listing is 70 to 80ms inside PHP: core search build 7 to 10ms
+  (OpenSearch itself 1ms plus three price-bucket queries), document multi-search
+  14 to 16ms (OpenSearch 11ms, of which about 6ms is `_source` filtering), 25
+  SQL queries in 3 to 5ms (grouped and bundle price fallback, layer category),
+  the rest is the GraphQL executor and resolvers.
 
 ## Known gaps and deviations
 

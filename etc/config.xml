@@ -6,5 +6,11 @@
                 <serve_reads>0</serve_reads>
             </catalog_storefront>
         </graphcommerce>
+        <!-- User-defined attributes come from the EAV cache; the search adapter otherwise loads each facet attribute with SQL. -->
+        <dev>
+            <caching>
+                <cache_user_defined_attributes>1</cache_user_defined_attributes>
+            </caching>
+        </dev>
     </default>
 </config>

@@ -101,6 +101,10 @@
         <plugin name="graphcommerce_catalog_storefront_facet_labels_memo"
                 type="GraphCommerce\CatalogStorefront\Plugin\Resolver\FacetLabelsMemo"/>
     </type>
+    <type name="Magento\Elasticsearch\Model\Adapter\FieldMapper\FieldMapperResolver">
+        <plugin name="graphcommerce_catalog_storefront_field_name_memo"
+                type="GraphCommerce\CatalogStorefront\Plugin\Search\FieldNameMemo"/>
+    </type>
     <type name="Magento\Framework\GraphQl\Schema\SchemaGeneratorInterface">
         <plugin name="graphcommerce_catalog_storefront_reuse_schema"
                 type="GraphCommerce\CatalogStorefront\Plugin\GraphQl\ReuseSchema"/>
