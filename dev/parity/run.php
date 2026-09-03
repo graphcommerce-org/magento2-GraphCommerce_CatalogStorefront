@@ -25,6 +25,28 @@ if (!$queryFiles) {
     exit(2);
 }
 
+/**
+ * Aggregation option order is a search-engine tie-break between equal-count
+ * options, not a document difference. Sort options by value so the diff sees
+ * the set, not the order.
+ */
+function normalize(mixed $node): mixed
+{
+    if (!is_array($node)) {
+        return $node;
+    }
+    if (isset($node['aggregations']) && is_array($node['aggregations'])) {
+        foreach ($node['aggregations'] as &$aggregation) {
+            if (isset($aggregation['options']) && is_array($aggregation['options'])) {
+                usort($aggregation['options'], static fn($a, $b) => ($a['value'] ?? '') <=> ($b['value'] ?? ''));
+            }
+        }
+        unset($aggregation);
+    }
+
+    return array_map(normalize(...), $node);
+}
+
 function gql(string $endpoint, string $query): array
 {
     $context = stream_context_create(['http' => [
@@ -84,7 +106,7 @@ foreach ($queryFiles as $file) {
 $failed = 0;
 foreach ($queryFiles as $file) {
     $name = basename($file, '.graphql');
-    $diffs = diffPaths($stock[$file], $document[$file]);
+    $diffs = diffPaths(normalize($stock[$file]), normalize($document[$file]));
     if (!$diffs) {
         printf("PASS  %s\n", $name);
         continue;
