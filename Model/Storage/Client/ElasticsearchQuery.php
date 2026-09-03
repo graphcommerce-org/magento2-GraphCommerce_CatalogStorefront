@@ -148,6 +148,16 @@ class ElasticsearchQuery implements QueryInterface
     }
 
     /**
+     * @inheritdoc
+     */
+    public function aggregate(string $indexName, array $query, array $aggregations): array
+    {
+        $result = $this->searchRequest($indexName, '', ['query' => $query, 'aggregations' => $aggregations], 0);
+
+        return $result['aggregations'] ?? [];
+    }
+
+    /**
      * Searches entries into elastic search storage.
      *
      * @param string $indexName

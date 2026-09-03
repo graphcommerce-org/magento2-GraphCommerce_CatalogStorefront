@@ -26,13 +26,17 @@ class Product implements EntityConfigInterface
      */
     public function getSettings() : array
     {
-        // A document store: keep every field in _source and map only the sku,
-        // which the linked products lookup filters on, so the 1000-field
-        // mapping limit never applies to rich product documents.
+        // A document store: keep every field in _source and map only what a
+        // request filters or aggregates on, so the 1000-field mapping limit
+        // never applies to rich product documents. priceIndex holds one small
+        // object per customer group key and maps its floats dynamically.
         return [
             'dynamic' => false,
             'properties' => [
                 'sku' => ['type' => 'keyword'],
+                'status' => ['type' => 'keyword'],
+                'stock' => ['properties' => ['isSalable' => ['type' => 'boolean']]],
+                'priceIndex' => ['type' => 'object', 'dynamic' => true],
             ],
         ];
     }

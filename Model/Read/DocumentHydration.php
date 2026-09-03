@@ -3,9 +3,11 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Model\Read;
 
+use GraphCommerce\CatalogStorefront\Model\ProductPrice;
 use GraphCommerce\CatalogStorefront\Model\Storage\ProductDocumentStorage;
 use Magento\Catalog\Api\Data\ProductSearchResultsInterfaceFactory;
 use Magento\Catalog\Model\Product;
+use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Framework\Api\SearchResultsInterface;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\GraphQl\Model\Query\ContextInterface;
@@ -18,17 +20,15 @@ use Psr\Log\LoggerInterface;
  * Rebuilds product models from feed documents for the catalog GraphQL read
  * path: the two data provider plugins and the linked products resolver.
  *
- * When the query asks for price_range, the variant documents of every
- * configurable in the set are fetched in one request, limited to the fields
- * a price range needs, and attached to the parent model.
+ * When the query asks for price_range, the configurable price ranges of the
+ * whole set are fetched in one aggregation request for the request's customer
+ * group and attached to the parent models.
  */
 class DocumentHydration
 {
     public const CONFIG_SERVE_READS = 'graphcommerce/catalog_storefront/serve_reads';
 
-    public const VARIANTS_KEY = '_gc_variants';
-
-    private const VARIANT_FIELDS = ['productId', 'status', 'prices', 'stock', 'inStock'];
+    public const PRICE_RANGE_KEY = '_gc_price_range';
 
     public function __construct(
         private readonly ProductDocumentStorage $storage,
@@ -36,6 +36,8 @@ class DocumentHydration
         private readonly ProductSearchResultsInterfaceFactory $searchResultsFactory,
         private readonly ScopeConfigInterface $scopeConfig,
         private readonly StoreManagerInterface $storeManager,
+        private readonly CustomerSession $customerSession,
+        private readonly ProductPrice $productPrice,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -43,6 +45,17 @@ class DocumentHydration
     public function enabled(): bool
     {
         return $this->scopeConfig->isSetFlag(self::CONFIG_SERVE_READS, ScopeInterface::SCOPE_STORE);
+    }
+
+    /**
+     * The price group key of the request's customer.
+     */
+    public function groupKey(?ContextInterface $context): string
+    {
+        $groupId = $context?->getExtensionAttributes()->getCustomerGroupId()
+            ?? $this->customerSession->getCustomerGroupId();
+
+        return $this->productPrice->groupKey((int)$groupId);
     }
 
     /**
@@ -67,7 +80,7 @@ class DocumentHydration
             foreach ($this->storage->get($store->getCode(), $ids) as $entry) {
                 $documents[(int)$entry->getId()] = $entry->getData();
             }
-            $models = $this->buildModels($store, $documents, $requestedFields);
+            $models = $this->buildModels($store, $documents, $requestedFields, $this->groupKey($context));
             $items = [];
             foreach ($ids as $id) {
                 if (!isset($models[$id])) {
@@ -96,16 +109,18 @@ class DocumentHydration
      * @param string[] $requestedFields product fields selected by the query
      * @return array<int, Product> product id => model
      */
-    public function buildModels(StoreInterface $store, array $documents, array $requestedFields): array
+    public function buildModels(StoreInterface $store, array $documents, array $requestedFields, string $groupKey): array
     {
-        $variants = [];
-        $variantIds = array_merge(...array_map(
-            static fn(array $document) => array_values($document['variantIds'] ?? []),
-            array_values($documents)
-        ));
-        if ($variantIds && in_array('price_range', $requestedFields, true)) {
-            foreach ($this->storage->get($store->getCode(), $variantIds, self::VARIANT_FIELDS) as $entry) {
-                $variants[(int)$entry->getId()] = $entry->getData();
+        $ranges = [];
+        if (in_array('price_range', $requestedFields, true)) {
+            $variantIdsByParent = [];
+            foreach ($documents as $id => $document) {
+                if (!empty($document['variantIds'])) {
+                    $variantIdsByParent[(int)$id] = array_values($document['variantIds']);
+                }
+            }
+            if ($variantIdsByParent) {
+                $ranges = $this->storage->priceRanges($store->getCode(), $variantIdsByParent, $groupKey);
             }
         }
 
@@ -116,11 +131,8 @@ class DocumentHydration
             if ($model === null) {
                 continue;
             }
-            if ($variants && isset($document['variantIds'])) {
-                $model->setData(self::VARIANTS_KEY, array_values(array_intersect_key(
-                    $variants,
-                    array_flip($document['variantIds'])
-                )));
+            if (isset($ranges[(int)$id])) {
+                $model->setData(self::PRICE_RANGE_KEY, $ranges[(int)$id]);
             }
             $models[(int)$id] = $model;
         }

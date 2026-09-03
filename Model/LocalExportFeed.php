@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefront\Model;
 
 use GraphCommerce\CatalogStorefront\Model\Storage\ProductDocumentStorage;
+use Magento\Customer\Api\GroupManagementInterface;
+use Magento\Customer\Model\Group;
 use Magento\DataExporter\Model\ExportFeedInterface;
 use Magento\DataExporter\Model\FeedExportStatus;
 use Magento\DataExporter\Model\FeedExportStatusBuilder;
@@ -17,7 +19,8 @@ use Psr\Log\LoggerInterface;
  * Routes feed batches into the product document store. Each feed owns a slice
  * of the per-store-view product document:
  *   products             -> the base document (feed row as-is)
- *   prices               -> prices.<customerGroupCode>, fanned out per website
+ *   prices               -> prices.<customerGroupCode>, fanned out per website,
+ *                           plus priceIndex.<group key> for the price aggregation
  *   inventoryStockStatus -> stock
  *   variants             -> variantIds on the configurable parent document
  *   reviews              -> reviews.r<reviewId> (vote percents where visible)
@@ -33,6 +36,8 @@ class LocalExportFeed implements ExportFeedInterface
         private readonly FeedExportStatusBuilder $feedExportStatusBuilder,
         private readonly ProductDocumentStorage $storage,
         private readonly StoreManagerInterface $storeManager,
+        private readonly GroupManagementInterface $groupManagement,
+        private readonly ProductPrice $productPrice,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -81,19 +86,46 @@ class LocalExportFeed implements ExportFeedInterface
         }
     }
 
+    /**
+     * The prices slice keeps the feed rows by group key. Next to it, priceIndex
+     * carries the regular and final price per customer group with the fallback
+     * row already resolved, as mapped floats the configurable price
+     * aggregation reads. A batch holds a product's rows one group at a time,
+     * so the index is recomputed over the rows already stored plus the batch.
+     */
     private function applyPrices(array $rows): void
     {
-        $upserts = [];
+        $rowsByStore = [];
         foreach ($rows as $row) {
-            $group = 'g' . $row['customerGroupCode'];
             foreach ($this->storeViewCodesForWebsite($row['websiteCode']) as $store) {
                 // A string prefix keeps the group map a JSON object; a bare "0" key
                 // serializes as an array, and the doc merge replaces arrays wholesale.
-                $upserts[$store][(int)$row['productId']]['prices'][$group] = $row;
+                $rowsByStore[$store][(int)$row['productId']]['g' . $row['customerGroupCode']] = $row;
             }
         }
-        foreach ($upserts as $store => $documents) {
-            $this->storage->upsert($store, $documents);
+        $groupKeys = array_unique(array_merge(
+            [$this->productPrice->groupKey(Group::NOT_LOGGED_IN_ID)],
+            array_map(fn($group) => $this->productPrice->groupKey((int)$group->getId()), $this->groupManagement->getLoggedInGroups())
+        ));
+
+        foreach ($rowsByStore as $store => $products) {
+            $stored = [];
+            foreach ($this->storage->get($store, array_keys($products), ['prices']) as $entry) {
+                $stored[(int)$entry->getId()] = (array)($entry->getData()['prices'] ?? []);
+            }
+            $upserts = [];
+            foreach ($products as $productId => $groupRows) {
+                $prices = $groupRows + ($stored[$productId] ?? []);
+                $index = [];
+                foreach ($groupKeys as $groupKey) {
+                    $row = $this->productPrice->row($prices, $groupKey);
+                    if ($row !== null) {
+                        $index[$groupKey] = ['regular' => (float)$row['regular'], 'final' => $this->productPrice->finalPrice($row)];
+                    }
+                }
+                $upserts[$productId] = ['prices' => $groupRows, 'priceIndex' => $index];
+            }
+            $this->storage->upsert($store, $upserts);
         }
     }
 

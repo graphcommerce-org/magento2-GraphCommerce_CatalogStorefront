@@ -128,4 +128,10 @@ interface QueryInterface
         int $minDocCount,
         ?string $clauseType = 'terms'
     ): array;
+
+    /**
+     * Runs the aggregations over the documents the query matches and returns
+     * the aggregation results.
+     */
+    public function aggregate(string $indexName, array $query, array $aggregations): array;
 }

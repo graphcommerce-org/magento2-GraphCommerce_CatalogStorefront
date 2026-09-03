@@ -82,6 +82,58 @@ class ProductDocumentStorage
         return $this->query->searchFilteredEntries($this->aliasName($storeViewCode), self::ENTITY, ['sku' => $skus]);
     }
 
+    /**
+     * Minimum and maximum regular and final price over the variants of each
+     * parent for one customer group, once over the salable enabled variants and
+     * once over all enabled variants, in one request for the whole set. A
+     * variant without a price for the group does not count.
+     *
+     * @param array<int, int[]> $variantIdsByParent
+     * @return array<int, array{salable: ?array, all: ?array}> ranges as [minRegular, minFinal, maxRegular, maxFinal]
+     */
+    public function priceRanges(string $storeViewCode, array $variantIdsByParent, string $groupKey): array
+    {
+        $stats = [
+            'minRegular' => ['min' => ['field' => 'priceIndex.' . $groupKey . '.regular']],
+            'minFinal' => ['min' => ['field' => 'priceIndex.' . $groupKey . '.final']],
+            'maxRegular' => ['max' => ['field' => 'priceIndex.' . $groupKey . '.regular']],
+            'maxFinal' => ['max' => ['field' => 'priceIndex.' . $groupKey . '.final']],
+        ];
+        $enabled = ['term' => ['status' => 'Enabled']];
+        $aggregations = [];
+        foreach ($variantIdsByParent as $parentId => $variantIds) {
+            $aggregations['p' . $parentId] = [
+                'filter' => ['ids' => ['values' => array_map('strval', $variantIds)]],
+                'aggs' => [
+                    'salable' => ['filter' => ['bool' => ['filter' => [$enabled, ['term' => ['stock.isSalable' => true]]]]], 'aggs' => $stats],
+                    'all' => ['filter' => $enabled, 'aggs' => $stats],
+                ],
+            ];
+        }
+        $result = $this->query->aggregate(
+            $this->aliasName($storeViewCode),
+            ['ids' => ['values' => array_map('strval', array_merge(...array_values($variantIdsByParent)))]],
+            $aggregations
+        );
+
+        $ranges = [];
+        foreach (array_keys($variantIdsByParent) as $parentId) {
+            foreach (['salable', 'all'] as $mode) {
+                $bucket = $result['p' . $parentId][$mode] ?? [];
+                $ranges[$parentId][$mode] = isset($bucket['minFinal']['value'])
+                    ? [
+                        (float)$bucket['minRegular']['value'],
+                        (float)$bucket['minFinal']['value'],
+                        (float)$bucket['maxRegular']['value'],
+                        (float)$bucket['maxFinal']['value'],
+                    ]
+                    : null;
+            }
+        }
+
+        return $ranges;
+    }
+
     private function ensureIndex(string $storeViewCode): void
     {
         if (isset($this->ensured[$storeViewCode])) {

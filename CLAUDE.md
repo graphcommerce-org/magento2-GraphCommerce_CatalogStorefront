@@ -27,25 +27,34 @@ ids in the feed instead of the labels.
 ## Shape
 
 - Write: `LocalExportFeed` routes feed slices into one document per store view
-  (products = base, prices = `prices.g<group code>`, inventory = `stock`,
-  variants = `variantIds` on the configurable parent, reviews =
-  `reviews.r<review id>` with the vote percents where the review is visible).
+  (products = base, prices = `prices.g<group code>` plus `priceIndex.<group
+  key>` with regular and final price per customer group and the fallback row
+  resolved, inventory = `stock`, variants = `variantIds` on the configurable
+  parent, reviews = `reviews.r<review id>` with the vote percents where the
+  review is visible). `Model/ProductPrice` holds the price semantics both sides
+  share.
   `etc/et_schema.xml` extends the feed with what the read side needs and the
   exporter lacks: link position, option admin label and textual swatch value
   (`Plugin/Feed/*`), and a reviews provider that exports during indexing
   (`Model/Feed/ReviewsDataProcessor`, feed table `gc_product_reviews_feed`).
 - Read: `ServeSearchFromDocuments` / `ServeFilterFromDocuments` rebuild product
   models from documents through `DocumentHydration`, which also attaches the
-  variant documents when `price_range` is requested. Per-field plugins in
+  configurable price ranges when `price_range` is requested: one aggregation
+  request per page with a filter per parent over its `variantIds`, min and max
+  of `priceIndex.<group key>` over salable and over all enabled variants. Per-field plugins in
   `Plugin/Resolver/*` serve price_range (simple, virtual, downloadable,
   configurable), media_gallery, url_rewrites, max_sale_qty,
   configurable_options with swatch_data, downloadable links and samples,
   rating_summary, review_count, and related, upsell and crosssell products
   (fetched by sku). `Plugin/SalableFromDocument` answers the configurable and
   bundle salability check from the inventory slice.
-- The product index mapping is `dynamic: false` with only `sku` mapped as a
-  keyword. Every field is stored in `_source`; rich configurable documents
-  otherwise exceed the 1000-field mapping limit and their writes fail silently.
+- The product index mapping is `dynamic: false`; only `sku`, `status`,
+  `stock.isSalable` and the `priceIndex` floats are mapped, because requests
+  filter or aggregate on them. Every field is stored in `_source`; rich
+  configurable documents otherwise exceed the 1000-field mapping limit and
+  their writes fail silently. Wildcard `_source` filters are very slow: never.
+- A listing page costs three OpenSearch requests on the document path: the
+  core product search, the products fetch, the price aggregation.
 - The GraphCommerce ProductList query (`dev/parity/queries/13-*.graphql`, all
   fragments and injections resolved) runs on the document path with no catalog
   SQL: only per-process metadata and bootstrap queries remain.

@@ -83,7 +83,13 @@ class LinkedProductsFromDocuments
                     $linkedDocuments[(int)$entry->getId()] = $entry->getData();
                 }
                 $visibleIds = $this->visibility->getVisibleInCatalogIds();
-                foreach ($this->hydration->buildModels($store, $linkedDocuments, $requestedFields) as $model) {
+                $models = $this->hydration->buildModels(
+                    $store,
+                    $linkedDocuments,
+                    $requestedFields,
+                    $this->hydration->groupKey($context)
+                );
+                foreach ($models as $model) {
                     if ((int)$model->getStatus() === Status::STATUS_ENABLED
                         && in_array((int)$model->getVisibility(), $visibleIds, true)
                         && $model->isAvailable()
