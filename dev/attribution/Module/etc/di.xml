@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- Outermost on every type, so a short-circuiting module plugin is still counted. -->
+    <type name="Magento\Framework\AppInterface">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\GraphQl\Controller\GraphQl">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\Framework\GraphQl\Query\QueryProcessor">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\Framework\GraphQl\Query\QueryParser">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\Framework\GraphQl\Schema\SchemaGeneratorInterface">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\Framework\GraphQl\Query\ResolverInterface">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+        <plugin name="graphcommerce_attribution_inner" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Inner" sortOrder="1000"/>
+    </type>
+    <type name="Magento\Framework\GraphQl\Query\Resolver\BatchResolverInterface">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+        <plugin name="graphcommerce_attribution_inner" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Inner" sortOrder="1000"/>
+    </type>
+    <type name="Magento\Framework\GraphQl\Schema\Type\ResolveInfoFactory">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\Framework\DB\Adapter\Pdo\Mysql">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\OpenSearch\Model\OpenSearch">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\OpenSearch\SearchAdapter\Adapter">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Storage\Client\ElasticsearchQuery">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\ProductSearch">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Storage\ProductDocumentStorage">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Read\DocumentHydration">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\Framework\Cache\Frontend\Adapter\Symfony">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+</config>

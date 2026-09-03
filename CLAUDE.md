@@ -106,14 +106,29 @@ ids in the feed instead of the labels.
   nothing. Under concurrent load every thread pays that once per shape: warm
   the worker after a deploy, or set `num` on the web-worker in the Caddyfile.
 - Measure server side, not only over the wire: the proxy chain and a TLS
-  handshake add 10 to 20ms, and the first request after a few idle seconds
+  handshake add 2 to 7ms, and the first request after a few idle seconds
   pays 40 to 60ms of wake-up over the wire (15 to 25ms inside PHP, spread
-  evenly over OpenSearch, MySQL and Redis). Steady state for the 200-item
-  GraphCommerce listing is 70 to 80ms inside PHP: core search build 7 to 10ms
-  (OpenSearch itself 1ms plus three price-bucket queries), document multi-search
-  14 to 16ms (OpenSearch 11ms, of which about 6ms is `_source` filtering), 25
-  SQL queries in 3 to 5ms (grouped and bundle price fallback, layer category),
-  the rest is the GraphQL executor and resolvers.
+  evenly over OpenSearch, MySQL and Redis).
+- `dev/attribution` prints the full latency stack of one query: wire, proxy
+  chain, FrankenPHP, PHP launch, dispatch, parse, schema, execution, every
+  resolver class by self time with the plugin chain around it, the search
+  adapter and the document listing down to OpenSearch's own `took`, SQL, Redis
+  and ResolveInfo creation. It is a separate module so the request path stays
+  free of it: link `dev/attribution/Module` to
+  `app/code/GraphCommerce/CatalogStorefrontAttribution`, `module:enable` it,
+  compile, flush, restart the worker, then
+  `dev/attribution/run.sh <container> <proxy graphql url> <query file>`; disable
+  and recompile afterwards. The instrumentation itself costs about 5ms on the
+  200-item listing. Steady state of that listing, measured this way: 86ms over
+  the wire, 78ms inside PHP: execute 71ms of which the products resolver is
+  17ms (core search adapter 7ms with OpenSearch at 1ms, document multi-search
+  15ms with OpenSearch at 11 to 13ms, of which about 6ms is `_source`
+  filtering, model build 2ms), the other resolvers 12ms (price_range 5ms,
+  configurable option value fields 3ms), and the executor walk 37ms (3806
+  ResolveInfo objects 6ms, plugin chains 7ms, webonyx over about 12000 fields
+  the rest); serialization 5ms; 25 SQL queries in 4ms (grouped and bundle price
+  fallback, layer category). The state reset after the response takes 22ms per
+  request on the thread, which is throughput, not latency.
 
 ## Known gaps and deviations
 
