@@ -53,7 +53,8 @@ class Outer
         try {
             return $proceed();
         } finally {
-            $out = ['pre_launch' => round($preLaunch * 1000, 2), 'launch' => round((hrtime(true) - self::$launchStart) / 1e6, 2)];
+            // A caller tags its request to find the line, the parity gate does.
+            $out = ['tag' => $_SERVER['HTTP_X_GC_TAG'] ?? null, 'pre_launch' => round($preLaunch * 1000, 2), 'launch' => round((hrtime(true) - self::$launchStart) / 1e6, 2)];
             foreach (self::$acc as $k => $v) {
                 $out[$k] = [round($v['ms'], 2), $v['n']];
             }

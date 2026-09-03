@@ -7,6 +7,10 @@
         <field name="defaultLabel" type="String"/>
         <field name="textSwatchValue" type="String"/>
     </record>
+    <record name="ProductCustomAttribute">
+        <field name="attributeCode" type="String"/>
+        <field name="value" type="String"/>
+    </record>
     <record name="Product">
         <field name="skuType" type="String" provider="GraphCommerce\CatalogStorefront\Model\Feed\BundleAttributesProvider">
             <using field="productId"/>
@@ -15,6 +19,25 @@
         <field name="shipmentType" type="String" provider="GraphCommerce\CatalogStorefront\Model\Feed\BundleAttributesProvider">
             <using field="productId"/>
             <using field="storeViewCode"/>
+        </field>
+        <field name="customAttributes" type="ProductCustomAttribute" repeated="true" provider="GraphCommerce\CatalogStorefront\Model\Feed\CustomAttributesProvider">
+            <using field="productId"/>
+            <using field="storeViewCode"/>
+            <using field="type"/>
+        </field>
+    </record>
+    <record name="StockItemStatus">
+        <field name="minQty" type="Float" provider="GraphCommerce\CatalogStorefront\Model\Feed\StockItemProvider">
+            <using field="productId"/>
+            <using field="stockId"/>
+        </field>
+        <field name="minSaleQty" type="Float" provider="GraphCommerce\CatalogStorefront\Model\Feed\StockItemProvider">
+            <using field="productId"/>
+            <using field="stockId"/>
+        </field>
+        <field name="maxSaleQty" type="Float" provider="GraphCommerce\CatalogStorefront\Model\Feed\StockItemProvider">
+            <using field="productId"/>
+            <using field="stockId"/>
         </field>
     </record>
     <record name="Category">
@@ -28,6 +51,10 @@
         <field name="label" type="String"/>
     </record>
     <record name="ProductAttributeMetadata">
+        <field name="attributeId" type="Int" provider="GraphCommerce\CatalogStorefront\Model\Feed\AttributeLayerProvider">
+            <using field="id"/>
+            <using field="storeViewCode"/>
+        </field>
         <field name="options" type="ProductAttributeOption" repeated="true" provider="GraphCommerce\CatalogStorefront\Model\Feed\AttributeOptionsProvider">
             <using field="id"/>
             <using field="storeViewCode"/>

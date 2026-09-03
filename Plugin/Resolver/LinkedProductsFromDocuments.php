@@ -83,16 +83,7 @@ class LinkedProductsFromDocuments
                     $linkedDocuments[(int)$entry->getId()] = $entry->getData();
                 }
                 $visibleIds = $this->visibility->getVisibleInCatalogIds();
-                $priceData = [];
-                $groupKey = $this->hydration->groupKey($context);
-                $compositeIds = array_keys(array_filter(
-                    $linkedDocuments,
-                    static fn(array $document) => in_array($document['type'] ?? '', ['configurable', 'grouped', 'bundle'], true)
-                ));
-                if ($compositeIds && in_array('price_range', $requestedFields, true)) {
-                    $priceData = $this->storage->priceData($store->getCode(), $compositeIds, $groupKey);
-                }
-                foreach ($this->hydration->buildModels($store, $linkedDocuments, $priceData, $groupKey, $requestedFields) as $model) {
+                foreach ($this->hydration->models($store, $context, $linkedDocuments, $requestedFields) as $model) {
                     if ((int)$model->getStatus() === Status::STATUS_ENABLED
                         && in_array((int)$model->getVisibility(), $visibleIds, true)
                         && $model->isAvailable()

@@ -3,18 +3,23 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Model\Feed;
 
-use Magento\Framework\App\ResourceConnection;
+use Magento\Catalog\Model\Product;
+use Magento\Eav\Model\Config as EavConfig;
+use Magento\Framework\App\Area;
+use Magento\Store\Model\App\Emulation;
 use Magento\Store\Model\StoreManagerInterface;
 
 /**
- * Feed provider of an attribute's options with their store view labels in
- * sort order, one feed row per option as the exporter assembles a repeated
- * field; the exporter's attribute metadata carries no options.
+ * Adds to an attribute metadata row the options of its source in the store
+ * view's labels and order, as core lists them on read: the option table for
+ * a user attribute, the source model for an attribute like status or the tax
+ * class. The empty entry a source puts first is left out.
  */
 class AttributeOptionsProvider
 {
     public function __construct(
-        private readonly ResourceConnection $resourceConnection,
+        private readonly EavConfig $eavConfig,
+        private readonly Emulation $emulation,
         private readonly StoreManagerInterface $storeManager,
     ) {
     }
@@ -23,32 +28,32 @@ class AttributeOptionsProvider
     {
         $idsByStore = [];
         foreach ($values as $value) {
-            $idsByStore[$value['storeViewCode']][] = (int)$value['id'];
+            $idsByStore[$value['storeViewCode']][(int)$value['id']] = true;
         }
-        $connection = $this->resourceConnection->getConnection();
         $output = [];
         foreach ($idsByStore as $storeViewCode => $ids) {
             $storeId = (int)$this->storeManager->getStore($storeViewCode)->getId();
-            $select = $connection->select()
-                ->from(['option' => $this->resourceConnection->getTableName('eav_attribute_option')], ['attribute_id', 'option_id'])
-                ->join(
-                    ['default_value' => $this->resourceConnection->getTableName('eav_attribute_option_value')],
-                    'default_value.option_id = option.option_id AND default_value.store_id = 0',
-                    []
-                )
-                ->joinLeft(
-                    ['store_value' => $this->resourceConnection->getTableName('eav_attribute_option_value')],
-                    'store_value.option_id = option.option_id AND store_value.store_id = ' . $storeId,
-                    ['label' => $connection->getCheckSql('store_value.value_id > 0', 'store_value.value', 'default_value.value')]
-                )
-                ->where('option.attribute_id IN (?)', $ids)
-                ->order(['option.sort_order ASC', 'option.option_id ASC']);
-            foreach ($connection->fetchAll($select) as $row) {
-                $output[$storeViewCode . '_' . $row['attribute_id'] . '_' . $row['option_id']] = [
-                    'id' => (string)$row['attribute_id'],
-                    'storeViewCode' => $storeViewCode,
-                    'options' => ['id' => (string)$row['option_id'], 'label' => (string)$row['label']],
-                ];
+            $this->emulation->startEnvironmentEmulation($storeId, Area::AREA_FRONTEND, true);
+            try {
+                foreach (array_keys($ids) as $id) {
+                    $attribute = $this->eavConfig->getAttribute(Product::ENTITY, $id);
+                    if (!$attribute->getId() || !$attribute->usesSource()) {
+                        continue;
+                    }
+                    $attribute->setStoreId($storeId);
+                    foreach ($attribute->getSource()->getAllOptions() as $option) {
+                        if (!isset($option['value']) || is_array($option['value']) || (string)$option['value'] === '') {
+                            continue;
+                        }
+                        $output[$storeViewCode . '_' . $id . '_' . $option['value']] = [
+                            'id' => (string)$id,
+                            'storeViewCode' => $storeViewCode,
+                            'options' => ['id' => (string)$option['value'], 'label' => (string)($option['label'] ?? '')],
+                        ];
+                    }
+                }
+            } finally {
+                $this->emulation->stopEnvironmentEmulation();
             }
         }
 

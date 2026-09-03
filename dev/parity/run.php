@@ -6,12 +6,14 @@
  * stock database path and once on the document path, by toggling the
  * serve_reads flag. Reports PASS or a field-level diff per query. With
  * GC_WORKER_CONTAINER set and the attribution module enabled in the worker, a
- * document-path query that runs SQL fails too, with its statements: the first
- * rule of the module is that the request path runs none.
+ * document-path query that runs a SQL lookup fails too, with its statements:
+ * the first rule of the module is that the request path runs none. Each
+ * judged request carries a tag header, so its log line is found by tag. A
+ * write is printed, not failed.
  *
- * Usage, from the Magento root:
- *   php app/code/GraphCommerce/CatalogStorefront/dev/parity/run.php <endpoint>
- * Example endpoint: https://backend.localhost.reachdigital.io/graphql
+ * Usage, from the Magento root, against the worker's own host name:
+ *   GC_WORKER_CONTAINER=project-backend-frankenphp-1 \
+ *   php app/code/GraphCommerce/CatalogStorefront/dev/parity/run.php https://worker.localhost.reachdigital.io/graphql
  */
 declare(strict_types=1);
 
@@ -62,11 +64,11 @@ function normalize(mixed $node): mixed
     return array_map(normalize(...), $node);
 }
 
-function gql(string $endpoint, string $query): array
+function gql(string $endpoint, string $query, string $tag = ''): array
 {
     $context = stream_context_create(['http' => [
         'method' => 'POST',
-        'header' => "Content-Type: application/json\r\n",
+        'header' => "Content-Type: application/json\r\nX-GC-Tag: $tag\r\n",
         'content' => json_encode(['query' => $query]),
         'ignore_errors' => true,
         'timeout' => 120,
@@ -90,27 +92,26 @@ function setFlag(int $value): void
 }
 
 /**
- * The attribution module logs one GCATTR line per GraphQL request in the
- * worker, with the SQL count and statements; the lines of the current worker
- * lifetime, in request order.
- *
- * @return array[]
+ * The attribution module logs one GCATTR line per request in the worker, with
+ * the SQL count and statements and the tag the request carried. The line
+ * reaches the container log a moment after the response.
  */
-function workerRequests(string $container): array
+function workerRequest(string $container, string $tag): ?array
 {
-    $log = (string)shell_exec(sprintf('docker logs %s 2>&1', $container));
-    $log = substr($log, (int)strrpos($log, 'FrankenPHP started'));
-    $requests = [];
-    if (preg_match_all('/GCATTR (\{.*?\})",/', $log, $matches)) {
-        foreach ($matches[1] as $json) {
-            $request = json_decode(str_replace(['\\"', '\\\\'], ['"', '\\'], $json), true);
-            if (isset($request['graphql_dispatch'])) {
-                $requests[] = $request;
+    for ($attempt = 0; $attempt < 20; $attempt++) {
+        $log = (string)shell_exec(sprintf('docker logs --since 2m %s 2>&1', $container));
+        if (preg_match_all('/GCATTR (\{.*?\})",/', $log, $matches)) {
+            foreach ($matches[1] as $json) {
+                $request = json_decode(str_replace(['\\"', '\\\\'], ['"', '\\'], $json), true);
+                if (($request['tag'] ?? null) === $tag) {
+                    return $request;
+                }
             }
         }
+        usleep(100000);
     }
 
-    return $requests;
+    return null;
 }
 
 /**
@@ -155,10 +156,10 @@ if ($container) {
     }
 }
 foreach ($queryFiles as $file) {
-    $before = $container ? count(workerRequests($container)) : 0;
-    $document[$file] = gql($endpoint, file_get_contents($file));
-    if ($container) {
-        $sql[$file] = array_slice(workerRequests($container), $before);
+    $tag = 'parity-' . basename($file, '.graphql') . '-' . getmypid();
+    $document[$file] = gql($endpoint, file_get_contents($file), $tag);
+    if ($container && ($request = workerRequest($container, $tag))) {
+        $sql[$file] = [$request];
     }
 }
 $gate = $container && array_filter($sql);
@@ -184,10 +185,19 @@ foreach ($queryFiles as $file) {
         }
     }
     $statements = [];
+    $writes = [];
     foreach ($sql[$file] ?? [] as $request) {
         foreach ((array)($request['sql_statements'] ?? []) as $statement => $count) {
-            $statements[$statement] = ($statements[$statement] ?? 0) + $count;
+            // A write is not a lookup: core records the search term's popularity on every search.
+            if (preg_match('/^\s*(INSERT|UPDATE|DELETE|REPLACE)\b/i', $statement)) {
+                $writes[$statement] = ($writes[$statement] ?? 0) + $count;
+            } else {
+                $statements[$statement] = ($statements[$statement] ?? 0) + $count;
+            }
         }
+    }
+    foreach ($writes as $statement => $count) {
+        printf("WRITE %s (document path): %dx %s\n", $name, $count, substr($statement, 0, 160));
     }
     if ($statements) {
         $failed++;

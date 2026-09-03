@@ -11,11 +11,15 @@ Catalog read model: feed documents in OpenSearch serve the catalog GraphQL read 
 - The read path MUST fall back to the core resolver whenever the document lacks
   what a field needs, never to a database read of its own.
 - Parity is the gate: `dev/parity/run.php <endpoint>` MUST stay green before a
-  change ships. Run it against the worker with `GC_WORKER_CONTAINER` set and
-  the attribution module enabled: then a document-path query that runs SQL
-  fails with its statements, which is the first rule enforced. Every query
-  runs once unjudged first, so the gate sees the steady state and not the
-  cache fill after the flush. Add a query for every field a new plugin serves. A poison test
+  change ships. Run it against the worker's own host name
+  (`https://worker.localhost.reachdigital.io/graphql`; the backend host name
+  goes to the host PHP-FPM) with `GC_WORKER_CONTAINER` set and the attribution
+  module enabled: then a document-path query that runs a SQL lookup fails with
+  its statements, which is the first rule enforced. Every query runs twice
+  unjudged first, so the gate sees the steady state and not the cache fill
+  after the flush; each judged request is tagged with a header and its log
+  line found by tag. All eighteen queries pass with no lookup; the search
+  listing's two writes (core records the search term) are printed. Add a query for every field a new plugin serves. A poison test
   (edit a document in OpenSearch, see the change in the response) proves a
   field is live; the harness alone cannot. Product `sku` filters accept only
   `eq` and `in`; the harness fails a query that errors on either path.
@@ -84,17 +88,39 @@ left on the request path.
   on the product value the executor hands to child fields, the fields whose
   core resolvers only derive from the model and the document: uid, id,
   new_from_date, new_to_date, rating_summary, review_count, image, small_image
-  and thumbnail (url through `Model/Read/ImageUrl`, label) and price_range
-  (simple, virtual, downloadable, configurable). `ReuseSchema` routes those
-  fields (di.xml `prefilledFields`, per type or interface name) to the
-  pre-filled value and to the core resolver when the parent carries none, so
-  core-served products and what a document cannot answer keep the core path.
-  A pre-filled field costs the executor a plain array read instead of a
-  resolver call with its ResolveInfo object, argument validation and four
+  and thumbnail (url through `Model/Read/ImageUrl`, label), stock_status,
+  only_x_left_in_stock (salable quantity less the item's minimum, at most the
+  configured threshold), quantity (the stock slice's quantity, null when the
+  not-available message hides it), min_sale_qty and max_sale_qty (the stock
+  slice carries the item's own minimum and sale quantities, null where it
+  takes the configured value, `Model/Feed/StockItemProvider`) and price_range
+  (simple, virtual, downloadable, configurable). `ReuseSchema`
+  routes those fields (di.xml `prefilledFields`, per type or interface name)
+  to the pre-filled value and to the core resolver when the parent carries
+  none, so core-served products and what a document cannot answer keep the
+  core path. A pre-filled field costs the executor a plain array read instead
+  of a resolver call with its ResolveInfo object, argument validation and four
   plugins (about 4µs per call). Per-field plugins in `Plugin/Resolver/*` serve
-  media_gallery, url_rewrites, max_sale_qty, configurable_options, downloadable
-  links and samples, and related, upsell and crosssell products (fetched by
-  sku). `Plugin/SalableFromDocument` answers the configurable and bundle
+  media_gallery, url_rewrites, configurable_options, downloadable
+  links and samples, related, upsell and crosssell products (fetched by sku),
+  configurable variants (the children by `variantIds`, enabled and, unless
+  out-of-stock products are shown, salable; the variant attributes resolve
+  from `configurableOptions` keyed by attribute id), bundle items and grouped
+  items (from `optionsV2` and the child documents by `bundleChildIds` and
+  `groupedChildIds`; the option list and label are pre-filled on the item,
+  the product is the child's model, which the core product resolver takes as
+  is), categories (`categoryData` is what the category product index holds:
+  assignments and anchor ancestors, so only the store root is left out; the
+  category documents are fetched once per request for the whole page and
+  hydrated through core's category hydrator), and custom_attributesV2
+  (`customAttributes` on the document: the raw store view value of every
+  attribute of the product's attribute set that has one, plus tier_price the
+  way the load backend sets it, `Model/Feed/CustomAttributesProvider`; the
+  attribute documents give the visible non-static list by attribute id, the
+  frontend input and the options, source model options included). Documents
+  fetched outside a listing go through `DocumentHydration::documents` and
+  `models`, which fetches the composite price data when the fields ask for a
+  price range. `Plugin/SalableFromDocument` answers the configurable and bundle
   salability check from the inventory slice.
 - The product index mapping is `dynamic: false`; only `sku`, `parentIds`,
   `status`, `stock.isSalable` and the `priceIndex` floats are mapped, because
@@ -158,7 +184,12 @@ left on the request path.
   with an admin token, then reindex stock, price, search and the feeds): the
   demo catalog has only a dynamic bundle with required radio options. The
   harness fails a query that returns no product on either path, because a
-  hidden product passed vacuously for hours before that check existed.
+  hidden product passed vacuously for hours before that check existed. The
+  stock query (`18-*.graphql`) needs `24-WG01` at quantity 1 (source item and
+  legacy stock item, then reindex `inventory`, `cataloginventory_stock` and
+  the stock feed), so only_x_left_in_stock has a number to compare. A SQL
+  write on the document path (core records a search term's popularity) is
+  printed as `WRITE`, not failed: the rule forbids lookups.
 - After di.xml changes: `setup:di:compile`, `cache:flush` on the host and in
   the worker container, then restart the worker. After `et_schema.xml` changes
   every feed row changes hash, so the next reindex re-exports everything.
@@ -212,6 +243,16 @@ left on the request path.
   range. A percent bundle selection is a percent of the bundle's regular
   price; core applies a catalog rule on the bundle first.
 - The feed exports the special price attribute without its from and to dates.
+- `quantity` is the stock slice's quantity (the inventory stock, all assigned
+  sources); core reads the legacy stock status, the default source only.
+  `min_sale_qty` and `max_sale_qty` resolve the configured value without a
+  customer group, as core's resolvers do. `custom_attributesV2` falls back to
+  core for a filter on a property the attribute documents lack
+  (`is_html_allowed_on_front`, `is_used_for_promo_rules`,
+  `is_visible_in_advanced_search`, `is_wysiwyg_enabled`). Grouped items and
+  bundle selections are not filtered on required customizable options or on
+  stock, as core's collections do in some configurations. Variant attributes
+  are listed by attribute id, the order core's super attribute index yields.
 - `configurable_options` falls back to core when `id` or `use_default` is
   selected: the feed carries no super attribute id.
 - The inventory feed is written to every store view regardless of stock id.

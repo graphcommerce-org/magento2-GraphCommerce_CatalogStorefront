@@ -89,6 +89,45 @@ class DocumentHydration
     }
 
     /**
+     * @param int[] $ids
+     * @return array[] the documents that exist, keyed by product id
+     */
+    public function documents(string $storeViewCode, array $ids): array
+    {
+        $documents = [];
+        if ($ids) {
+            foreach ($this->storage->get($storeViewCode, array_values(array_unique($ids))) as $entry) {
+                $documents[(int)$entry->getId()] = $entry->getData();
+            }
+        }
+
+        return $documents;
+    }
+
+    /**
+     * Models of documents fetched outside a listing, with the composite price
+     * data fetched when the fields ask for a price range.
+     *
+     * @param array[] $documents keyed by product id
+     * @param string[] $requestedFields product fields the query selects; empty selects all
+     * @return Product[] keyed by product id
+     */
+    public function models(StoreInterface $store, ?ContextInterface $context, array $documents, array $requestedFields): array
+    {
+        $groupKey = $this->groupKey($context);
+        $priceData = [];
+        $compositeIds = array_keys(array_filter(
+            $documents,
+            static fn(array $document) => in_array($document['type'] ?? '', ['configurable', 'grouped', 'bundle', 'bundle_fixed'], true)
+        ));
+        if ($compositeIds && in_array('price_range', $requestedFields, true)) {
+            $priceData = $this->storage->priceData($store->getCode(), $compositeIds, $groupKey);
+        }
+
+        return $this->buildModels($store, $documents, $priceData, $groupKey, $requestedFields);
+    }
+
+    /**
      * @param array[] $documents keyed by product id
      * @param array $priceData composite price data as ProductDocumentStorage::priceData() returns it, or empty
      * @param string[] $requestedFields product fields the query selects; empty selects all

@@ -9,7 +9,9 @@ use Magento\Catalog\Model\Product\Type;
 use Magento\CatalogGraphQl\Model\Resolver\Product\Price\Discount;
 use Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\Image\Placeholder;
 use Magento\CatalogInventory\Api\StockConfigurationInterface;
+use Magento\CatalogInventory\Model\Config\Source\NotAvailableMessage;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
+use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Downloadable\Model\Product\Type as DownloadableType;
 use Magento\Framework\GraphQl\Query\Uid;
 use Magento\GroupedProduct\Model\Product\Type\Grouped;
@@ -37,7 +39,10 @@ class Prefill
 
     private const DATE_ATTRIBUTES = ['new_from_date' => 'news_from_date', 'new_to_date' => 'news_to_date'];
 
+    private const CONFIG_NOT_AVAILABLE_MESSAGE = 'cataloginventory/options/not_available_message';
+
     public function __construct(
+        private readonly ScopeConfigInterface $scopeConfig,
         private readonly Uid $uidEncoder,
         private readonly ReviewsConfig $reviewsConfig,
         private readonly Placeholder $placeholder,
@@ -77,7 +82,11 @@ class Prefill
         $currency = $store->getCurrentCurrencyCode();
         $mediaBaseUrl = $store->getBaseUrl(UrlInterface::URL_TYPE_MEDIA);
         $placeholders = [];
-        $showOutOfStock = $priceServable && $this->stockConfiguration->isShowOutOfStock();
+        $storeId = (int)$store->getId();
+        $showOutOfStock = $priceServable && $this->stockConfiguration->isShowOutOfStock($storeId);
+        // Core hides the quantity when the not-available message is set to "not enough items".
+        $quantityShown = $selected('quantity')
+            && (int)$this->scopeConfig->getValue(self::CONFIG_NOT_AVAILABLE_MESSAGE) !== NotAvailableMessage::VALUE_NOT_ENOUGH_ITEMS;
 
         foreach ($models as $id => $product) {
             $document = $documents[$id] ?? [];
@@ -87,6 +96,25 @@ class Prefill
             }
             if ($selected('id')) {
                 $filled['id'] = (int)$id;
+            }
+            if ($selected('stock_status')) {
+                $filled['stock_status'] = ($document['stock']['isSalable'] ?? $document['inStock'] ?? false)
+                    ? 'IN_STOCK'
+                    : 'OUT_OF_STOCK';
+            }
+            if ($selected('only_x_left_in_stock')) {
+                $filled['only_x_left_in_stock'] = $this->onlyXLeft($document, $product->getTypeId(), $storeId);
+            }
+            if ($selected('quantity')) {
+                $filled['quantity'] = $quantityShown ? (float)($document['stock']['qty'] ?? 0) : null;
+            }
+            if ($selected('min_sale_qty')) {
+                $filled['min_sale_qty'] = (float)($document['stock']['minSaleQty']
+                    ?? $this->stockConfiguration->getMinSaleQty($storeId));
+            }
+            if ($selected('max_sale_qty')) {
+                $filled['max_sale_qty'] = (float)($document['stock']['maxSaleQty']
+                    ?? $this->stockConfiguration->getMaxSaleQty($storeId));
             }
             // The products query hands the field over translated to its attribute code.
             foreach (self::DATE_ATTRIBUTES as $field => $attribute) {
@@ -138,6 +166,27 @@ class Prefill
             }
             $product->setData(self::KEY, $filled);
         }
+    }
+
+    /**
+     * The salable quantity less the stock item's minimum, when it is positive
+     * and at most the configured threshold; only product types with their own
+     * source items have a quantity. The stock slice carries the item's own
+     * minimum, null where it takes the configured value.
+     */
+    private function onlyXLeft(array $document, string $typeId, int $storeId): ?float
+    {
+        $stock = $document['stock'] ?? null;
+        if (!in_array($typeId, [Type::TYPE_SIMPLE, Type::TYPE_VIRTUAL, DownloadableType::TYPE_DOWNLOADABLE], true)
+            || !is_array($stock)
+            || empty($stock['isSalable'])
+        ) {
+            return null;
+        }
+        $left = (float)($stock['qtyForSale'] ?? 0)
+            - (float)($stock['minQty'] ?? $this->stockConfiguration->getMinQty($storeId));
+
+        return $left > 0 && $left <= (float)$this->stockConfiguration->getStockThresholdQty($storeId) ? $left : null;
     }
 
     private function singleRange(array $document, string $groupKey): ?array
