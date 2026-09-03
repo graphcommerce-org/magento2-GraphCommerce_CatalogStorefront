@@ -47,8 +47,10 @@ ids in the feed instead of the labels.
   query); `RootCategoryFromStore` takes the root category id from the store
   model; `PriceRangeStepMemo` keeps the current category's price step per
   process; `Plugin/CacheId/CustomerTaxRateMemo` keeps the response cache id's
-  tax factor per store, group and customer per process. With these, a listing
-  request runs one SQL query: core's deployment config hash check.
+  tax factor per store, group and customer per process;
+  `Plugin/Deploy/ConfigChangeMemo` answers core's deployment config hash check
+  once per process (a detected change is not kept, so an import lifts it). With
+  these, a listing request runs no SQL.
   `etc/et_schema.xml` extends the feed with what the read side needs and the
   exporter lacks: link position, option admin label and textual swatch value
   (`Plugin/Feed/*`), and a reviews provider that exports during indexing
@@ -165,7 +167,7 @@ ids in the feed instead of the labels.
   is `_source` filtering, model build 2ms), the other resolvers 2ms (150
   resolver calls), and the webonyx walk over about 22000 fields 25ms; the
   plugins around the controller 1ms, response build 3ms (JSON render 0.7ms);
-  one SQL query, the deployment config hash check. The state reset after the
+  no SQL. The state reset after the
   response takes 22ms per request on the thread, which is throughput, not
   latency. PHP JIT (tracing and function mode) makes this workload 10 to 20%
   slower in the worker and, combined with the kept schema, produced erratic

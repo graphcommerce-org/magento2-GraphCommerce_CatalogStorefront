@@ -134,6 +134,10 @@
         <plugin name="graphcommerce_catalog_storefront_tax_rate_memo"
                 type="GraphCommerce\CatalogStorefront\Plugin\CacheId\CustomerTaxRateMemo"/>
     </type>
+    <type name="Magento\Deploy\Model\DeploymentConfig\ChangeDetector">
+        <plugin name="graphcommerce_catalog_storefront_config_change_memo"
+                type="GraphCommerce\CatalogStorefront\Plugin\Deploy\ConfigChangeMemo"/>
+    </type>
     <type name="Magento\Framework\GraphQl\Schema\SchemaGeneratorInterface">
         <plugin name="graphcommerce_catalog_storefront_reuse_schema"
                 type="GraphCommerce\CatalogStorefront\Plugin\GraphQl\ReuseSchema"/>
