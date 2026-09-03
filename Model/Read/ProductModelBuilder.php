@@ -21,6 +21,8 @@ use Magento\Tax\Model\ResourceModel\TaxClass\CollectionFactory as TaxClassCollec
  */
 class ProductModelBuilder
 {
+    public const DOCUMENT_KEY = '_gc_document';
+
     private const GUEST_CUSTOMER_GROUP = '0';
 
     /** @var array<string, string|null> */
@@ -108,6 +110,7 @@ class ProductModelBuilder
 
         $product = $this->productFactory->create();
         $product->setData($data);
+        $product->setData(self::DOCUMENT_KEY, $document);
         $product->setStoreId($storeId);
         $product->setHasDataChanges(false);
 
