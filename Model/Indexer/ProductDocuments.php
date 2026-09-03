@@ -26,6 +26,15 @@ class ProductDocuments implements
 {
     public const INDEXER_ID = 'graphcommerce_catalog_documents';
 
+    /**
+     * Association data whose consumers call methods on the entries, so a document
+     * must not carry them as arrays. The type model loads them from the database.
+     */
+    private const OBJECT_ASSOCIATION_KEYS = [
+        'downloadable_links' => true,
+        'downloadable_samples' => true,
+    ];
+
     public function __construct(
         private readonly DocumentStore $documentStore,
         private readonly ProductRepositoryInterface $productRepository,
@@ -101,6 +110,9 @@ class ProductDocuments implements
 
     private function extract(ProductInterface $product): array
     {
-        return $this->hydratorPool->getHydrator(ProductInterface::class)->extract($product);
+        return array_diff_key(
+            $this->hydratorPool->getHydrator(ProductInterface::class)->extract($product),
+            self::OBJECT_ASSOCIATION_KEYS
+        );
     }
 }

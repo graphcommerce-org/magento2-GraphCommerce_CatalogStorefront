@@ -59,6 +59,14 @@ bin/magento cache:flush config
 documents and every request uses the stock path, so you can build the index first and
 flip reads per store view.
 
+## Known deviations from the stock path
+
+- Downloadable products with links purchased separately return a `price_range`
+  whose maximum includes the link prices. The stock collection path does not load
+  `links_purchased_separately` and returns 0 for these products. The document path
+  matches what core computes for a fully loaded product and what the price index
+  stores.
+
 ## Scope and limits
 
 - Serves the `products` GraphQL query. Cart, checkout, customers, orders and the admin
