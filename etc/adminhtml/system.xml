@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <tab id="graphcommerce" translate="label" sortOrder="400">
+            <label>GraphCommerce</label>
+        </tab>
+        <section id="graphcommerce" translate="label" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Catalog Storefront</label>
+            <tab>graphcommerce</tab>
+            <resource>GraphCommerce_CatalogStorefront::config</resource>
+            <group id="catalog_storefront" translate="label" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Catalog Read Model</label>
+                <field id="serve_reads" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Serve Catalog GraphQL From Documents</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Requires synced feeds. Requests fall back to the database when a document is missing.</comment>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

@@ -3,6 +3,22 @@
     <preference for="Magento\DataExporter\Model\ExportFeedInterface"
                 type="GraphCommerce\CatalogStorefront\Model\LocalExportFeed"/>
 
+    <preference for="GraphCommerce\CatalogStorefront\Model\Storage\Client\CommandInterface"
+                type="GraphCommerce\CatalogStorefront\Model\Storage\Client\ElasticsearchCommand"/>
+    <preference for="GraphCommerce\CatalogStorefront\Model\Storage\Client\QueryInterface"
+                type="GraphCommerce\CatalogStorefront\Model\Storage\Client\ElasticsearchQuery"/>
+    <preference for="GraphCommerce\CatalogStorefront\Model\Storage\Client\DataDefinitionInterface"
+                type="GraphCommerce\CatalogStorefront\Model\Storage\Client\ElasticsearchDataDefinitionAdapter"/>
+
+    <type name="Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\ProductSearch">
+        <plugin name="graphcommerce_catalog_storefront_serve_search"
+                type="GraphCommerce\CatalogStorefront\Plugin\ServeSearchFromDocuments"/>
+    </type>
+    <type name="Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\Product">
+        <plugin name="graphcommerce_catalog_storefront_serve_filter"
+                type="GraphCommerce\CatalogStorefront\Plugin\ServeFilterFromDocuments"/>
+    </type>
+
     <type name="GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\EntityConfigPool">
         <arguments>
             <argument name="configs" xsi:type="array">

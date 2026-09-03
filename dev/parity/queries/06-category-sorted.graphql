@@ -1,0 +1,6 @@
+{
+  products(filter: { category_id: { eq: "23" } }, sort: { price: ASC }, pageSize: 12) {
+    total_count
+    items { sku name price_range { minimum_price { final_price { value } } } }
+  }
+}

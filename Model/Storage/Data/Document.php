@@ -33,7 +33,7 @@ class Document implements EntryInterface
      */
     public function getId(): string
     {
-        return $this->data['id'];
+        return (string)$this->data['id'];
     }
 
     /**

@@ -1,0 +1,5 @@
+{
+  products(filter: { category_id: { eq: "23" } }) {
+    aggregations { attribute_code label count options { label value count } }
+  }
+}

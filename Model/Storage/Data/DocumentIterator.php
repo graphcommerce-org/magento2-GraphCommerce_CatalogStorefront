@@ -29,7 +29,7 @@ class DocumentIterator implements EntryIteratorInterface
     /**
      * @inheritdoc
      */
-    public function next()
+    public function next(): void
     {
         next($this->documents);
     }
@@ -37,7 +37,7 @@ class DocumentIterator implements EntryIteratorInterface
     /**
      * @inheritdoc
      */
-    public function key()
+    public function key(): mixed
     {
         key($this->documents);
     }
@@ -45,7 +45,7 @@ class DocumentIterator implements EntryIteratorInterface
     /**
      * @inheritdoc
      */
-    public function valid()
+    public function valid(): bool
     {
         return key($this->documents) !== null;
     }
@@ -53,7 +53,7 @@ class DocumentIterator implements EntryIteratorInterface
     /**
      * @inheritdoc
      */
-    public function rewind()
+    public function rewind(): void
     {
         reset($this->documents);
     }
@@ -61,6 +61,7 @@ class DocumentIterator implements EntryIteratorInterface
     /**
      * @inheritdoc
      */
+    #[\ReturnTypeWillChange]
     public function current(): EntryInterface
     {
         return current($this->documents);

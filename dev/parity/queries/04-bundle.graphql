@@ -1,0 +1,12 @@
+{
+  products(filter: { sku: { eq: "24-WG080" } }) {
+    items {
+      uid sku name __typename
+      ... on BundleProduct {
+        dynamic_price dynamic_sku
+        items { title type required option_id options { quantity is_default label uid product { sku } } }
+      }
+      price_range { minimum_price { final_price { value } } maximum_price { final_price { value } } }
+    }
+  }
+}

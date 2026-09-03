@@ -1,0 +1,10 @@
+{
+  products(filter: { sku: { eq: "24-WG085_Group" } }) {
+    items {
+      uid sku name __typename
+      ... on GroupedProduct {
+        items { qty position product { sku name price_range { minimum_price { final_price { value } } } } }
+      }
+    }
+  }
+}

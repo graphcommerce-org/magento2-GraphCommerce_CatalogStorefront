@@ -1,0 +1,16 @@
+{
+  products(search: "jacket", pageSize: 24) {
+    total_count
+    items {
+      uid sku name url_key stock_status
+      description { html }
+      thumbnail { disabled label position url }
+      media_gallery { disabled label position url }
+      categories { name url_path }
+      price_range {
+        minimum_price { regular_price { value currency } final_price { value currency } discount { amount_off percent_off } }
+        maximum_price { regular_price { value currency } final_price { value currency } discount { amount_off percent_off } }
+      }
+    }
+  }
+}
