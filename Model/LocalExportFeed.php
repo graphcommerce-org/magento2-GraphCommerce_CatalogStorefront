@@ -5,6 +5,7 @@ namespace GraphCommerce\CatalogStorefront\Model;
 
 use GraphCommerce\CatalogStorefront\Model\Feed\CompositeLinks;
 use GraphCommerce\CatalogStorefront\Model\Feed\ConfigurableOptionsBuilder;
+use GraphCommerce\CatalogStorefront\Model\Feed\ProductDocumentEnricher;
 use GraphCommerce\CatalogStorefront\Model\Storage\MetadataDocumentStorage;
 use GraphCommerce\CatalogStorefront\Model\Storage\ProductDocumentStorage;
 use Magento\Customer\Api\GroupManagementInterface;
@@ -47,6 +48,7 @@ class LocalExportFeed implements ExportFeedInterface
         private readonly ProductPrice $productPrice,
         private readonly ConfigurableOptionsBuilder $configurableOptionsBuilder,
         private readonly CompositeLinks $compositeLinks,
+        private readonly ProductDocumentEnricher $enricher,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -94,7 +96,7 @@ class LocalExportFeed implements ExportFeedInterface
             }
         }
         foreach (array_unique(array_merge(array_keys($upserts), array_keys($deletes))) as $store) {
-            $documents = $upserts[$store] ?? [];
+            $documents = $this->enricher->enrich($store, $upserts[$store] ?? []);
             foreach ($this->compositeLinks->upserts($store, $documents, $deletes[$store] ?? []) as $id => $links) {
                 $documents[$id] = array_replace($documents[$id] ?? [], $links);
             }

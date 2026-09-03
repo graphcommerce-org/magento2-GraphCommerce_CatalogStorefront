@@ -4,14 +4,14 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefront\Plugin\Search;
 
 use Magento\Elasticsearch\Model\Adapter\FieldMapper\FieldMapperResolver;
+use Magento\Framework\ObjectManager\ResetAfterRequestInterface;
 
 /**
- * Remembers the search index field name per attribute code and context per
- * process. The core mapper loads the attribute for every facet bucket, filter
- * and sort of every request; the field name is attribute metadata. A changed
- * attribute configuration reaches a worker at its next restart.
+ * Remembers the search index field name per attribute code and context within
+ * a request: the core mapper loads the attribute for every facet bucket,
+ * filter and sort, several times per attribute.
  */
-class FieldNameMemo
+class FieldNameMemo implements ResetAfterRequestInterface
 {
     private const LIMIT = 2000;
 
@@ -29,5 +29,10 @@ class FieldNameMemo
         }
 
         return $this->names[$key];
+    }
+
+    public function _resetState(): void
+    {
+        $this->names = [];
     }
 }

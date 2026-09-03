@@ -4,21 +4,17 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefront\Model\Read;
 
 use Magento\Catalog\Model\Product;
-use Magento\Store\Model\StoreManagerInterface;
 use Magento\Catalog\Model\Product\Attribute\Source\Status;
 use Magento\Catalog\Model\Product\Visibility;
 use Magento\Catalog\Model\ProductFactory;
-use Magento\Eav\Model\Config as EavConfig;
-use Magento\Tax\Model\ResourceModel\TaxClass\CollectionFactory as TaxClassCollectionFactory;
 
 /**
  * Builds a catalog product model from a feed document, so the stock GraphQL
  * resolvers can run on it unchanged.
  *
- * The feeds export labels where the model holds ids (status, visibility, tax
- * class, select attribute options) and absolute media URLs where the model
- * holds files, so this builder translates back. Label-to-id maps are cached
- * per process.
+ * The feeds export labels where the model holds ids (status, visibility) and
+ * absolute media URLs where the model holds files, so this builder translates
+ * back; the option and tax class ids were resolved by the writer.
  */
 class ProductModelBuilder
 {
@@ -26,21 +22,11 @@ class ProductModelBuilder
 
     private const GUEST_CUSTOMER_GROUP = '0';
 
-    /** @var array<string, string|null> */
-    private array $optionIdCache = [];
-
-    /** @var array<string, int>|null */
-    private ?array $taxClassMap = null;
-
     /** @var array<string, int>|null */
     private ?array $visibilityMap = null;
 
     public function __construct(
         private readonly ProductFactory $productFactory,
-        private readonly EavConfig $eavConfig,
-        private readonly TaxClassCollectionFactory $taxClassCollectionFactory,
-        private readonly AttributeMetadata $attributeMetadata,
-        private readonly StoreManagerInterface $storeManager,
     ) {
     }
 
@@ -53,7 +39,6 @@ class ProductModelBuilder
         if (!isset($document['sku'], $document['productId'])) {
             return null;
         }
-        $storeViewCode = $this->storeManager->getStore($storeId)->getCode();
 
         $data = [
             'entity_id' => (int)$document['productId'],
@@ -99,8 +84,8 @@ class ProductModelBuilder
         if (isset($document['linksPurchasedSeparately'])) {
             $data['links_purchased_separately'] = (int)$document['linksPurchasedSeparately'];
         }
-        if (isset($document['taxClassId'])) {
-            $data['tax_class_id'] = $this->taxClassId((string)$document['taxClassId']);
+        if (array_key_exists('taxClassNumericId', $document)) {
+            $data['tax_class_id'] = $document['taxClassNumericId'];
         }
 
         foreach ((array)($document['prices'] ?? []) as $priceRow) {
@@ -124,9 +109,8 @@ class ProductModelBuilder
                 continue;
             }
             $data[$attribute['attributeCode']] = $this->attributeValue(
-                $attribute['attributeCode'],
                 (array)($attribute['value'] ?? []),
-                $storeViewCode
+                (array)($attribute['valueId'] ?? [])
             );
         }
 
@@ -151,52 +135,19 @@ class ProductModelBuilder
         return $this->visibilityMap[$label] ?? Visibility::VISIBILITY_NOT_VISIBLE;
     }
 
-    private function taxClassId(string $label): ?int
-    {
-        if ($this->taxClassMap === null) {
-            $this->taxClassMap = [];
-            foreach ($this->taxClassCollectionFactory->create() as $taxClass) {
-                $this->taxClassMap[$taxClass->getClassName()] = (int)$taxClass->getId();
-            }
-        }
-
-        return $this->taxClassMap[$label] ?? null;
-    }
-
     /**
-     * Select and multiselect attributes come as option labels; the model holds
-     * option ids. Attributes without a source keep the raw value.
+     * The model holds option ids where the feed carries labels; the writer
+     * resolved them next to the labels. An attribute without a source keeps
+     * the label.
      */
-    private function attributeValue(string $code, array $labels, string $storeViewCode): ?string
+    private function attributeValue(array $labels, array $ids): ?string
     {
-        $ids = [];
-        foreach ($labels as $label) {
-            $key = $storeViewCode . ':' . $code . ':' . $label;
-            if (!array_key_exists($key, $this->optionIdCache)) {
-                $this->optionIdCache[$key] = $this->lookupOptionId($code, (string)$label, $storeViewCode);
-            }
-            $ids[] = $this->optionIdCache[$key] ?? $label;
+        $values = [];
+        foreach ($labels as $index => $label) {
+            $values[] = $ids[$index] ?? $label;
         }
 
-        return $ids ? implode(',', $ids) : null;
-    }
-
-    private function lookupOptionId(string $code, string $label, string $storeViewCode): ?string
-    {
-        if ($this->attributeMetadata->get($storeViewCode, $code) !== null) {
-            return $this->attributeMetadata->optionId($storeViewCode, $code, $label);
-        }
-        try {
-            $attribute = $this->eavConfig->getAttribute(Product::ENTITY, $code);
-            if (!$attribute->getId() || !$attribute->usesSource()) {
-                return null;
-            }
-            $optionId = $attribute->getSource()->getOptionId($label);
-
-            return $optionId !== null ? (string)$optionId : null;
-        } catch (\Throwable) {
-            return null;
-        }
+        return $values ? implode(',', $values) : null;
     }
 
     private function mediaFile(?string $url): string

@@ -11,19 +11,21 @@ Catalog read model: feed documents in OpenSearch serve the catalog GraphQL read 
 - The read path MUST fall back to the core resolver whenever the document lacks
   what a field needs, never to a database read of its own.
 - Parity is the gate: `dev/parity/run.php <endpoint>` MUST stay green before a
-  change ships. Add a query for every field a new plugin serves. A poison test
+  change ships. Run it against the worker with `GC_WORKER_CONTAINER` set and
+  the attribution module enabled: then a document-path query that runs SQL
+  fails with its statements, which is the first rule enforced. Every query
+  runs once unjudged first, so the gate sees the steady state and not the
+  cache fill after the flush. Add a query for every field a new plugin serves. A poison test
   (edit a document in OpenSearch, see the change in the response) proves a
   field is live; the harness alone cannot. Product `sku` filters accept only
   `eq` and `in`; the harness fails a query that errors on either path.
 
 ## Boundary note
 
-`ProductModelBuilder` decodes feed labels back to ids: select-attribute options
-through the attribute documents (`Model/Read/AttributeMetadata`, the product
-attributes feed extended with options), status and visibility through static
-maps, and the tax class through a map loaded once per process from the tax
-class table, because no feed carries tax classes. That map is the one
-metadata lookup left on the request path.
+`ProductModelBuilder` decodes feed labels back to ids for status and visibility
+through static maps; the option ids and the tax class id come resolved from
+the writer (`Model/Feed/ProductDocumentEnricher`), so no metadata lookup is
+left on the request path.
 
 ## Shape
 
@@ -55,8 +57,8 @@ metadata lookup left on the request path.
   bucket from the category documents (store tree membership by path, store
   view names, direct children and their activity for a category-filtered
   query); `RootCategoryFromStore` takes the root category id from the store
-  model; `PriceRangeStepMemo` keeps the current category's price step per
-  process; `Plugin/CacheId/CustomerTaxRateMemo` keeps the response cache id's
+  model; `PriceRangeStepFromDocument` reads the current category's price step
+  from its document; `Plugin/CacheId/CustomerTaxRateMemo` keeps the response cache id's
   tax factor per store, group and customer per process;
   `Plugin/Deploy/ConfigChangeMemo` answers core's deployment config hash check
   once per process (a detected change is not kept, so an import lifts it). With
@@ -103,16 +105,23 @@ metadata lookup left on the request path.
   core product search, then the multi-search above. Writes are visible to the
   aggregation after the index refresh (one second by default); the fetch by id
   is immediate.
-- Per-process memos, allowed because they hold metadata or pure derivations:
-  `Model/Read/ImageUrl` (image URL per store, type and file),
+- Nothing derived from catalog data is held across requests. What a request
+  needs beyond the documents it fetches per request:
   `Model/Read/AttributeMetadata` and `RatingMetadata` (the store view's
-  attribute and rating documents, loaded once; the facet labels come from them
-  through `Plugin/Layer/AttributeOptionsFromDocuments`), `Plugin/Search/FieldNameMemo` (search
-  index field name per attribute code and context; the core mapper otherwise
-  loads the attribute for each of the 24 facet buckets on every request). A
-  changed label, attribute or media configuration reaches a worker at its next
-  restart. `etc/config.xml` turns on `dev/caching/cache_user_defined_attributes`
-  so the EAV config serves user-defined attributes from cache instead of SQL.
+  attribute and rating documents; the facet labels come from them through
+  `Plugin/Layer/AttributeOptionsFromDocuments`, the rating scale for the
+  review percents) and `Plugin/Search/FieldNameMemo` (search index field name
+  per attribute code and context, the core mapper asks several times per
+  attribute) are request-scoped. Derivations that used to be memos are made by
+  the writer instead: `Model/Feed/ProductDocumentEnricher` puts the image
+  media paths, the option ids and the tax class id on the product document;
+  the category price step travels on the category document. The state that
+  does live for a process lifetime derives from the query text or the
+  deployment, not from catalog data: the kept schemas (`ReuseSchema`), the
+  validated documents (`ValidateOncePerProcess`), the cache id tax factor
+  (`CustomerTaxRateMemo`) and the deployment config check (`ConfigChangeMemo`).
+  `etc/config.xml` turns on `dev/caching/cache_user_defined_attributes` so the
+  EAV config serves user-defined attributes from cache instead of SQL.
 - `Plugin/GraphQl/ValidateOncePerProcess` validates a query document once per
   process and executes repeats with an empty rule set. `Plugin/GraphQl/ReuseSchema`
   keeps one built schema per query shape: Magento prunes every type to the

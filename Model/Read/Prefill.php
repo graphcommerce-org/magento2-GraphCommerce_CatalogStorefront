@@ -7,12 +7,14 @@ use GraphCommerce\CatalogStorefront\Model\ProductPrice;
 use Magento\Catalog\Model\Product;
 use Magento\Catalog\Model\Product\Type;
 use Magento\CatalogGraphQl\Model\Resolver\Product\Price\Discount;
+use Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\Image\Placeholder;
 use Magento\CatalogInventory\Api\StockConfigurationInterface;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 use Magento\Downloadable\Model\Product\Type as DownloadableType;
 use Magento\Framework\GraphQl\Query\Uid;
 use Magento\GroupedProduct\Model\Product\Type\Grouped;
 use Magento\Framework\Pricing\PriceCurrencyInterface;
+use Magento\Framework\UrlInterface;
 use Magento\Review\Model\Review\Config as ReviewsConfig;
 use Magento\Store\Api\Data\StoreInterface;
 use Magento\Tax\Model\Config as TaxConfig;
@@ -37,8 +39,8 @@ class Prefill
 
     public function __construct(
         private readonly Uid $uidEncoder,
-        private readonly ImageUrl $imageUrl,
         private readonly ReviewsConfig $reviewsConfig,
+        private readonly Placeholder $placeholder,
         private readonly Discount $discount,
         private readonly PriceCurrencyInterface $priceCurrency,
         private readonly StockConfigurationInterface $stockConfiguration,
@@ -73,6 +75,8 @@ class Prefill
             && (int)$this->taxConfig->getPriceDisplayType($store) === TaxConfig::DISPLAY_TYPE_EXCLUDING_TAX
             && !$this->weeeHelper->isEnabled($store);
         $currency = $store->getCurrentCurrencyCode();
+        $mediaBaseUrl = $store->getBaseUrl(UrlInterface::URL_TYPE_MEDIA);
+        $placeholders = [];
         $showOutOfStock = $priceServable && $this->stockConfiguration->isShowOutOfStock();
 
         foreach ($models as $id => $product) {
@@ -105,10 +109,12 @@ class Prefill
                 $filled['review_count'] = count($reviews);
             }
             foreach (self::IMAGE_TYPES as $type) {
-                if ($selected($type)) {
-                    $file = $product->getData($type);
+                $image = $document['imageUrls'][$type] ?? null;
+                if ($selected($type) && is_array($image)) {
                     $filled[$type] = [
-                        self::KEY => ['url' => $this->imageUrl->get($store, $type, is_string($file) ? $file : null)],
+                        self::KEY => ['url' => isset($image['mediaPath'])
+                            ? $mediaBaseUrl . $image['mediaPath']
+                            : $placeholders[$type] ??= $this->placeholder->getPlaceholder($type)],
                         'label' => $product->getData($type . '_label') ?: $product->getData('name'),
                     ];
                 }

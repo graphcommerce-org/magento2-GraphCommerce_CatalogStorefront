@@ -4,14 +4,14 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefront\Model\Read;
 
 use GraphCommerce\CatalogStorefront\Model\Storage\MetadataDocumentStorage;
+use Magento\Framework\ObjectManager\ResetAfterRequestInterface;
 
 /**
- * The store view's attribute documents, loaded once per process: labels,
+ * The store view's attribute documents, loaded once per request: labels,
  * frontend input, layer position, filterable mode and the options with their
- * labels, from the product attributes feed. A changed attribute reaches a
- * worker at its next restart.
+ * labels, from the product attributes feed. 
  */
-class AttributeMetadata
+class AttributeMetadata implements ResetAfterRequestInterface
 {
     /** @var array<string, array[]> attribute documents per store view keyed by attribute code */
     private array $byStore = [];
@@ -50,5 +50,11 @@ class AttributeMetadata
         }
 
         return $this->optionIds[$key][$label] ?? null;
+    }
+
+    public function _resetState(): void
+    {
+        $this->byStore = [];
+        $this->optionIds = [];
     }
 }

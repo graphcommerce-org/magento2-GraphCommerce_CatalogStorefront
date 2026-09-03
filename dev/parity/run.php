@@ -4,7 +4,10 @@
  *
  * Runs every query in queries/ against the same endpoint twice: once on the
  * stock database path and once on the document path, by toggling the
- * serve_reads flag. Reports PASS or a field-level diff per query.
+ * serve_reads flag. Reports PASS or a field-level diff per query. With
+ * GC_WORKER_CONTAINER set and the attribution module enabled in the worker, a
+ * document-path query that runs SQL fails too, with its statements: the first
+ * rule of the module is that the request path runs none.
  *
  * Usage, from the Magento root:
  *   php app/code/GraphCommerce/CatalogStorefront/dev/parity/run.php <endpoint>
@@ -87,6 +90,30 @@ function setFlag(int $value): void
 }
 
 /**
+ * The attribution module logs one GCATTR line per GraphQL request in the
+ * worker, with the SQL count and statements; the lines of the current worker
+ * lifetime, in request order.
+ *
+ * @return array[]
+ */
+function workerRequests(string $container): array
+{
+    $log = (string)shell_exec(sprintf('docker logs %s 2>&1', $container));
+    $log = substr($log, (int)strrpos($log, 'FrankenPHP started'));
+    $requests = [];
+    if (preg_match_all('/GCATTR (\{.*?\})",/', $log, $matches)) {
+        foreach ($matches[1] as $json) {
+            $request = json_decode(str_replace(['\\"', '\\\\'], ['"', '\\'], $json), true);
+            if (isset($request['graphql_dispatch'])) {
+                $requests[] = $request;
+            }
+        }
+    }
+
+    return $requests;
+}
+
+/**
  * @return string[] json-pointer-ish paths of differing leaves
  */
 function diffPaths(mixed $a, mixed $b, string $path = ''): array
@@ -117,9 +144,26 @@ foreach ($queryFiles as $file) {
     $stock[$file] = gql($endpoint, file_get_contents($file));
 }
 $document = [];
+$sql = [];
 setFlag(1);
+$container = getenv('GC_WORKER_CONTAINER');
+if ($container) {
+    // Every query runs once unjudged: both worker threads take their cold request and the
+    // caches the flush emptied fill up, so the gate sees the steady state.
+    foreach (array_merge($queryFiles, $queryFiles) as $file) {
+        gql($endpoint, file_get_contents($file));
+    }
+}
 foreach ($queryFiles as $file) {
+    $before = $container ? count(workerRequests($container)) : 0;
     $document[$file] = gql($endpoint, file_get_contents($file));
+    if ($container) {
+        $sql[$file] = array_slice(workerRequests($container), $before);
+    }
+}
+$gate = $container && array_filter($sql);
+if ($container && !$gate) {
+    echo "NOTE  SQL gate skipped: enable GraphCommerce_CatalogStorefrontAttribution in the worker\n";
 }
 
 $failed = 0;
@@ -138,6 +182,20 @@ foreach ($queryFiles as $file) {
             printf("EMPTY %s (%s path): no products returned\n", $name, $path);
             continue 2;
         }
+    }
+    $statements = [];
+    foreach ($sql[$file] ?? [] as $request) {
+        foreach ((array)($request['sql_statements'] ?? []) as $statement => $count) {
+            $statements[$statement] = ($statements[$statement] ?? 0) + $count;
+        }
+    }
+    if ($statements) {
+        $failed++;
+        printf("SQL   %s (document path): %d queries\n", $name, array_sum($statements));
+        foreach (array_slice($statements, 0, 8, true) as $statement => $count) {
+            printf("      %dx %s\n", $count, substr($statement, 0, 200));
+        }
+        continue;
     }
     $diffs = diffPaths(normalize($stock[$file]), normalize($document[$file]));
     if (!$diffs) {

@@ -156,8 +156,8 @@
                 type="GraphCommerce\CatalogStorefront\Plugin\Layer\RootCategoryFromStore"/>
     </type>
     <type name="Magento\Catalog\Model\Layer\Filter\Price\Range">
-        <plugin name="graphcommerce_catalog_storefront_price_step_memo"
-                type="GraphCommerce\CatalogStorefront\Plugin\Layer\PriceRangeStepMemo"/>
+        <plugin name="graphcommerce_catalog_storefront_price_step"
+                type="GraphCommerce\CatalogStorefront\Plugin\Layer\PriceRangeStepFromDocument"/>
     </type>
     <type name="Magento\CustomerGraphQl\CacheIdFactorProviders\CustomerTaxRateProvider">
         <plugin name="graphcommerce_catalog_storefront_tax_rate_memo"
@@ -185,6 +185,11 @@
         </arguments>
     </type>
     <type name="GraphCommerce\CatalogStorefront\Plugin\Layer\CategoryFacetFromDocuments">
+        <arguments>
+            <argument name="categoryStorage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage</argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Plugin\Layer\PriceRangeStepFromDocument">
         <arguments>
             <argument name="categoryStorage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage</argument>
         </arguments>

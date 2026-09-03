@@ -1,0 +1,19 @@
+{
+  products(filter: { category_id: { eq: "3" } }, pageSize: 100) {
+    items {
+      sku
+      related_products {
+        name
+        uid
+      }
+      upsell_products {
+        name
+        uid
+      }
+      crosssell_products {
+        name
+        uid
+      }
+    }
+  }
+}

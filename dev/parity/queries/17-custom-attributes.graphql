@@ -1,0 +1,21 @@
+{
+  products(filter: { category_id: { eq: "3" } }, pageSize: 100) {
+    items {
+      sku
+      custom_attributesV2 {
+        items {
+          code
+          ... on AttributeValue {
+            value
+          }
+          ... on AttributeSelectedOptions {
+            selected_options {
+              label
+              value
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -17,6 +17,12 @@
             <using field="storeViewCode"/>
         </field>
     </record>
+    <record name="Category">
+        <field name="filterPriceRange" type="String" provider="GraphCommerce\CatalogStorefront\Model\Feed\CategoryPriceStepProvider">
+            <using field="categoryId"/>
+            <using field="storeViewCode"/>
+        </field>
+    </record>
     <record name="ProductAttributeOption">
         <field name="id" type="ID"/>
         <field name="label" type="String"/>
