@@ -36,7 +36,8 @@ ids in the feed instead of the labels.
   `etc/et_schema.xml` extends the feed with what the read side needs and the
   exporter lacks: link position, option admin label and textual swatch value
   (`Plugin/Feed/*`), and a reviews provider that exports during indexing
-  (`Model/Feed/ReviewsDataProcessor`, feed table `gc_product_reviews_feed`).
+  (`Model/Feed/ReviewsDataProcessor`; `etc/db_schema.xml` adds the modern feed
+  columns to the exporter's own `catalog_data_exporter_product_reviews`).
 - Read: `ServeSearchFromDocuments` / `ServeFilterFromDocuments` rebuild product
   models from documents through `DocumentHydration`. A listing page is one
   multi-search request: the documents by id with the heavy keys the query does
@@ -80,8 +81,9 @@ ids in the feed instead of the labels.
   A benchmark that flips the flag must do this, or both runs measure one path.
 - With immediate export, a full `indexer:reindex` of a feed skips rows whose
   feed hash is unchanged, so it does not repair a document store. To rebuild
-  the documents: drop the index, truncate the `cde_*` and `gc_*` feed tables,
-  then reindex the products, prices, stock, variants and reviews feeds.
+  the documents: drop the index, truncate the `cde_*` feed tables and
+  `catalog_data_exporter_product_reviews`, then reindex the products, prices,
+  stock, variants and reviews feeds.
 - After di.xml changes: `setup:di:compile`, `cache:flush` on the host and in
   the worker container, then restart the worker. After `et_schema.xml` changes
   every feed row changes hash, so the next reindex re-exports everything.

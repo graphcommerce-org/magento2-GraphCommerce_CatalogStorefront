@@ -26,11 +26,10 @@
         <plugin name="graphcommerce_catalog_storefront_url_rewrites"
                 type="GraphCommerce\CatalogStorefront\Plugin\Resolver\UrlRewritesFromDocument"/>
     </type>
-    <!-- The reviews feed is delivered like the catalog feeds: during indexing, into a feed table of the modern layout. -->
+    <!-- The reviews feed is delivered like the catalog feeds: during indexing, keyed like the modern feed tables. -->
     <virtualType name="Magento\ProductReviewDataExporter\Model\Indexer\ProductReviewsFeedIndexMetadata"
                  type="Magento\DataExporter\Model\Indexer\FeedIndexMetadata">
         <arguments>
-            <argument name="feedTableName" xsi:type="string">gc_product_reviews_feed</argument>
             <argument name="feedTableField" xsi:type="string">source_entity_id</argument>
             <argument name="feedTableMutableColumns" xsi:type="array">
                 <item name="feed_data" xsi:type="string">feed_data</item>
@@ -113,6 +112,52 @@
     <type name="Magento\CatalogInventoryGraphQl\Model\Resolver\MaxSaleQtyResolver">
         <plugin name="graphcommerce_catalog_storefront_max_sale_qty"
                 type="GraphCommerce\CatalogStorefront\Plugin\Resolver\MaxSaleQtyFromConfig"/>
+    </type>
+
+    <!-- Document keys a listing fetch leaves out unless the query selects a field that needs them. -->
+    <type name="GraphCommerce\CatalogStorefront\Model\Read\DocumentHydration">
+        <arguments>
+            <argument name="fieldDocumentKeys" xsi:type="array">
+                <item name="description" xsi:type="array"><item name="0" xsi:type="string">description</item></item>
+                <item name="short_description" xsi:type="array"><item name="0" xsi:type="string">shortDescription</item></item>
+                <item name="media_gallery" xsi:type="array"><item name="0" xsi:type="string">media_gallery</item><item name="1" xsi:type="string">images</item><item name="2" xsi:type="string">videos</item></item>
+                <item name="media_gallery_entries" xsi:type="array"><item name="0" xsi:type="string">media_gallery</item><item name="1" xsi:type="string">images</item><item name="2" xsi:type="string">videos</item></item>
+                <item name="url_rewrites" xsi:type="array"><item name="0" xsi:type="string">urlRewrites</item></item>
+                <item name="related_products" xsi:type="array"><item name="0" xsi:type="string">links</item></item>
+                <item name="upsell_products" xsi:type="array"><item name="0" xsi:type="string">links</item></item>
+                <item name="crosssell_products" xsi:type="array"><item name="0" xsi:type="string">links</item></item>
+                <item name="categories" xsi:type="array"><item name="0" xsi:type="string">categoryData</item></item>
+                <item name="configurable_options" xsi:type="array"><item name="0" xsi:type="string">optionsV2</item></item>
+                <item name="options" xsi:type="array"><item name="0" xsi:type="string">optionsV2</item><item name="1" xsi:type="string">shopperInputOptions</item></item>
+                <item name="downloadable_product_links" xsi:type="array"><item name="0" xsi:type="string">optionsV2</item></item>
+                <item name="downloadable_product_samples" xsi:type="array"><item name="0" xsi:type="string">samples</item></item>
+                <item name="links_purchased_separately" xsi:type="array"><item name="0" xsi:type="string">optionsV2</item></item>
+            </argument>
+            <argument name="baseFields" xsi:type="array">
+                <item name="__typename" xsi:type="string">__typename</item>
+                <item name="uid" xsi:type="string">uid</item>
+                <item name="id" xsi:type="string">id</item>
+                <item name="sku" xsi:type="string">sku</item>
+                <item name="name" xsi:type="string">name</item>
+                <item name="url_key" xsi:type="string">url_key</item>
+                <item name="url_suffix" xsi:type="string">url_suffix</item>
+                <item name="type_id" xsi:type="string">type_id</item>
+                <item name="created_at" xsi:type="string">created_at</item>
+                <item name="updated_at" xsi:type="string">updated_at</item>
+                <item name="image" xsi:type="string">image</item>
+                <item name="small_image" xsi:type="string">small_image</item>
+                <item name="thumbnail" xsi:type="string">thumbnail</item>
+                <item name="price_range" xsi:type="string">price_range</item>
+                <item name="stock_status" xsi:type="string">stock_status</item>
+                <item name="new_from_date" xsi:type="string">new_from_date</item>
+                <item name="new_to_date" xsi:type="string">new_to_date</item>
+                <item name="rating_summary" xsi:type="string">rating_summary</item>
+                <item name="review_count" xsi:type="string">review_count</item>
+                <item name="max_sale_qty" xsi:type="string">max_sale_qty</item>
+                <item name="canonical_url" xsi:type="string">canonical_url</item>
+                <item name="only_x_left_in_stock" xsi:type="string">only_x_left_in_stock</item>
+            </argument>
+        </arguments>
     </type>
 
     <type name="GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\EntityConfigPool">

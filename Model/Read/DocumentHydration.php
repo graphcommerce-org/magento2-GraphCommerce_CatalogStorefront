@@ -26,38 +26,16 @@ use Psr\Log\LoggerInterface;
  */
 class DocumentHydration
 {
-    public const CONFIG_SERVE_READS = 'graphcommerce/catalog_storefront/serve_reads';
+    public const CONFIG_SERVE_READS = "graphcommerce/catalog_storefront/serve_reads";
 
-    public const PRICE_RANGE_KEY = '_gc_price_range';
+    public const PRICE_RANGE_KEY = "_gc_price_range";
 
     /**
-     * Document keys a listing can leave out, by the GraphQL fields that need
-     * them. Any other selected field is served from the base keys, except
-     * custom attribute fields, which need the attributes key.
+     * @param array<string, string[]> $fieldDocumentKeys document keys a GraphQL field needs beyond the
+     *        base keys; a listing leaves out every such key its query does not select (di.xml)
+     * @param string[] $baseFields GraphQL fields served from the base keys; any other selected field
+     *        that is not in $fieldDocumentKeys is a custom attribute and keeps the attributes key (di.xml)
      */
-    private const HEAVY_KEYS = [
-        'description' => ['description'],
-        'short_description' => ['shortDescription'],
-        'media_gallery' => ['media_gallery', 'images', 'videos'],
-        'media_gallery_entries' => ['media_gallery', 'images', 'videos'],
-        'url_rewrites' => ['urlRewrites'],
-        'related_products' => ['links'],
-        'upsell_products' => ['links'],
-        'crosssell_products' => ['links'],
-        'categories' => ['categoryData'],
-        'configurable_options' => ['optionsV2'],
-        'options' => ['optionsV2', 'shopperInputOptions'],
-        'downloadable_product_links' => ['optionsV2'],
-        'downloadable_product_samples' => ['samples'],
-        'links_purchased_separately' => ['optionsV2'],
-    ];
-
-    private const BASE_FIELDS = [
-        '__typename', 'uid', 'id', 'sku', 'name', 'url_key', 'url_suffix', 'type_id', 'created_at', 'updated_at',
-        'image', 'small_image', 'thumbnail', 'price_range', 'stock_status', 'new_from_date', 'new_to_date',
-        'rating_summary', 'review_count', 'max_sale_qty', 'canonical_url', 'only_x_left_in_stock',
-    ];
-
     public function __construct(
         private readonly ProductDocumentStorage $storage,
         private readonly ProductModelBuilder $modelBuilder,
@@ -67,8 +45,9 @@ class DocumentHydration
         private readonly CustomerSession $customerSession,
         private readonly ProductPrice $productPrice,
         private readonly LoggerInterface $logger,
-    ) {
-    }
+        private readonly array $fieldDocumentKeys = [],
+        private readonly array $baseFields = [],
+    ) {}
 
     public function enabled(): bool
     {
@@ -80,10 +59,10 @@ class DocumentHydration
      */
     public function groupKey(?ContextInterface $context): string
     {
-        $groupId = $context?->getExtensionAttributes()->getCustomerGroupId()
-            ?? $this->customerSession->getCustomerGroupId();
+        $groupId =
+            $context?->getExtensionAttributes()->getCustomerGroupId() ?? $this->customerSession->getCustomerGroupId();
 
-        return $this->productPrice->groupKey((int)$groupId);
+        return $this->productPrice->groupKey((int) $groupId);
     }
 
     /**
@@ -97,7 +76,7 @@ class DocumentHydration
         int $totalCount,
         \Magento\Framework\Api\SearchCriteriaInterface $searchCriteria,
         ?ContextInterface $context,
-        array $requestedFields = []
+        array $requestedFields = [],
     ): ?SearchResultsInterface {
         try {
             $store = $context?->getExtensionAttributes()->getStore() ?? $this->storeManager->getStore();
@@ -108,7 +87,7 @@ class DocumentHydration
                 $store->getCode(),
                 $ids,
                 $this->sourceExcludes($requestedFields),
-                in_array('price_range', $requestedFields, true) ? $this->groupKey($context) : null
+                in_array("price_range", $requestedFields, true) ? $this->groupKey($context) : null,
             );
             $models = $this->buildModels($store, $documents, $ranges);
             $items = [];
@@ -119,7 +98,7 @@ class DocumentHydration
                 $items[$id] = $models[$id];
             }
         } catch (\Throwable $e) {
-            $this->logger->warning('catalog-storefront read fallback: ' . $e->getMessage());
+            $this->logger->warning("catalog-storefront read fallback: " . $e->getMessage());
 
             return null;
         }
@@ -141,17 +120,17 @@ class DocumentHydration
      */
     public function buildModels(StoreInterface $store, array $documents, array $ranges): array
     {
-        $storeId = (int)$store->getId();
+        $storeId = (int) $store->getId();
         $models = [];
         foreach ($documents as $id => $document) {
             $model = $this->modelBuilder->build($document, $storeId);
             if ($model === null) {
                 continue;
             }
-            if (isset($ranges[(int)$id])) {
-                $model->setData(self::PRICE_RANGE_KEY, $ranges[(int)$id]);
+            if (isset($ranges[(int) $id])) {
+                $model->setData(self::PRICE_RANGE_KEY, $ranges[(int) $id]);
             }
-            $models[(int)$id] = $model;
+            $models[(int) $id] = $model;
         }
 
         return $models;
@@ -165,13 +144,13 @@ class DocumentHydration
     {
         $needed = [];
         foreach ($requestedFields as $field) {
-            if (isset(self::HEAVY_KEYS[$field])) {
-                $needed = array_merge($needed, self::HEAVY_KEYS[$field]);
-            } elseif (!in_array($field, self::BASE_FIELDS, true)) {
-                $needed[] = 'attributes';
+            if (isset($this->fieldDocumentKeys[$field])) {
+                $needed = array_merge($needed, $this->fieldDocumentKeys[$field]);
+            } elseif (!in_array($field, $this->baseFields, true)) {
+                $needed[] = "attributes";
             }
         }
-        $excludable = array_merge(['attributes'], ...array_values(self::HEAVY_KEYS));
+        $excludable = array_merge(["attributes"], ...array_values($this->fieldDocumentKeys));
 
         return array_values(array_diff(array_unique($excludable), $needed));
     }
