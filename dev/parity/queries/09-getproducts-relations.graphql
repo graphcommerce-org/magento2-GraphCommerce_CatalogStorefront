@@ -1,6 +1,11 @@
+# The core maximum price of a downloadable product includes its link prices
+# only when links_purchased_separately is loaded on the model, so the stock
+# path gives a different price for the same product without this selection.
+# The document path always includes them.
 fragment ProductPiece on ProductInterface {
   uid
   name
+  ... on DownloadableProduct { links_purchased_separately }
   price_range {
     maximum_price { discount { amount_off percent_off } final_price { currency value } regular_price { currency value } }
     minimum_price { discount { amount_off percent_off } final_price { currency value } regular_price { currency value } }

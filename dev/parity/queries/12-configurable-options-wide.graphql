@@ -1,0 +1,13 @@
+{
+  products(filter: { sku: { like: "M%" } }, pageSize: 50) {
+    items {
+      sku __typename stock_status
+      ... on ConfigurableProduct {
+        configurable_options {
+          uid attribute_code label position
+          values { value_index uid label swatch_data { __typename value } }
+        }
+      }
+    }
+  }
+}

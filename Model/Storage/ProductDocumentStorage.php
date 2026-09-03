@@ -64,11 +64,22 @@ class ProductDocumentStorage
     }
 
     /**
+     * Missing ids are skipped. A field list limits the returned source.
+     *
      * @param int[] $ids
+     * @param string[] $fields
      */
-    public function get(string $storeViewCode, array $ids): EntryIteratorInterface
+    public function get(string $storeViewCode, array $ids, array $fields = ['*']): EntryIteratorInterface
     {
-        return $this->query->getEntries($this->aliasName($storeViewCode), self::ENTITY, $ids, ['*']);
+        return $this->query->getEntries($this->aliasName($storeViewCode), self::ENTITY, $ids, $fields);
+    }
+
+    /**
+     * @param string[] $skus
+     */
+    public function findBySku(string $storeViewCode, array $skus): EntryIteratorInterface
+    {
+        return $this->query->searchFilteredEntries($this->aliasName($storeViewCode), self::ENTITY, ['sku' => $skus]);
     }
 
     private function ensureIndex(string $storeViewCode): void

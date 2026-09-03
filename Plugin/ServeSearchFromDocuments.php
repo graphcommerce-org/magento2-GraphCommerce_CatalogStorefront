@@ -37,7 +37,8 @@ class ServeSearchFromDocuments
             array_map(static fn($item) => (int)$item->getId(), $searchResult->getItems()),
             (int)$searchResult->getTotalCount(),
             $searchCriteria,
-            $context
+            $context,
+            $attributes
         );
 
         return $rebuilt ?? $proceed($searchCriteria, $searchResult, $attributes, $context);

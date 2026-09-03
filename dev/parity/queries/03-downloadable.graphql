@@ -1,13 +1,13 @@
 {
-  products(filter: { sku: { eq: "240-LV09" } }) {
+  products(filter: { sku: { like: "240-LV%" } }) {
     items {
       uid sku name __typename
       ... on DownloadableProduct {
         links_purchased_separately
-        downloadable_product_links { title price sort_order uid }
-        downloadable_product_samples { title sort_order }
+        downloadable_product_links { id title price sort_order uid sample_url }
+        downloadable_product_samples { id title sort_order sample_url }
       }
-      price_range { minimum_price { final_price { value } } maximum_price { final_price { value } } }
+      price_range { minimum_price { final_price { value } } maximum_price { final_price { value } regular_price { value } discount { amount_off } } }
     }
   }
 }

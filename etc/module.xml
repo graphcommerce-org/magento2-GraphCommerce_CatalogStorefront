@@ -3,6 +3,7 @@
     <module name="GraphCommerce_CatalogStorefront">
         <sequence>
             <module name="Magento_DataExporter"/>
+            <module name="Magento_CatalogDataExporter"/>
         </sequence>
     </module>
 </config>

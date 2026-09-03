@@ -78,6 +78,9 @@ class ProductModelBuilder
             'is_salable' => (int)($document['stock']['isSalable'] ?? $document['inStock'] ?? false),
         ];
 
+        if (isset($document['linksPurchasedSeparately'])) {
+            $data['links_purchased_separately'] = (int)$document['linksPurchasedSeparately'];
+        }
         if (isset($document['taxClassId'])) {
             $data['tax_class_id'] = $this->taxClassId((string)$document['taxClassId']);
         }

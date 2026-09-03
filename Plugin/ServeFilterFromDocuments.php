@@ -37,7 +37,8 @@ class ServeFilterFromDocuments
             array_map(static fn($item) => (int)$item->getId(), $result->getItems()),
             (int)$result->getTotalCount(),
             $searchCriteria,
-            $context
+            $context,
+            $attributes
         ) ?? $result;
     }
 }

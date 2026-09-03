@@ -1,0 +1,11 @@
+{
+  products(filter: { sku: { like: "WP1%" } }, pageSize: 60) {
+    items {
+      sku __typename stock_status
+      price_range {
+        minimum_price { regular_price { value currency } final_price { value currency } discount { amount_off percent_off } }
+        maximum_price { regular_price { value currency } final_price { value currency } discount { amount_off percent_off } }
+      }
+    }
+  }
+}

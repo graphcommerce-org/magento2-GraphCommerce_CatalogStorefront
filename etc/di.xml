@@ -26,6 +26,43 @@
         <plugin name="graphcommerce_catalog_storefront_url_rewrites"
                 type="GraphCommerce\CatalogStorefront\Plugin\Resolver\UrlRewritesFromDocument"/>
     </type>
+    <type name="Magento\CatalogDataExporter\Model\Provider\Product\Links">
+        <plugin name="graphcommerce_catalog_storefront_link_position"
+                type="GraphCommerce\CatalogStorefront\Plugin\Feed\LinkPosition"/>
+    </type>
+
+    <type name="Magento\ConfigurableProduct\Model\Product\Type\Configurable">
+        <plugin name="graphcommerce_catalog_storefront_salable"
+                type="GraphCommerce\CatalogStorefront\Plugin\SalableFromDocument"/>
+    </type>
+    <type name="Magento\Bundle\Model\Product\Type">
+        <plugin name="graphcommerce_catalog_storefront_salable"
+                type="GraphCommerce\CatalogStorefront\Plugin\SalableFromDocument"/>
+    </type>
+    <type name="Magento\RelatedProductGraphQl\Model\Resolver\Batch\AbstractLikedProducts">
+        <plugin name="graphcommerce_catalog_storefront_linked_products"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\LinkedProductsFromDocuments"/>
+    </type>
+    <type name="Magento\ConfigurableProductGraphQl\Model\Resolver\Options">
+        <plugin name="graphcommerce_catalog_storefront_configurable_options"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\ConfigurableOptionsFromDocument"/>
+    </type>
+    <type name="Magento\SwatchesGraphQl\Model\Resolver\Product\Options\SwatchData">
+        <plugin name="graphcommerce_catalog_storefront_swatch_data"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\SwatchDataFromDocument"/>
+    </type>
+    <type name="Magento\DownloadableGraphQl\Resolver\Product\Links">
+        <plugin name="graphcommerce_catalog_storefront_downloadable_links"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\DownloadableLinksFromDocument"/>
+    </type>
+    <type name="Magento\DownloadableGraphQl\Resolver\Product\Samples">
+        <plugin name="graphcommerce_catalog_storefront_downloadable_samples"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\DownloadableSamplesFromDocument"/>
+    </type>
+    <type name="Magento\CatalogGraphQl\Model\Resolver\Product\PriceRange">
+        <plugin name="graphcommerce_catalog_storefront_price_range"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\PriceRangeFromDocument"/>
+    </type>
     <type name="Magento\CatalogInventoryGraphQl\Model\Resolver\MaxSaleQtyResolver">
         <plugin name="graphcommerce_catalog_storefront_max_sale_qty"
                 type="GraphCommerce\CatalogStorefront\Plugin\Resolver\MaxSaleQtyFromConfig"/>

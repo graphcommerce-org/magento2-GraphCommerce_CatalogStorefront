@@ -1,9 +1,15 @@
 {
   products(filter: { sku: { eq: "WJ02" } }) {
     items {
-      uid sku name __typename
+      uid sku name __typename stock_status
       ... on ConfigurableProduct {
-        configurable_options { attribute_code label values { label uid } }
+        configurable_options {
+          uid attribute_id attribute_id_v2 attribute_uid attribute_code label position product_id
+          values {
+            value_index uid label
+            swatch_data { __typename value ... on ImageSwatchData { thumbnail } }
+          }
+        }
         variants { product { sku stock_status price_range { minimum_price { final_price { value } } } } attributes { code label uid } }
       }
     }
