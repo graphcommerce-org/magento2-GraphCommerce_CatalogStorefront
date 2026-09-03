@@ -99,6 +99,19 @@ for label, v in rows:
     print(f'{v:7.1f}  {label}')
 print(f'\nper request: sql {med("sql", 1):.0f}, redis loads {med("redis_load", 1):.0f}, OpenSearch core calls {med("os_core_client", 1):.0f}, '
       f'resolver calls {sum(k for _, k, _ in resolvers):.0f}, peak memory {med("mem_peak_mb"):.0f} MB')
+statements = {}
+for a in attr:
+    for sql, k in (a.get('sql_statements') or {}).items():
+        statements.setdefault(sql, []).append(k)
+if statements:
+    print('\nSQL statements, average count per request')
+    origins = {}
+    for a in attr:
+        origins.update(a.get('sql_origins') or {})
+    for sql, ks in sorted(statements.items(), key=lambda x: -sum(x[1]))[:20]:
+        print(f'{sum(ks) / n:5.1f}  {sql}')
+        if origins.get(sql):
+            print(f'       from {origins[sql]}')
 print('\nresolver: self ms, calls, class | core resolver inside the chain ms | chain and module plugins ms')
 for ms, k, cls in resolvers[:25]:
     print(f'{ms:7.2f} {k:6.0f}  {cls.replace("Magento", "M")} | {inner.get(cls, 0):6.2f} | {ms - inner.get(cls, 0):6.2f}')

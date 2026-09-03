@@ -15,6 +15,8 @@ class Outer
 {
     private static array $acc = [];
     private static array $took = [];
+    private static array $sql = [];
+    private static array $sqlOrigins = [];
     private static array $resolverStack = [];
     private static array $resolverSelf = [];
     private static float $resolverTopLevel = 0;
@@ -40,6 +42,8 @@ class Outer
     {
         self::$acc = [];
         self::$took = [];
+        self::$sql = [];
+        self::$sqlOrigins = [];
         self::$resolverStack = [];
         self::$resolverSelf = [];
         self::$resolverTopLevel = 0;
@@ -58,6 +62,10 @@ class Outer
             $out['resolver_self'] = array_map(static fn($v) => [round($v['ms'], 2), $v['n']], self::$resolverSelf);
             $out['resolver_inner'] = array_map(static fn($v) => [round($v['ms'], 2), $v['n']], Inner::$inner);
             $out['took'] = self::$took;
+            $counts = array_count_values(self::$sql);
+            arsort($counts);
+            $out['sql_statements'] = $counts;
+            $out['sql_origins'] = self::$sqlOrigins;
             $out['mem_peak_mb'] = round(memory_get_peak_usage(true) / 1048576, 1);
             error_log('GCATTR ' . json_encode($out));
         }
@@ -106,6 +114,24 @@ class Outer
     public function aroundQuery($subject, \Closure $proceed, ...$args)
     {
         if ($subject instanceof \Magento\Framework\DB\Adapter\Pdo\Mysql) {
+            $sql = $args[0] instanceof \Magento\Framework\DB\Select ? $args[0]->__toString() : (string)$args[0];
+            $short = preg_replace('/\s+/', ' ', substr($sql, 0, 140));
+            self::$sql[] = $short;
+            if (!isset(self::$sqlOrigins[$short])) {
+                $frames = [];
+                foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 60) as $frame) {
+                    $class = $frame['class'] ?? '';
+                    if ($class === '' || $class === self::class || str_contains($class, 'Interceptor')
+                        || str_starts_with($class, 'Magento\\Framework\\DB') || str_starts_with($class, 'Magento\\Framework\\Model\\ResourceModel')
+                        || str_starts_with($class, 'Magento\\Framework\\Data\\Collection') || str_starts_with($class, 'GraphQL\\')
+                        || str_starts_with($class, 'Magento\\Framework\\GraphQl')
+                    ) {
+                        continue;
+                    }
+                    $frames[] = substr($class, strrpos($class, '\\') + 1) . '::' . $frame['function'];
+                }
+                self::$sqlOrigins[$short] = implode(' < ', array_slice(array_values(array_unique($frames)), 0, 9));
+            }
             return self::time('sql', $proceed, $args);
         }
         if ($subject instanceof \Magento\OpenSearch\Model\OpenSearch) {

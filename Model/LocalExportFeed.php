@@ -5,6 +5,7 @@ namespace GraphCommerce\CatalogStorefront\Model;
 
 use GraphCommerce\CatalogStorefront\Model\Feed\CompositeLinks;
 use GraphCommerce\CatalogStorefront\Model\Feed\ConfigurableOptionsBuilder;
+use GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage;
 use GraphCommerce\CatalogStorefront\Model\Storage\ProductDocumentStorage;
 use Magento\Customer\Api\GroupManagementInterface;
 use Magento\Customer\Model\Group;
@@ -38,6 +39,7 @@ class LocalExportFeed implements ExportFeedInterface
     public function __construct(
         private readonly FeedExportStatusBuilder $feedExportStatusBuilder,
         private readonly ProductDocumentStorage $storage,
+        private readonly CategoryDocumentStorage $categoryStorage,
         private readonly StoreManagerInterface $storeManager,
         private readonly GroupManagementInterface $groupManagement,
         private readonly ProductPrice $productPrice,
@@ -56,6 +58,7 @@ class LocalExportFeed implements ExportFeedInterface
                 'inventoryStockStatus' => $this->applyStock($data),
                 'variants' => $this->applyVariants($data),
                 'reviews' => $this->applyReviews($data),
+                'categories' => $this->applyCategories($data),
                 default => null,
             };
         } catch (\Throwable $e) {
@@ -234,6 +237,28 @@ class LocalExportFeed implements ExportFeedInterface
     /**
      * @return string[]
      */
+    private function applyCategories(array $rows): void
+    {
+        $upserts = [];
+        $deletes = [];
+        foreach ($rows as $row) {
+            if (empty($row['categoryId']) || empty($row['storeViewCode'])) {
+                continue;
+            }
+            if (!empty($row['deleted'])) {
+                $deletes[$row['storeViewCode']][] = (int)$row['categoryId'];
+            } else {
+                $upserts[$row['storeViewCode']][(int)$row['categoryId']] = $row;
+            }
+        }
+        foreach ($upserts as $store => $documents) {
+            $this->categoryStorage->upsert($store, $documents);
+        }
+        foreach ($deletes as $store => $ids) {
+            $this->categoryStorage->delete($store, $ids);
+        }
+    }
+
     private function storeViewCodesForWebsite(string $websiteCode): array
     {
         $codes = [];

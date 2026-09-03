@@ -114,6 +114,26 @@
             </argument>
         </arguments>
     </type>
+    <type name="Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\Builder\Category">
+        <plugin name="graphcommerce_catalog_storefront_category_facet"
+                type="GraphCommerce\CatalogStorefront\Plugin\Layer\CategoryFacetFromDocuments"/>
+    </type>
+    <type name="Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\Builder\Aggregations\Category\IncludeDirectChildrenOnly">
+        <plugin name="graphcommerce_catalog_storefront_category_facet"
+                type="GraphCommerce\CatalogStorefront\Plugin\Layer\CategoryFacetFromDocuments"/>
+    </type>
+    <type name="Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\RootCategoryProvider">
+        <plugin name="graphcommerce_catalog_storefront_root_category"
+                type="GraphCommerce\CatalogStorefront\Plugin\Layer\RootCategoryFromStore"/>
+    </type>
+    <type name="Magento\Catalog\Model\Layer\Filter\Price\Range">
+        <plugin name="graphcommerce_catalog_storefront_price_step_memo"
+                type="GraphCommerce\CatalogStorefront\Plugin\Layer\PriceRangeStepMemo"/>
+    </type>
+    <type name="Magento\CustomerGraphQl\CacheIdFactorProviders\CustomerTaxRateProvider">
+        <plugin name="graphcommerce_catalog_storefront_tax_rate_memo"
+                type="GraphCommerce\CatalogStorefront\Plugin\CacheId\CustomerTaxRateMemo"/>
+    </type>
     <type name="Magento\Framework\GraphQl\Schema\SchemaGeneratorInterface">
         <plugin name="graphcommerce_catalog_storefront_reuse_schema"
                 type="GraphCommerce\CatalogStorefront\Plugin\GraphQl\ReuseSchema"/>
