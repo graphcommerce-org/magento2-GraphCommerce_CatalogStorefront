@@ -52,8 +52,11 @@ ids in the feed instead of the labels.
 
 ## Operations
 
-- The FrankenPHP worker keeps the scope config in memory. A `serve_reads` flip
-  (or any config change) needs a worker restart; a cache clean is not enough.
+- The FrankenPHP worker container has its own env file and its own Redis cache
+  database. A host-side `cache:flush` or `config:set` never reaches it: flush
+  inside the container (`docker exec project-backend-frankenphp-1 php
+  bin/magento cache:flush`) and restart the worker after a `serve_reads` flip.
+  A benchmark that flips the flag must do this, or both runs measure one path.
 - With immediate export, a full `indexer:reindex` of a feed skips rows whose
   feed hash is unchanged, so it does not repair a document store. To rebuild
   the documents: drop the index, truncate the `cde_*` and `gc_*` feed tables,
