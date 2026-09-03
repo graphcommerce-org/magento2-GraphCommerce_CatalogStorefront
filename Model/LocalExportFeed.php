@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Model;
 
+use GraphCommerce\CatalogStorefront\Model\Feed\ConfigurableOptionsBuilder;
 use GraphCommerce\CatalogStorefront\Model\Storage\ProductDocumentStorage;
 use Magento\Customer\Api\GroupManagementInterface;
 use Magento\Customer\Model\Group;
@@ -18,7 +19,8 @@ use Psr\Log\LoggerInterface;
  *
  * Routes feed batches into the product document store. Each feed owns a slice
  * of the per-store-view product document:
- *   products             -> the base document (feed row as-is)
+ *   products             -> the base document (feed row as-is, plus the
+ *                           configurable_options response shape)
  *   prices               -> prices.<customerGroupCode>, fanned out per website,
  *                           plus priceIndex.<group key> for the price aggregation
  *   inventoryStockStatus -> stock
@@ -38,6 +40,7 @@ class LocalExportFeed implements ExportFeedInterface
         private readonly StoreManagerInterface $storeManager,
         private readonly GroupManagementInterface $groupManagement,
         private readonly ProductPrice $productPrice,
+        private readonly ConfigurableOptionsBuilder $configurableOptionsBuilder,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -75,6 +78,9 @@ class LocalExportFeed implements ExportFeedInterface
             } else {
                 // The prices and stock keys belong to the price and inventory feed slices.
                 unset($row['prices'], $row['stock']);
+                if (($row['type'] ?? null) === 'configurable') {
+                    $row['configurableOptions'] = $this->configurableOptionsBuilder->build($row);
+                }
                 $upserts[$store][(int)$row['productId']] = $row;
             }
         }

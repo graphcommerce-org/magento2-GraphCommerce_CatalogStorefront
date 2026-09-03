@@ -101,6 +101,10 @@
         <plugin name="graphcommerce_catalog_storefront_facet_labels_memo"
                 type="GraphCommerce\CatalogStorefront\Plugin\Resolver\FacetLabelsMemo"/>
     </type>
+    <type name="Magento\Framework\GraphQl\Schema\SchemaGeneratorInterface">
+        <plugin name="graphcommerce_catalog_storefront_reuse_schema"
+                type="GraphCommerce\CatalogStorefront\Plugin\GraphQl\ReuseSchema"/>
+    </type>
     <type name="Magento\Framework\GraphQl\Query\QueryProcessor">
         <plugin name="graphcommerce_catalog_storefront_validate_once"
                 type="GraphCommerce\CatalogStorefront\Plugin\GraphQl\ValidateOncePerProcess"/>
@@ -127,7 +131,7 @@
                 <item name="upsell_products" xsi:type="array"><item name="0" xsi:type="string">links</item></item>
                 <item name="crosssell_products" xsi:type="array"><item name="0" xsi:type="string">links</item></item>
                 <item name="categories" xsi:type="array"><item name="0" xsi:type="string">categoryData</item></item>
-                <item name="configurable_options" xsi:type="array"><item name="0" xsi:type="string">optionsV2</item></item>
+                <item name="configurable_options" xsi:type="array"><item name="0" xsi:type="string">configurableOptions</item></item>
                 <item name="options" xsi:type="array"><item name="0" xsi:type="string">optionsV2</item><item name="1" xsi:type="string">shopperInputOptions</item></item>
                 <item name="downloadable_product_links" xsi:type="array"><item name="0" xsi:type="string">optionsV2</item></item>
                 <item name="downloadable_product_samples" xsi:type="array"><item name="0" xsi:type="string">samples</item></item>

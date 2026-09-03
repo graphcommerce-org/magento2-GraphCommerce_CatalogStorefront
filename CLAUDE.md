@@ -65,9 +65,17 @@ ids in the feed instead of the labels.
   (facet attribute and option labels). A changed label or media configuration
   reaches a worker at its next restart.
 - `Plugin/GraphQl/ValidateOncePerProcess` validates a query document once per
-  process and executes repeats with an empty rule set. Reusing the built schema
-  object across requests is NOT possible from a plugin: the between-request
-  reset empties the type registry and a kept schema loses its fields.
+  process and executes repeats with an empty rule set. `Plugin/GraphQl/ReuseSchema`
+  keeps one built schema per query shape: Magento prunes every type to the
+  names the query uses, so a schema belongs to that name set, and its type map
+  is materialized at build time because the type registry resets between
+  requests. Both hold state for the worker's lifetime; a schema or config
+  change reaches a worker at its next restart.
+- `configurable_options` is built at index time (`Model/Feed/ConfigurableOptionsBuilder`,
+  document key `configurableOptions`) and returned as is; the per-value `uid`
+  and `swatch_data` fields still run through Magento's resolver wrapper, about
+  3µs per call, which a schema redeclaration would remove for document-served
+  products only at the cost of core-served ones.
 - The GraphCommerce ProductList query (`dev/parity/queries/13-*.graphql`, all
   fragments and injections resolved) runs on the document path with no catalog
   SQL: only per-process metadata and bootstrap queries remain.
