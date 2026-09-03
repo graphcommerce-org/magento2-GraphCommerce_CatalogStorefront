@@ -97,9 +97,12 @@ class ProductModelBuilder
         }
 
         foreach ($document['attributes'] ?? [] as $attribute) {
+            if (!isset($attribute['attributeCode'])) {
+                continue;
+            }
             $data[$attribute['attributeCode']] = $this->attributeValue(
                 $attribute['attributeCode'],
-                (array)$attribute['value']
+                (array)($attribute['value'] ?? [])
             );
         }
 

@@ -10,6 +10,7 @@ namespace GraphCommerce\CatalogStorefront\Model\Storage\Client;
 
 use GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\EntityConfigInterface;
 use GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\EntityConfigPool;
+use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\DeploymentConfig\Reader;
 use Magento\Framework\Exception\ConfigurationMismatchException;
 use Magento\Framework\Config\File\ConfigFilePool;
@@ -87,12 +88,15 @@ class Config
      * @throws \Magento\Framework\Exception\FileSystemException
      * @throws \Magento\Framework\Exception\RuntimeException
      */
-    public function __construct(Reader $configReader, EntityConfigPool $entityConfigPool)
-    {
+    public function __construct(
+        Reader $configReader,
+        EntityConfigPool $entityConfigPool,
+        ScopeConfigInterface $scopeConfig
+    ) {
         $configData = $configReader->load(ConfigFilePool::APP_ENV);
         $this->config = isset($configData['catalog-store-front'])
-            ? array_replace_recursive(self::$DEFAULT_CONFIG, $configData['catalog-store-front'])
-            : self::$DEFAULT_CONFIG;
+            ? array_replace_recursive($this->defaultConfig($scopeConfig), $configData['catalog-store-front'])
+            : $this->defaultConfig($scopeConfig);
         $options = $this->config['connections']['default'];
 
         if (empty($options['hostname']) || ((!empty($options['enableAuth'])
@@ -104,6 +108,30 @@ class Config
         }
         $this->connectionConfig = $options;
         $this->entityConfigPool = $entityConfigPool;
+    }
+
+    /**
+     * The connection defaults follow Magento's own search-engine config, so the
+     * document store reaches the same host as the rest of the application in
+     * every runtime (php-fpm, worker container, cli), including env overrides.
+     */
+    private function defaultConfig(ScopeConfigInterface $scopeConfig): array
+    {
+        $engine = (string)$scopeConfig->getValue('catalog/search/engine') ?: 'opensearch';
+        $prefix = 'catalog/search/' . $engine . '_server_';
+
+        $config = self::$DEFAULT_CONFIG;
+        $config['connections']['default'] = [
+            'protocol' => 'http',
+            'hostname' => (string)$scopeConfig->getValue($prefix . 'hostname') ?: 'localhost',
+            'port' => (string)$scopeConfig->getValue($prefix . 'port') ?: '9200',
+            'username' => (string)$scopeConfig->getValue('catalog/search/' . $engine . '_server_username'),
+            'password' => (string)$scopeConfig->getValue('catalog/search/' . $engine . '_server_password'),
+            'enableAuth' => (int)$scopeConfig->getValue('catalog/search/' . $engine . '_enable_auth'),
+            'timeout' => 3,
+        ];
+
+        return $config;
     }
 
     /**
