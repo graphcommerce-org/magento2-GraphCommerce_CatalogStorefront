@@ -79,6 +79,11 @@ function setFlag(int $value): void
     // The GraphQL resolver cache must be cleared too, or a result cached under one
     // path is served under the other and parity passes falsely.
     exec('bin/magento cache:clean config graphql_query_resolver_result 2>/dev/null');
+    // The worker container has its own cache database and holds the flag until restarted.
+    if ($container = getenv('GC_WORKER_CONTAINER')) {
+        exec(sprintf('docker exec %s php bin/magento cache:flush >/dev/null 2>&1; docker restart %s >/dev/null 2>&1', $container, $container));
+        sleep(6);
+    }
 }
 
 /**

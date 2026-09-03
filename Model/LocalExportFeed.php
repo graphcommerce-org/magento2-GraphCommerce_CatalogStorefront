@@ -22,7 +22,7 @@ use Psr\Log\LoggerInterface;
  *   prices               -> prices.<customerGroupCode>, fanned out per website,
  *                           plus priceIndex.<group key> for the price aggregation
  *   inventoryStockStatus -> stock
- *   variants             -> variantIds on the configurable parent document
+ *   variants             -> variantIds on the parent, parentIds on the variant
  *   reviews              -> reviews.r<reviewId> (vote percents where visible)
  * Other feeds are accepted and only persisted in their feed tables. A storage
  * failure reports status 500, so the feed machinery retries the batch by cron.
@@ -130,28 +130,47 @@ class LocalExportFeed implements ExportFeedInterface
     }
 
     /**
-     * Records each configurable variant on its parent document, keyed by variant
-     * id, and clears the key when the feed reports the link removed. The
-     * parentId comes straight from the ProductVariantDataExporter feed, so the
-     * read side can gather variant documents without a product load.
+     * Records the configurable relation on both sides: the parent document
+     * keeps a variant map keyed by variant id, the variant document keeps the
+     * list of its parent ids the price aggregation groups by. A link the feed
+     * reports removed clears the map key and leaves the list. Both come
+     * straight from the ProductVariantDataExporter feed, so the read side needs
+     * no product load. The list is merged with the one stored, so a batch that
+     * carries one parent of a variant keeps its other parents.
      */
     private function applyVariants(array $rows): void
     {
         $stores = array_map(static fn($store) => $store->getCode(), $this->storeManager->getStores());
 
-        $upserts = [];
+        $links = [];
         foreach ($rows as $row) {
             if (empty($row['parentId']) || empty($row['productId'])) {
                 continue;
             }
-            $parentId = (int)$row['parentId'];
-            $variantKey = 'v' . $row['productId'];
-            foreach ($stores as $store) {
-                $upserts[$store][$parentId]['variantIds'][$variantKey] = empty($row['deleted']) ? (int)$row['productId'] : null;
-            }
+            $links[(int)$row['productId']][(string)(int)$row['parentId']] = empty($row['deleted']);
         }
-        foreach ($upserts as $store => $documents) {
-            $this->storage->upsert($store, $documents);
+        if (!$links) {
+            return;
+        }
+        foreach ($stores as $store) {
+            $stored = [];
+            foreach ($this->storage->get($store, array_keys($links), ['parentIds']) as $entry) {
+                $stored[(int)$entry->getId()] = (array)($entry->getData()['parentIds'] ?? []);
+            }
+            $upserts = [];
+            foreach ($links as $variantId => $parents) {
+                $parentIds = array_fill_keys($stored[$variantId] ?? [], true);
+                foreach ($parents as $parentId => $linked) {
+                    $upserts[(int)$parentId]['variantIds']['v' . $variantId] = $linked ? $variantId : null;
+                    if ($linked) {
+                        $parentIds[$parentId] = true;
+                    } else {
+                        unset($parentIds[$parentId]);
+                    }
+                }
+                $upserts[$variantId]['parentIds'] = array_keys($parentIds);
+            }
+            $this->storage->upsert($store, $upserts);
         }
     }
 

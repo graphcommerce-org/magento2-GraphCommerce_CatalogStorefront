@@ -83,49 +83,99 @@ class ProductDocumentStorage
     }
 
     /**
-     * Minimum and maximum regular and final price over the variants of each
-     * parent for one customer group, once over the salable enabled variants and
-     * once over all enabled variants, in one request for the whole set. A
-     * variant without a price for the group does not count.
+     * The documents of a listing page and the configurable price ranges of the
+     * page, in one request: a search by id with the heavy source fields the
+     * query does not need left out, and the price aggregation over the
+     * variants of every listed parent.
      *
-     * @param array<int, int[]> $variantIdsByParent
+     * @param int[] $ids
+     * @param string[] $sourceExcludes document keys to leave out
+     * @param string|null $groupKey price group key, null when no ranges are needed
+     * @return array{0: array<int, array>, 1: array} documents by id, ranges by parent id
+     */
+    public function listing(string $storeViewCode, array $ids, array $sourceExcludes, ?string $groupKey): array
+    {
+        $searches = [[
+            'size' => count($ids),
+            'query' => ['ids' => ['values' => array_map('strval', $ids)]],
+            '_source' => $sourceExcludes ? ['excludes' => $sourceExcludes] : true,
+        ]];
+        if ($groupKey !== null) {
+            $searches[] = $this->priceAggregation($ids, $groupKey);
+        }
+        $responses = $this->query->multiSearch($this->aliasName($storeViewCode), $searches);
+
+        $documents = [];
+        foreach ($responses[0]['hits']['hits'] ?? [] as $hit) {
+            $documents[(int)$hit['_id']] = $hit['_source'];
+        }
+
+        return [$documents, $groupKey === null ? [] : $this->parseRanges($responses[1] ?? [])];
+    }
+
+    /**
+     * The configurable price ranges of the given parents for one customer group.
+     *
+     * @param int[] $parentIds
      * @return array<int, array{salable: ?array, all: ?array}> ranges as [minRegular, minFinal, maxRegular, maxFinal]
      */
-    public function priceRanges(string $storeViewCode, array $variantIdsByParent, string $groupKey): array
+    public function priceRanges(string $storeViewCode, array $parentIds, string $groupKey): array
     {
+        $search = $this->priceAggregation($parentIds, $groupKey);
+
+        return $this->parseRanges(
+            ['aggregations' => $this->query->aggregate($this->aliasName($storeViewCode), $search['query'], $search['aggs'])]
+        );
+    }
+
+    /**
+     * Minimum and maximum regular and final price over the enabled variants
+     * of each parent, once over the salable variants and once over all. A
+     * variant without a price for the group does not count.
+     *
+     * @param int[] $parentIds
+     */
+    private function priceAggregation(array $parentIds, string $groupKey): array
+    {
+        $parentIds = array_map('strval', $parentIds);
         $stats = [
             'minRegular' => ['min' => ['field' => 'priceIndex.' . $groupKey . '.regular']],
             'minFinal' => ['min' => ['field' => 'priceIndex.' . $groupKey . '.final']],
             'maxRegular' => ['max' => ['field' => 'priceIndex.' . $groupKey . '.regular']],
             'maxFinal' => ['max' => ['field' => 'priceIndex.' . $groupKey . '.final']],
         ];
-        $enabled = ['term' => ['status' => 'Enabled']];
-        $aggregations = [];
-        foreach ($variantIdsByParent as $parentId => $variantIds) {
-            $aggregations['p' . $parentId] = [
-                'filter' => ['ids' => ['values' => array_map('strval', $variantIds)]],
-                'aggs' => [
-                    'salable' => ['filter' => ['bool' => ['filter' => [$enabled, ['term' => ['stock.isSalable' => true]]]]], 'aggs' => $stats],
-                    'all' => ['filter' => $enabled, 'aggs' => $stats],
-                ],
-            ];
-        }
-        $result = $this->query->aggregate(
-            $this->aliasName($storeViewCode),
-            ['ids' => ['values' => array_map('strval', array_merge(...array_values($variantIdsByParent)))]],
-            $aggregations
-        );
 
+        return [
+            'size' => 0,
+            'query' => ['bool' => ['filter' => [
+                ['terms' => ['parentIds' => $parentIds]],
+                ['term' => ['status' => 'Enabled']],
+            ]]],
+            'aggs' => ['parents' => [
+                'terms' => ['field' => 'parentIds', 'size' => count($parentIds), 'include' => $parentIds],
+                'aggs' => [
+                    'salable' => ['filter' => ['term' => ['stock.isSalable' => true]], 'aggs' => $stats],
+                    'all' => ['filter' => ['match_all' => new \stdClass()], 'aggs' => $stats],
+                ],
+            ]],
+        ];
+    }
+
+    /**
+     * @return array<int, array{salable: ?array, all: ?array}>
+     */
+    private function parseRanges(array $response): array
+    {
         $ranges = [];
-        foreach (array_keys($variantIdsByParent) as $parentId) {
+        foreach ($response['aggregations']['parents']['buckets'] ?? [] as $bucket) {
             foreach (['salable', 'all'] as $mode) {
-                $bucket = $result['p' . $parentId][$mode] ?? [];
-                $ranges[$parentId][$mode] = isset($bucket['minFinal']['value'])
+                $stats = $bucket[$mode];
+                $ranges[(int)$bucket['key']][$mode] = isset($stats['minFinal']['value'])
                     ? [
-                        (float)$bucket['minRegular']['value'],
-                        (float)$bucket['minFinal']['value'],
-                        (float)$bucket['maxRegular']['value'],
-                        (float)$bucket['maxFinal']['value'],
+                        (float)$stats['minRegular']['value'],
+                        (float)$stats['minFinal']['value'],
+                        (float)$stats['maxRegular']['value'],
+                        (float)$stats['maxFinal']['value'],
                     ]
                     : null;
             }

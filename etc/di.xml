@@ -94,6 +94,18 @@
         <plugin name="graphcommerce_catalog_storefront_downloadable_samples"
                 type="GraphCommerce\CatalogStorefront\Plugin\Resolver\DownloadableSamplesFromDocument"/>
     </type>
+    <type name="Magento\CatalogGraphQl\Model\Resolver\Product\MediaGallery\Url">
+        <plugin name="graphcommerce_catalog_storefront_image_url_memo"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\ImageUrlMemo"/>
+    </type>
+    <type name="Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\AttributeOptionProvider">
+        <plugin name="graphcommerce_catalog_storefront_facet_labels_memo"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\FacetLabelsMemo"/>
+    </type>
+    <type name="Magento\Framework\GraphQl\Query\QueryProcessor">
+        <plugin name="graphcommerce_catalog_storefront_validate_once"
+                type="GraphCommerce\CatalogStorefront\Plugin\GraphQl\ValidateOncePerProcess"/>
+    </type>
     <type name="Magento\CatalogGraphQl\Model\Resolver\Product\PriceRange">
         <plugin name="graphcommerce_catalog_storefront_price_range"
                 type="GraphCommerce\CatalogStorefront\Plugin\Resolver\PriceRangeFromDocument"/>

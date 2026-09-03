@@ -20,15 +20,43 @@ use Psr\Log\LoggerInterface;
  * Rebuilds product models from feed documents for the catalog GraphQL read
  * path: the two data provider plugins and the linked products resolver.
  *
- * When the query asks for price_range, the configurable price ranges of the
- * whole set are fetched in one aggregation request for the request's customer
- * group and attached to the parent models.
+ * A listing page is one storage request: the documents with the heavy fields
+ * the query does not select left out, and, when price_range is selected, the
+ * configurable price ranges for the request's customer group.
  */
 class DocumentHydration
 {
     public const CONFIG_SERVE_READS = 'graphcommerce/catalog_storefront/serve_reads';
 
     public const PRICE_RANGE_KEY = '_gc_price_range';
+
+    /**
+     * Document keys a listing can leave out, by the GraphQL fields that need
+     * them. Any other selected field is served from the base keys, except
+     * custom attribute fields, which need the attributes key.
+     */
+    private const HEAVY_KEYS = [
+        'description' => ['description'],
+        'short_description' => ['shortDescription'],
+        'media_gallery' => ['media_gallery', 'images', 'videos'],
+        'media_gallery_entries' => ['media_gallery', 'images', 'videos'],
+        'url_rewrites' => ['urlRewrites'],
+        'related_products' => ['links'],
+        'upsell_products' => ['links'],
+        'crosssell_products' => ['links'],
+        'categories' => ['categoryData'],
+        'configurable_options' => ['optionsV2'],
+        'options' => ['optionsV2', 'shopperInputOptions'],
+        'downloadable_product_links' => ['optionsV2'],
+        'downloadable_product_samples' => ['samples'],
+        'links_purchased_separately' => ['optionsV2'],
+    ];
+
+    private const BASE_FIELDS = [
+        '__typename', 'uid', 'id', 'sku', 'name', 'url_key', 'url_suffix', 'type_id', 'created_at', 'updated_at',
+        'image', 'small_image', 'thumbnail', 'price_range', 'stock_status', 'new_from_date', 'new_to_date',
+        'rating_summary', 'review_count', 'max_sale_qty', 'canonical_url', 'only_x_left_in_stock',
+    ];
 
     public function __construct(
         private readonly ProductDocumentStorage $storage,
@@ -76,11 +104,13 @@ class DocumentHydration
             if (!$ids) {
                 return null;
             }
-            $documents = [];
-            foreach ($this->storage->get($store->getCode(), $ids) as $entry) {
-                $documents[(int)$entry->getId()] = $entry->getData();
-            }
-            $models = $this->buildModels($store, $documents, $requestedFields, $this->groupKey($context));
+            [$documents, $ranges] = $this->storage->listing(
+                $store->getCode(),
+                $ids,
+                $this->sourceExcludes($requestedFields),
+                in_array('price_range', $requestedFields, true) ? $this->groupKey($context) : null
+            );
+            $models = $this->buildModels($store, $documents, $ranges);
             $items = [];
             foreach ($ids as $id) {
                 if (!isset($models[$id])) {
@@ -106,26 +136,11 @@ class DocumentHydration
      * Documents without the products feed slice are left out.
      *
      * @param array<int, array> $documents product id => document
-     * @param string[] $requestedFields product fields selected by the query
+     * @param array<int, array> $ranges configurable price ranges by parent id
      * @return array<int, Product> product id => model
      */
-    public function buildModels(StoreInterface $store, array $documents, array $requestedFields, string $groupKey): array
+    public function buildModels(StoreInterface $store, array $documents, array $ranges): array
     {
-        $ranges = [];
-        if (in_array('price_range', $requestedFields, true)) {
-            $variantIdsByParent = [];
-            foreach ($documents as $id => $document) {
-                // A removed link leaves a null under its key.
-                $variantIds = array_values(array_filter((array)($document['variantIds'] ?? [])));
-                if ($variantIds) {
-                    $variantIdsByParent[(int)$id] = $variantIds;
-                }
-            }
-            if ($variantIdsByParent) {
-                $ranges = $this->storage->priceRanges($store->getCode(), $variantIdsByParent, $groupKey);
-            }
-        }
-
         $storeId = (int)$store->getId();
         $models = [];
         foreach ($documents as $id => $document) {
@@ -140,5 +155,24 @@ class DocumentHydration
         }
 
         return $models;
+    }
+
+    /**
+     * @param string[] $requestedFields
+     * @return string[] document keys to leave out of the fetch
+     */
+    private function sourceExcludes(array $requestedFields): array
+    {
+        $needed = [];
+        foreach ($requestedFields as $field) {
+            if (isset(self::HEAVY_KEYS[$field])) {
+                $needed = array_merge($needed, self::HEAVY_KEYS[$field]);
+            } elseif (!in_array($field, self::BASE_FIELDS, true)) {
+                $needed[] = 'attributes';
+            }
+        }
+        $excludable = array_merge(['attributes'], ...array_values(self::HEAVY_KEYS));
+
+        return array_values(array_diff(array_unique($excludable), $needed));
     }
 }

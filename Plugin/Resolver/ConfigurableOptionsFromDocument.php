@@ -83,6 +83,7 @@ class ConfigurableOptionsFromDocument
                     'label' => $optionValue['label'] ?? null,
                     'default_label' => $optionValue['defaultLabel'] ?? $optionValue['label'] ?? null,
                     'store_label' => $optionValue['defaultLabel'] ?? $optionValue['label'] ?? null,
+                    // Core's option loader sets use_default_value to true for every value.
                     'use_default_value' => true,
                     'attribute_id' => $attributeId,
                     self::SWATCH_KEY => $swatch,

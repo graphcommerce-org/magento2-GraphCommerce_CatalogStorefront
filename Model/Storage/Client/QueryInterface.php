@@ -134,4 +134,12 @@ interface QueryInterface
      * the aggregation results.
      */
     public function aggregate(string $indexName, array $query, array $aggregations): array;
+
+    /**
+     * Runs several searches in one request and returns their responses in order.
+     *
+     * @param array[] $searches search bodies
+     * @return array[] one raw search response per search
+     */
+    public function multiSearch(string $indexName, array $searches): array;
 }

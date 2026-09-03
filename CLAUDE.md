@@ -38,23 +38,35 @@ ids in the feed instead of the labels.
   (`Plugin/Feed/*`), and a reviews provider that exports during indexing
   (`Model/Feed/ReviewsDataProcessor`, feed table `gc_product_reviews_feed`).
 - Read: `ServeSearchFromDocuments` / `ServeFilterFromDocuments` rebuild product
-  models from documents through `DocumentHydration`, which also attaches the
-  configurable price ranges when `price_range` is requested: one aggregation
-  request per page with a filter per parent over its `variantIds`, min and max
-  of `priceIndex.<group key>` over salable and over all enabled variants. Per-field plugins in
+  models from documents through `DocumentHydration`. A listing page is one
+  multi-search request: the documents by id with the heavy keys the query does
+  not select left out (`HEAVY_KEYS`, `attributes` only when a non-base field is
+  selected), and, when `price_range` is selected, the configurable price
+  aggregation: terms on `parentIds`, min and max of `priceIndex.<group key>`
+  over salable and over all enabled variants. Per-field plugins in
   `Plugin/Resolver/*` serve price_range (simple, virtual, downloadable,
   configurable), media_gallery, url_rewrites, max_sale_qty,
   configurable_options with swatch_data, downloadable links and samples,
   rating_summary, review_count, and related, upsell and crosssell products
   (fetched by sku). `Plugin/SalableFromDocument` answers the configurable and
   bundle salability check from the inventory slice.
-- The product index mapping is `dynamic: false`; only `sku`, `status`,
-  `stock.isSalable` and the `priceIndex` floats are mapped, because requests
-  filter or aggregate on them. Every field is stored in `_source`; rich
+- The product index mapping is `dynamic: false`; only `sku`, `parentIds`,
+  `status`, `stock.isSalable` and the `priceIndex` floats are mapped, because
+  requests filter or aggregate on them. Every field is stored in `_source`; rich
   configurable documents otherwise exceed the 1000-field mapping limit and
   their writes fail silently. Wildcard `_source` filters are very slow: never.
-- A listing page costs three OpenSearch requests on the document path: the
-  core product search, the products fetch, the price aggregation.
+- A listing page costs two OpenSearch round trips on the document path: the
+  core product search, then the multi-search above. Writes are visible to the
+  aggregation after the index refresh (one second by default); the fetch by id
+  is immediate.
+- Per-process memos, allowed because they hold metadata or pure derivations:
+  `ImageUrlMemo` (image URL per type, file and store), `FacetLabelsMemo`
+  (facet attribute and option labels). A changed label or media configuration
+  reaches a worker at its next restart.
+- `Plugin/GraphQl/ValidateOncePerProcess` validates a query document once per
+  process and executes repeats with an empty rule set. Reusing the built schema
+  object across requests is NOT possible from a plugin: the between-request
+  reset empties the type registry and a kept schema loses its fields.
 - The GraphCommerce ProductList query (`dev/parity/queries/13-*.graphql`, all
   fragments and injections resolved) runs on the document path with no catalog
   SQL: only per-process metadata and bootstrap queries remain.

@@ -158,6 +158,28 @@ class ElasticsearchQuery implements QueryInterface
     }
 
     /**
+     * @inheritdoc
+     */
+    public function multiSearch(string $indexName, array $searches): array
+    {
+        $body = [];
+        foreach ($searches as $search) {
+            $body[] = ['index' => $indexName];
+            $body[] = $search;
+        }
+        try {
+            $result = $this->connectionPull->getConnection()->msearch(['body' => $body]);
+        } catch (\Throwable $throwable) {
+            throw new RuntimeException(
+                __("Storage error: {$throwable->getMessage()} Query was:" . \json_encode($body)),
+                $throwable
+            );
+        }
+
+        return $result['responses'] ?? [];
+    }
+
+    /**
      * Searches entries into elastic search storage.
      *
      * @param string $indexName
