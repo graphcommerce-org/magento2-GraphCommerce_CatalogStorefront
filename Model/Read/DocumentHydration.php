@@ -115,8 +115,10 @@ class DocumentHydration
         if (in_array('price_range', $requestedFields, true)) {
             $variantIdsByParent = [];
             foreach ($documents as $id => $document) {
-                if (!empty($document['variantIds'])) {
-                    $variantIdsByParent[(int)$id] = array_values($document['variantIds']);
+                // A removed link leaves a null under its key.
+                $variantIds = array_values(array_filter((array)($document['variantIds'] ?? [])));
+                if ($variantIds) {
+                    $variantIdsByParent[(int)$id] = $variantIds;
                 }
             }
             if ($variantIdsByParent) {

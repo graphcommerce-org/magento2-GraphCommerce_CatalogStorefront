@@ -131,8 +131,9 @@ class LocalExportFeed implements ExportFeedInterface
 
     /**
      * Records each configurable variant on its parent document, keyed by variant
-     * id. The parentId comes straight from the ProductVariantDataExporter feed,
-     * so the read side can gather variant documents without a product load.
+     * id, and clears the key when the feed reports the link removed. The
+     * parentId comes straight from the ProductVariantDataExporter feed, so the
+     * read side can gather variant documents without a product load.
      */
     private function applyVariants(array $rows): void
     {
@@ -146,7 +147,7 @@ class LocalExportFeed implements ExportFeedInterface
             $parentId = (int)$row['parentId'];
             $variantKey = 'v' . $row['productId'];
             foreach ($stores as $store) {
-                $upserts[$store][$parentId]['variantIds'][$variantKey] = (int)$row['productId'];
+                $upserts[$store][$parentId]['variantIds'][$variantKey] = empty($row['deleted']) ? (int)$row['productId'] : null;
             }
         }
         foreach ($upserts as $store => $documents) {
