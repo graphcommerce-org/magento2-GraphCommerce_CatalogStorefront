@@ -40,6 +40,7 @@ class MediaGalleryFromDocument
                 'label' => $entry['label'] ?? $product->getName(),
                 'position' => $entry['sort_order'] ?? $index + 1,
                 'disabled' => false,
+                'types' => (array)($entry['types'] ?? []),
                 'media_type' => 'image',
                 'model' => $product,
             ];

@@ -35,13 +35,14 @@ class CompositeLinks
      */
     public function upserts(string $storeViewCode, array $rows, array $deletedIds): array
     {
-        // The feed folds a fixed bundle price type into the product type.
-        $types = array_map(static fn(array $row) => $row['type'] === 'bundle_fixed' ? 'bundle' : ($row['type'] ?? ''), $rows);
+        // The feed folds a fixed bundle price type into the product type, on a row and on a child's parents.
+        $normalize = static fn(?string $type): string => $type === 'bundle_fixed' ? 'bundle' : (string)$type;
+        $types = array_map(static fn(array $row) => $normalize($row['type'] ?? null), $rows);
         $childSkus = [];
         $skus = [];
         foreach ($rows as $id => $row) {
             foreach ((array)($row['parents'] ?? []) as $parent) {
-                if (isset(self::TYPES[$parent['productType'] ?? ''], $parent['sku'])) {
+                if (isset(self::TYPES[$normalize($parent['productType'] ?? null)], $parent['sku'])) {
                     $skus[] = $parent['sku'];
                 }
             }
@@ -66,10 +67,10 @@ class CompositeLinks
 
         $upserts = [];
         foreach ($rows as $id => $row) {
-            foreach (self::TYPES as $type => $keys) {
+            foreach (self::TYPES as $linkType => $keys) {
                 $parentIds = [];
                 foreach ((array)($row['parents'] ?? []) as $parent) {
-                    if (($parent['productType'] ?? null) === $type && isset($ids[$parent['sku']])) {
+                    if ($normalize($parent["productType"] ?? null) === $linkType && isset($ids[$parent['sku']])) {
                         $parentIds[] = $ids[$parent['sku']];
                     }
                 }

@@ -102,6 +102,14 @@
         <plugin name="graphcommerce_catalog_storefront_configurable_options"
                 type="GraphCommerce\CatalogStorefront\Plugin\Resolver\ConfigurableOptionsFromDocument"/>
     </type>
+    <type name="Magento\ProductPriceDataExporter\Model\Provider\ProductPrice">
+        <plugin name="graphcommerce_catalog_storefront_tier_price_percent"
+                type="GraphCommerce\CatalogStorefront\Plugin\Feed\TierPricePercent"/>
+    </type>
+    <type name="Magento\ConfigurableProductGraphQl\Model\Resolver\OptionsSelectionMetadata">
+        <plugin name="graphcommerce_catalog_storefront_options_selection"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\OptionsSelectionFromDocuments"/>
+    </type>
     <type name="Magento\ConfigurableProductGraphQl\Model\Resolver\ConfigurableVariant">
         <plugin name="graphcommerce_catalog_storefront_variants"
                 type="GraphCommerce\CatalogStorefront\Plugin\Resolver\VariantsFromDocuments"/>
@@ -121,6 +129,14 @@
     <type name="Magento\CatalogGraphQl\Model\Resolver\Product\ProductCustomAttributes">
         <plugin name="graphcommerce_catalog_storefront_custom_attributes"
                 type="GraphCommerce\CatalogStorefront\Plugin\Resolver\CustomAttributesFromDocument"/>
+    </type>
+    <type name="Magento\Catalog\Model\ProductLink\ProductLinkQuery">
+        <plugin name="graphcommerce_catalog_storefront_product_links"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\ProductLinksFromDocuments"/>
+    </type>
+    <type name="Magento\ReviewGraphQl\Model\Resolver\Product\Reviews">
+        <plugin name="graphcommerce_catalog_storefront_reviews"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\ReviewsFromDocument"/>
     </type>
     <type name="Magento\EavGraphQl\Model\TypeResolver\AttributeValue">
         <plugin name="graphcommerce_catalog_storefront_attribute_value_type"
@@ -166,6 +182,24 @@
                     <item name="quantity" xsi:type="string">quantity</item>
                     <item name="min_sale_qty" xsi:type="string">min_sale_qty</item>
                     <item name="max_sale_qty" xsi:type="string">max_sale_qty</item>
+                    <item name="price" xsi:type="string">price</item>
+                    <item name="price_tiers" xsi:type="string">price_tiers</item>
+                    <item name="tier_prices" xsi:type="string">tier_prices</item>
+                    <item name="websites" xsi:type="string">websites</item>
+                    <item name="media_gallery_entries" xsi:type="string">media_gallery_entries</item>
+                </item>
+                <item name="BundleProduct" xsi:type="array">
+                    <item name="price_details" xsi:type="string">price_details</item>
+                </item>
+                <item name="CategoryInterface" xsi:type="array">
+                    <item name="product_count" xsi:type="string">product_count</item>
+                </item>
+                <item name="ConfigurableProductOptionsSelection" xsi:type="array">
+                    <item name="media_gallery" xsi:type="string">media_gallery</item>
+                </item>
+                <item name="ProductReview" xsi:type="array">
+                    <item name="average_rating" xsi:type="string">average_rating</item>
+                    <item name="ratings_breakdown" xsi:type="string">ratings_breakdown</item>
                 </item>
                 <item name="ProductImage" xsi:type="array">
                     <item name="url" xsi:type="string">url</item>
@@ -176,6 +210,7 @@
                 </item>
                 <item name="BundleItem" xsi:type="array">
                     <item name="options" xsi:type="string">options</item>
+                    <item name="price_range" xsi:type="string">price_range</item>
                 </item>
                 <item name="BundleItemOption" xsi:type="array">
                     <item name="label" xsi:type="string">label</item>
@@ -268,8 +303,14 @@
                 <item name="categories" xsi:type="array"><item name="0" xsi:type="string">categoryData</item></item>
                 <item name="configurable_options" xsi:type="array"><item name="0" xsi:type="string">configurableOptions</item></item>
                 <item name="variants" xsi:type="array"><item name="0" xsi:type="string">configurableOptions</item></item>
+                <item name="configurable_product_options_selection" xsi:type="array"><item name="0" xsi:type="string">configurableOptions</item></item>
                 <item name="items" xsi:type="array"><item name="0" xsi:type="string">optionsV2</item></item>
                 <item name="custom_attributesV2" xsi:type="array"><item name="0" xsi:type="string">customAttributes</item></item>
+                <item name="product_links" xsi:type="array"><item name="0" xsi:type="string">links</item><item name="1" xsi:type="string">optionsV2</item></item>
+                <item name="reviews" xsi:type="array"><item name="0" xsi:type="string">reviews</item></item>
+                <item name="rating_summary" xsi:type="array"><item name="0" xsi:type="string">reviews</item></item>
+                <item name="review_count" xsi:type="array"><item name="0" xsi:type="string">reviews</item></item>
+                <item name="price_details" xsi:type="array"><item name="0" xsi:type="string">customAttributes</item></item>
                 <item name="options" xsi:type="array"><item name="0" xsi:type="string">optionsV2</item><item name="1" xsi:type="string">shopperInputOptions</item></item>
                 <item name="downloadable_product_links" xsi:type="array"><item name="0" xsi:type="string">optionsV2</item></item>
                 <item name="downloadable_product_samples" xsi:type="array"><item name="0" xsi:type="string">samples</item></item>
@@ -300,6 +341,11 @@
                 <item name="quantity" xsi:type="string">quantity</item>
                 <item name="canonical_url" xsi:type="string">canonical_url</item>
                 <item name="only_x_left_in_stock" xsi:type="string">only_x_left_in_stock</item>
+                <item name="price" xsi:type="string">price</item>
+                <item name="price_tiers" xsi:type="string">price_tiers</item>
+                <item name="tier_prices" xsi:type="string">tier_prices</item>
+                <item name="websites" xsi:type="string">websites</item>
+                <item name="attribute_set_id" xsi:type="string">attribute_set_id</item>
             </argument>
         </arguments>
     </type>

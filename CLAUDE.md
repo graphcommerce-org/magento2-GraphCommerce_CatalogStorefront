@@ -26,10 +26,11 @@ Catalog read model: feed documents in OpenSearch serve the catalog GraphQL read 
 
 ## Boundary note
 
-`ProductModelBuilder` decodes feed labels back to ids for status and visibility
-through static maps; the option ids and the tax class id come resolved from
-the writer (`Model/Feed/ProductDocumentEnricher`), so no metadata lookup is
-left on the request path.
+`ProductModelBuilder` sets the raw store view value of every attribute from the
+document's `customAttributes` (option ids, tax class id, dates, prices as the
+entity tables hold them) and decodes the feed's status and visibility labels
+through static maps, so no metadata lookup is left on the request path; the
+writer (`Model/Feed/ProductDocumentEnricher`) resolves only the image URLs.
 
 ## Shape
 
@@ -75,8 +76,9 @@ left on the request path.
 - Read: `ServeSearchFromDocuments` / `ServeFilterFromDocuments` rebuild product
   models from documents through `DocumentHydration`. A listing page is one
   multi-search request: the documents by id with the heavy keys the query does
-  not select left out (`HEAVY_KEYS`, `attributes` only when a non-base field is
-  selected), and, when `price_range` is selected, the composite price data:
+  not select left out (di.xml `fieldDocumentKeys`; `customAttributes` only
+  when a non-base field is selected, the labelled `attributes` slice never),
+  and, when a price field is selected, the composite price data:
   the configurable and the grouped price aggregation (terms on `parentIds`
   and on `groupedParentIds`, min and max of `priceIndex.<group key>` over
   salable and over all enabled children), the bundle selection documents by
@@ -243,6 +245,11 @@ left on the request path.
   range. A percent bundle selection is a percent of the bundle's regular
   price; core applies a catalog rule on the bundle first.
 - The feed exports the special price attribute without its from and to dates.
+- `dev/parity/queries/19-*.graphql` selects every product field of the
+  schema (`dev/parity/gen-all-fields.py <skus...>` generates it from introspection); the
+  routable fields, `product_links` (its own query) and the bundle item's
+  price range are left out. `GC_PARITY_DUMP=<dir>` keeps both responses of
+  every query for a closer look than the diff excerpt.
 - `quantity` is the stock slice's quantity (the inventory stock, all assigned
   sources); core reads the legacy stock status, the default source only.
   `min_sale_qty` and `max_sale_qty` resolve the configured value without a
@@ -253,8 +260,16 @@ left on the request path.
   bundle selections are not filtered on required customizable options or on
   stock, as core's collections do in some configurations. Variant attributes
   are listed by attribute id, the order core's super attribute index yields.
-- `configurable_options` falls back to core when `id` or `use_default` is
-  selected: the feed carries no super attribute id.
+- A bundle item's `price_range` is the bundle's own range; core resolves a
+  product loaded by the item's sku and answers something else for a dynamic
+  bundle. `websites` lists the document's own website only; a product in
+  several websites has a document per store view. The deprecated
+  `tier_prices` read every tier as for all groups, which the price feed does
+  not carry. `media_gallery_entries` ids and uids count from one per product;
+  the feed carries no gallery value ids. A category's
+  `product_count` is the count at export time; `default_sort_by` is the
+  feed's resolved value where core returns the unset attribute. A grouped
+  item's `qty` follows the link attribute; core answers 1 on some queries.
 - The inventory feed is written to every store view regardless of stock id.
   Multi-source setups with a stock per website need the stock id mapped to its
   website's store views.

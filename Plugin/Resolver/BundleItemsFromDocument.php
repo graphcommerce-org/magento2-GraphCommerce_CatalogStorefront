@@ -6,6 +6,7 @@ namespace GraphCommerce\CatalogStorefront\Plugin\Resolver;
 use GraphCommerce\CatalogStorefront\Model\Read\DocumentHydration;
 use GraphCommerce\CatalogStorefront\Model\Read\Prefill;
 use GraphCommerce\CatalogStorefront\Model\Read\ProductModelBuilder;
+use GraphCommerce\CatalogStorefront\Model\Storage\ProductDocumentStorage;
 use Magento\BundleGraphQl\Model\Resolver\BundleItems;
 use Magento\Catalog\Model\Product\Type;
 use Magento\Framework\GraphQl\Config\Element\Field;
@@ -19,7 +20,7 @@ use Psr\Log\LoggerInterface;
  * documents of its selections. Each item carries its options pre-filled, each
  * option its label, so the core link and label resolvers do not run; the
  * option's product is the selection's model, which the core product resolver
- * takes as is.
+ * takes as is. An item's price range is the bundle's own.
  */
 class BundleItemsFromDocument
 {
@@ -27,6 +28,8 @@ class BundleItemsFromDocument
 
     public function __construct(
         private readonly DocumentHydration $hydration,
+        private readonly Prefill $prefill,
+        private readonly ProductDocumentStorage $storage,
         private readonly Uid $uidEncoder,
         private readonly LoggerInterface $logger,
     ) {
@@ -57,6 +60,19 @@ class BundleItemsFromDocument
 
             $items = [];
             $parentId = (int)$document['productId'];
+            $parentRange = $value['model']->getData(Prefill::KEY)['price_range'] ?? null;
+            if ($parentRange === null && isset($info->getFieldSelection(0)['price_range'])) {
+                $groupKey = $this->hydration->groupKey($context);
+                $this->prefill->fill(
+                    [$parentId => $value['model']],
+                    [$parentId => $document],
+                    $store,
+                    $groupKey,
+                    $this->storage->priceData($store->getCode(), [$parentId], $groupKey),
+                    ['price_range']
+                );
+                $parentRange = $value['model']->getData(Prefill::KEY)['price_range'] ?? null;
+            }
             foreach ((array)($document['optionsV2'] ?? []) as $option) {
                 if (($option['type'] ?? null) !== 'bundle') {
                     continue;
@@ -99,7 +115,7 @@ class BundleItemsFromDocument
                     'position' => (int)($option['sortOrder'] ?? 0),
                     'sku' => $document['sku'],
                     'parent_id' => $parentId,
-                    Prefill::KEY => ['options' => $links],
+                    Prefill::KEY => ['options' => $links] + ($parentRange === null ? [] : ['price_range' => $parentRange]),
                 ];
             }
             usort($items, static fn(array $a, array $b) => [$a['position'], $a['option_id']] <=> [$b['position'], $b['option_id']]);

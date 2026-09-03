@@ -1,0 +1,5 @@
+{
+  products(filter: { sku: { in: ["24-WG01", "WJ02"] } }) {
+    items { sku product_links { link_type linked_product_sku linked_product_type position sku } }
+  }
+}

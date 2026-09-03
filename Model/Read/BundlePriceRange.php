@@ -52,17 +52,7 @@ class BundlePriceRange
         }
 
         $regular = (float)$row['regular'];
-        $payPercent = null;
-        foreach ((array)($row['discounts'] ?? []) as $discount) {
-            if (($discount['code'] ?? null) === 'special_price' && isset($discount['percentage'])) {
-                $payPercent = min($payPercent ?? 100.0, (float)$discount['percentage']);
-            }
-        }
-        foreach ((array)($row['tierPrices'] ?? []) as $tier) {
-            if ((float)($tier['qty'] ?? 1) <= 1 && isset($tier['percentage'])) {
-                $payPercent = min($payPercent ?? 100.0, max(0.0, min(100.0, 100.0 - (float)$tier['percentage'])));
-            }
-        }
+        $payPercent = $this->productPrice->bundlePayPercent($row);
         $discounted = static fn(float $value): float => $payPercent === null ? $value : round($value * $payPercent / 100, 2);
         $finalBase = 0.0;
         if ($fixed) {

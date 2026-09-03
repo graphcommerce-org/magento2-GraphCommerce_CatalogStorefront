@@ -16,7 +16,6 @@ use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
  */
 class ConfigurableOptionsFromDocument
 {
-    private const UNSERVED_OPTION_FIELDS = ['id', 'use_default'];
 
     public function aroundResolve(
         Options $subject,
@@ -31,7 +30,6 @@ class ConfigurableOptionsFromDocument
         if (!is_array($document)
             || ($value['type_id'] ?? null) !== Configurable::TYPE_CODE
             || !isset($document['configurableOptions'])
-            || array_intersect(array_keys($info->getFieldSelection(1)), self::UNSERVED_OPTION_FIELDS)
         ) {
             return $proceed($field, $context, $info, $value, $args);
         }

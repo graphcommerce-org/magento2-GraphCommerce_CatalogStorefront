@@ -70,6 +70,8 @@ class ConfigurableOptionsBuilder
                 return null;
             }
             $options[] = [
+                'id' => isset($option['superAttributeId']) ? (int)$option['superAttributeId'] : null,
+                'use_default' => (bool)($option['useDefault'] ?? false),
                 'uid' => $this->uidEncoder->encode('configurable/' . $productId . '/' . $attributeId),
                 'attribute_id' => (string)$attributeId,
                 'attribute_id_v2' => (int)$attributeId,

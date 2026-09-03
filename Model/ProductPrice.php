@@ -31,6 +31,28 @@ class ProductPrice
         return isset($row['regular']) ? $row : null;
     }
 
+    /**
+     * The percent of its regular price a bundle is sold for: a bundle special
+     * price is a percent to pay, a tier price for one piece a percent off;
+     * null without either.
+     */
+    public function bundlePayPercent(array $row): ?float
+    {
+        $payPercent = null;
+        foreach ((array)($row['discounts'] ?? []) as $discount) {
+            if (($discount['code'] ?? null) === 'special_price' && isset($discount['percentage'])) {
+                $payPercent = min($payPercent ?? 100.0, (float)$discount['percentage']);
+            }
+        }
+        foreach ((array)($row['tierPrices'] ?? []) as $tier) {
+            if ((float)($tier['qty'] ?? 1) <= 1 && isset($tier['percentage'])) {
+                $payPercent = min($payPercent ?? 100.0, max(0.0, min(100.0, 100.0 - (float)$tier['percentage'])));
+            }
+        }
+
+        return $payPercent;
+    }
+
     public function finalPrice(array $row): float
     {
         $regular = (float)$row['regular'];

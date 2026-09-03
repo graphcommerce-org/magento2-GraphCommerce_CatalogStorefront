@@ -97,7 +97,13 @@ class CustomAttributesProvider
                     continue;
                 }
                 $product = $this->productFactory->create();
-                $product->setData(['entity_id' => (int)$id, $linkField => (int)$id, 'type_id' => $typeId, 'store_id' => $storeId]);
+                $product->setData([
+                    'entity_id' => (int)$id,
+                    $linkField => (int)$id,
+                    'type_id' => $typeId,
+                    'store_id' => $storeId,
+                    'price' => $rows[(int)$id]['price'] ?? null,
+                ]);
                 $tierPrice->getBackend()->afterLoad($product);
                 $rows[(int)$id][self::TIER_PRICE] = $product->getData(self::TIER_PRICE);
             }

@@ -212,10 +212,10 @@ class LocalExportFeed implements ExportFeedInterface
 
     /**
      * Keeps one entry per review on the product document of every store view:
-     * the vote percents (value / 5 * 100, as core counts them) where the review
-     * is visible in that store view, null where it is not or once it is
-     * deleted. The read side aggregates, so batches need not carry all reviews
-     * of a product.
+     * the review's title, text, nickname, date and its votes as rating id to
+     * value where the review is visible in that store view, null where it is
+     * not or once it is deleted. The read side aggregates and pages, so
+     * batches need not carry all reviews of a product.
      */
     private function applyReviews(array $rows): void
     {
@@ -232,7 +232,15 @@ class LocalExportFeed implements ExportFeedInterface
             }
             foreach ($stores as $store) {
                 $visible = empty($row['deleted']) && in_array($store, (array)($row['visibility'] ?? []), true);
-                $upserts[$store][(int)$row['productId']]['reviews']['r' . $row['reviewId']] = $visible ? $votes : null;
+                $upserts[$store][(int)$row['productId']]['reviews']['r' . $row['reviewId']] = $visible
+                    ? [
+                        'votes' => $votes,
+                        'title' => $row['title'] ?? null,
+                        'text' => $row['text'] ?? null,
+                        'nickname' => $row['nickname'] ?? null,
+                        'createdAt' => $row['createdAt'] ?? null,
+                    ]
+                    : null;
             }
         }
         foreach ($upserts as $store => $documents) {

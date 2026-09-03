@@ -3,6 +3,10 @@
     <record name="Link">
         <field name="position" type="Int"/>
     </record>
+    <record name="ProductOption">
+        <field name="superAttributeId" type="Int"/>
+        <field name="useDefault" type="Boolean"/>
+    </record>
     <record name="ProductOptionValue">
         <field name="defaultLabel" type="String"/>
         <field name="textSwatchValue" type="String"/>
@@ -17,6 +21,10 @@
             <using field="storeViewCode"/>
         </field>
         <field name="shipmentType" type="String" provider="GraphCommerce\CatalogStorefront\Model\Feed\BundleAttributesProvider">
+            <using field="productId"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="attributeSetId" type="Int" provider="GraphCommerce\CatalogStorefront\Model\Feed\AttributeSetProvider">
             <using field="productId"/>
             <using field="storeViewCode"/>
         </field>
@@ -44,6 +52,15 @@
         <field name="filterPriceRange" type="String" provider="GraphCommerce\CatalogStorefront\Model\Feed\CategoryPriceStepProvider">
             <using field="categoryId"/>
             <using field="storeViewCode"/>
+        </field>
+        <field name="productCount" type="Int" provider="GraphCommerce\CatalogStorefront\Model\Feed\CategoryProductCountProvider">
+            <using field="categoryId"/>
+            <using field="storeViewCode"/>
+        </field>
+    </record>
+    <record name="Review">
+        <field name="createdAt" type="String" provider="GraphCommerce\CatalogStorefront\Model\Feed\ReviewDateProvider">
+            <using field="reviewId"/>
         </field>
     </record>
     <record name="ProductAttributeOption">

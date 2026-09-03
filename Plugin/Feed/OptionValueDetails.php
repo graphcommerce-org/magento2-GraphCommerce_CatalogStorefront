@@ -52,8 +52,30 @@ class OptionValueDetails
             $swatches[(int)$swatch['option_id']][(int)$swatch['store_id']] = $swatch['value'];
         }
 
+        $superAttributes = [];
+        $superAttributeRows = $connection->fetchAll(
+            $connection->select()
+                ->from(['super' => $this->resourceConnection->getTableName('catalog_product_super_attribute')], ['product_super_attribute_id', 'product_id', 'attribute_id'])
+                ->joinLeft(
+                    ['label' => $this->resourceConnection->getTableName('catalog_product_super_attribute_label')],
+                    'label.product_super_attribute_id = super.product_super_attribute_id AND label.store_id = 0',
+                    ['use_default']
+                )
+                ->where('super.product_id IN (?)', array_unique(array_map(static fn(array $row) => (int)$row['productId'], $output)))
+        );
+        foreach ($superAttributeRows as $superAttribute) {
+            $superAttributes[(int)$superAttribute['product_id']][(int)$superAttribute['attribute_id']] = [
+                'superAttributeId' => (int)$superAttribute['product_super_attribute_id'],
+                'useDefault' => (bool)$superAttribute['use_default'],
+            ];
+        }
         foreach ($output as $key => $row) {
             $storeId = (int)$this->storeRepository->get($row['storeViewCode'])->getId();
+            $firstValue = $row['optionsV2']['values'][0]['id'] ?? null;
+            if ($firstValue !== null) {
+                $attributeId = (int)explode('/', $this->uidEncoder->decode((string)$firstValue))[1];
+                $output[$key]['optionsV2'] += $superAttributes[(int)$row['productId']][$attributeId] ?? [];
+            }
             foreach ((array)($row['optionsV2']['values'] ?? []) as $index => $value) {
                 $optionId = (int)explode('/', $this->uidEncoder->decode((string)$value['id']))[2];
                 // A store-specific textual swatch wins when it is not empty, as the

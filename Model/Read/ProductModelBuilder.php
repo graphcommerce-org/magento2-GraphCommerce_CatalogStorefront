@@ -12,15 +12,18 @@ use Magento\Catalog\Model\ProductFactory;
  * Builds a catalog product model from a feed document, so the stock GraphQL
  * resolvers can run on it unchanged.
  *
- * The feeds export labels where the model holds ids (status, visibility) and
- * absolute media URLs where the model holds files, so this builder translates
- * back; the option and tax class ids were resolved by the writer.
+ * The model holds what a product load holds: the entity columns from the
+ * document's base fields and every attribute's raw store view value from the
+ * document's custom attributes, ids where the feed carries labels.
  */
 class ProductModelBuilder
 {
     public const DOCUMENT_KEY = '_gc_document';
 
     private const GUEST_CUSTOMER_GROUP = '0';
+
+    /** Core holds the loaded tier price rows under this attribute; the feed's string form is not a model value. */
+    private const NOT_MODEL_VALUES = ['tier_price'];
 
     /** @var array<string, int>|null */
     private ?array $visibilityMap = null;
@@ -45,7 +48,7 @@ class ProductModelBuilder
             'sku' => $document['sku'],
             'name' => $document['name'] ?? null,
             'type_id' => ($document['type'] ?? 'simple') === 'bundle_fixed' ? 'bundle' : ($document['type'] ?? 'simple'),
-            'attribute_set_id' => 4,
+            'attribute_set_id' => (int)($document['attributeSetId'] ?? 0),
             'status' => ($document['status'] ?? '') === 'Enabled'
                 ? Status::STATUS_ENABLED
                 : Status::STATUS_DISABLED,
@@ -84,9 +87,6 @@ class ProductModelBuilder
         if (isset($document['linksPurchasedSeparately'])) {
             $data['links_purchased_separately'] = (int)$document['linksPurchasedSeparately'];
         }
-        if (array_key_exists('taxClassNumericId', $document)) {
-            $data['tax_class_id'] = $document['taxClassNumericId'];
-        }
 
         foreach ((array)($document['prices'] ?? []) as $priceRow) {
             if (($priceRow['customerGroupCode'] ?? null) === self::GUEST_CUSTOMER_GROUP
@@ -104,14 +104,10 @@ class ProductModelBuilder
             )));
         }
 
-        foreach ($document['attributes'] ?? [] as $attribute) {
-            if (!isset($attribute['attributeCode'])) {
-                continue;
+        foreach ((array)($document['customAttributes'] ?? []) as $attribute) {
+            if (isset($attribute['attributeCode']) && !in_array($attribute['attributeCode'], self::NOT_MODEL_VALUES, true)) {
+                $data[$attribute['attributeCode']] = $attribute['value'] ?? null;
             }
-            $data[$attribute['attributeCode']] = $this->attributeValue(
-                (array)($attribute['value'] ?? []),
-                (array)($attribute['valueId'] ?? [])
-            );
         }
 
         $product = $this->productFactory->create();
@@ -135,21 +131,6 @@ class ProductModelBuilder
         return $this->visibilityMap[$label] ?? Visibility::VISIBILITY_NOT_VISIBLE;
     }
 
-    /**
-     * The model holds option ids where the feed carries labels; the writer
-     * resolved them next to the labels. An attribute without a source keeps
-     * the label.
-     */
-    private function attributeValue(array $labels, array $ids): ?string
-    {
-        $values = [];
-        foreach ($labels as $index => $label) {
-            $values[] = $ids[$index] ?? $label;
-        }
-
-        return $values ? implode(',', $values) : null;
-    }
-
     private function mediaFile(?string $url): string
     {
         if ($url === null) {
@@ -160,8 +141,12 @@ class ProductModelBuilder
         return $position === false ? $url : substr($url, $position + strlen('/catalog/product'));
     }
 
+    /**
+     * The entries in position order, as the gallery read handler lists them.
+     */
     private function mediaGallery(array $entries): array
     {
+        usort($entries, static fn(array $a, array $b) => (int)($a['sort_order'] ?? 0) <=> (int)($b['sort_order'] ?? 0));
         $images = [];
         foreach ($entries as $index => $entry) {
             $images[] = [
@@ -169,6 +154,7 @@ class ProductModelBuilder
                 'file' => $this->mediaFile($entry['url'] ?? null),
                 'label' => $entry['label'] ?? '',
                 'position' => $entry['sort_order'] ?? $index + 1,
+                'types' => (array)($entry['types'] ?? []),
                 'media_type' => 'image',
                 'disabled' => 0,
             ];

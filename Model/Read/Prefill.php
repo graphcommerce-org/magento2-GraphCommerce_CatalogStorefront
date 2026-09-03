@@ -19,6 +19,7 @@ use Magento\Framework\Pricing\PriceCurrencyInterface;
 use Magento\Framework\UrlInterface;
 use Magento\Review\Model\Review\Config as ReviewsConfig;
 use Magento\Store\Api\Data\StoreInterface;
+use Magento\Store\Model\StoreManagerInterface;
 use Magento\Tax\Model\Config as TaxConfig;
 use Magento\Weee\Helper\Data as WeeeHelper;
 
@@ -39,6 +40,9 @@ class Prefill
 
     private const DATE_ATTRIBUTES = ['new_from_date' => 'news_from_date', 'new_to_date' => 'news_to_date'];
 
+    /** The fields whose values derive from the price rows and the composite price data. */
+    public const PRICE_FIELDS = ['price_range', 'price', 'price_tiers', 'tier_prices', 'price_details'];
+
     private const CONFIG_NOT_AVAILABLE_MESSAGE = 'cataloginventory/options/not_available_message';
 
     public function __construct(
@@ -54,6 +58,7 @@ class Prefill
         private readonly ProductPrice $productPrice,
         private readonly BundlePriceRange $bundlePriceRange,
         private readonly RatingMetadata $ratingMetadata,
+        private readonly StoreManagerInterface $storeManager,
     ) {
     }
 
@@ -74,7 +79,7 @@ class Prefill
         $wanted = $requestedFields ? array_flip($requestedFields) : null;
         $selected = static fn(string $field): bool => $wanted === null || isset($wanted[$field]);
         $reviewsEnabled = ($selected('rating_summary') || $selected('review_count')) && $this->reviewsConfig->isEnabled();
-        $priceServable = $selected('price_range')
+        $priceServable = array_filter(self::PRICE_FIELDS, $selected)
             && $store->getCurrentCurrencyCode() === $store->getBaseCurrencyCode()
             && !$this->taxConfig->priceIncludesTax($store)
             && (int)$this->taxConfig->getPriceDisplayType($store) === TaxConfig::DISPLAY_TYPE_EXCLUDING_TAX
@@ -105,6 +110,24 @@ class Prefill
             if ($selected('only_x_left_in_stock')) {
                 $filled['only_x_left_in_stock'] = $this->onlyXLeft($document, $product->getTypeId(), $storeId);
             }
+            if ($selected('websites') && isset($document['websiteCode'])) {
+                $website = $this->storeManager->getWebsite($document['websiteCode']);
+                $filled['websites'] = [[
+                    'id' => (int)$website->getId(),
+                    'name' => $website->getName(),
+                    'code' => $website->getCode(),
+                    'sort_order' => $website->getSortOrder(),
+                    'default_group_id' => $website->getDefaultGroupId(),
+                    'is_default' => $website->getIsDefault(),
+                ]];
+            }
+            if ($selected('media_gallery_entries')) {
+                // The entries as the model holds them, plus the uid core encodes from the id.
+                $filled['media_gallery_entries'] = array_map(
+                    fn(array $entry) => $entry + ['id' => $entry['value_id'], 'uid' => $this->uidEncoder->encode((string)$entry['value_id']), 'content' => null, 'video_content' => null],
+                    (array)($product->getData('media_gallery')['images'] ?? [])
+                );
+            }
             if ($selected('quantity')) {
                 $filled['quantity'] = $quantityShown ? (float)($document['stock']['qty'] ?? 0) : null;
             }
@@ -125,8 +148,8 @@ class Prefill
             if ($selected('rating_summary') || $selected('review_count')) {
                 $reviews = $reviewsEnabled ? array_filter((array)($document['reviews'] ?? [])) : [];
                 $percents = [];
-                foreach ($reviews as $votes) {
-                    foreach ((array)$votes as $ratingId => $value) {
+                foreach ($reviews as $review) {
+                    foreach ((array)($review['votes'] ?? []) as $ratingId => $value) {
                         $scale = $this->ratingMetadata->scale($store->getCode(), (int)$ratingId);
                         if ($scale) {
                             $percents[] = (int)$value / $scale * 100;
@@ -161,10 +184,37 @@ class Prefill
                     default => null,
                 };
                 if ($range !== null) {
-                    $filled['price_range'] = $this->priceRange($product, $document, $range, $currency);
+                    $priceRange = $this->priceRange($product, $document, $range, $currency);
+                    $filled['price_range'] = $priceRange;
+                    // The deprecated price: a grouped product's regular price is its own, zero.
+                    $amount = static fn(float $value): array => ['amount' => ['value' => $value, 'currency' => $currency], 'adjustments' => []];
+                    $filled['price'] = [
+                        'minimalPrice' => $amount($priceRange['minimum_price']['final_price']['value']),
+                        'regularPrice' => $amount($product->getTypeId() === Grouped::TYPE_CODE
+                            ? (float)$product->getData('price')
+                            : $priceRange['minimum_price']['regular_price']['value']),
+                        'maximalPrice' => $amount($priceRange['maximum_price']['final_price']['value']),
+                    ];
+                    if ($selected('price_tiers') || $selected('tier_prices')) {
+                        $tiers = $this->tiers($document, $groupKey, $priceRange['minimum_price']['regular_price']['value'], $currency);
+                        $filled['price_tiers'] = $tiers['price_tiers'];
+                        $filled['tier_prices'] = $tiers['tier_prices'];
+                    }
+                    if ($product->getTypeId() === Type::TYPE_BUNDLE && $selected('price_details')) {
+                        $mainPrice = (float)$product->getData('price');
+                        $payPercent = $this->productPrice->bundlePayPercent(
+                            (array)$this->productPrice->row((array)($document['prices'] ?? []), $groupKey)
+                        );
+                        $mainFinalPrice = $payPercent === null ? $mainPrice : round($mainPrice * $payPercent / 100, 2);
+                        $filled['price_details'] = [
+                            'main_price' => $mainPrice,
+                            'main_final_price' => $mainFinalPrice,
+                            'discount_percentage' => $mainPrice ? 100 - ($mainFinalPrice * 100 / $mainPrice) : 0,
+                        ];
+                    }
                 }
             }
-            $product->setData(self::KEY, $filled);
+            $product->setData(self::KEY, $filled + (array)$product->getData(self::KEY));
         }
     }
 
@@ -187,6 +237,54 @@ class Prefill
             - (float)($stock['minQty'] ?? $this->stockConfiguration->getMinQty($storeId));
 
         return $left > 0 && $left <= (float)$this->stockConfiguration->getStockThresholdQty($storeId) ? $left : null;
+    }
+
+    /**
+     * The tier prices of the customer group's price row, as core lists them:
+     * a percent tier's price is the percent off the product price, a fixed
+     * tier's its value; of two tiers for one quantity the lower price stays.
+     * The deprecated shape carries the group only as the feed has it: every
+     * tier reads as for all groups.
+     *
+     * @return array{price_tiers: array[], tier_prices: array[]}
+     */
+    private function tiers(array $document, string $groupKey, float $regularPrice, string $currency): array
+    {
+        $row = $this->productPrice->row((array)($document['prices'] ?? []), $groupKey);
+        $byQty = [];
+        foreach ((array)($row['tierPrices'] ?? []) as $tier) {
+            $qty = (float)($tier['qty'] ?? 0);
+            $percentage = isset($tier['percentage']) ? (float)$tier['percentage'] : null;
+            $value = $this->priceCurrency->convertAndRound(
+                $percentage !== null
+                    ? (float)$row['regular'] * (1 - $percentage / 100)
+                    : (float)($tier['price'] ?? 0)
+            );
+            if (isset($byQty[$qty]) && $byQty[$qty]['value'] <= $value) {
+                continue;
+            }
+            $byQty[$qty] = ['qty' => $qty, 'value' => $value, 'percentage' => $percentage];
+        }
+        $priceTiers = [];
+        $tierPrices = [];
+        foreach ($byQty as $tier) {
+            $priceTiers[] = [
+                'discount' => $tier['percentage'] !== null
+                    ? $this->discount->getDiscountByPercent($regularPrice, $tier['percentage'])
+                    : $this->discount->getDiscountByDifference($regularPrice, $tier['value']),
+                'quantity' => $tier['qty'],
+                'final_price' => ['value' => $tier['value'], 'currency' => $currency],
+            ];
+            $tierPrices[] = [
+                'customer_group_id' => '32000',
+                'qty' => $tier['qty'],
+                'value' => $tier['value'],
+                'percentage_value' => null,
+                'website_id' => null,
+            ];
+        }
+
+        return ['price_tiers' => $priceTiers, 'tier_prices' => $tierPrices];
     }
 
     private function singleRange(array $document, string $groupKey): ?array

@@ -64,7 +64,7 @@ class DocumentHydration
                 $store->getCode(),
                 $ids,
                 $this->sourceExcludes($requestedFields),
-                in_array("price_range", $requestedFields, true) ? $groupKey : null,
+                array_intersect(Prefill::PRICE_FIELDS, $requestedFields) ? $groupKey : null,
             );
             $models = $this->buildModels($store, $documents, $priceData, $groupKey, $requestedFields);
             $items = [];
@@ -120,7 +120,7 @@ class DocumentHydration
             $documents,
             static fn(array $document) => in_array($document['type'] ?? '', ['configurable', 'grouped', 'bundle', 'bundle_fixed'], true)
         ));
-        if ($compositeIds && in_array('price_range', $requestedFields, true)) {
+        if ($compositeIds && array_intersect(Prefill::PRICE_FIELDS, $requestedFields)) {
             $priceData = $this->storage->priceData($store->getCode(), $compositeIds, $groupKey);
         }
 
@@ -160,10 +160,11 @@ class DocumentHydration
             if (isset($this->fieldDocumentKeys[$field])) {
                 $needed = array_merge($needed, $this->fieldDocumentKeys[$field]);
             } elseif (!in_array($field, $this->baseFields, true)) {
-                $needed[] = "attributes";
+                $needed[] = "customAttributes";
             }
         }
-        $excludable = array_merge(["attributes"], ...array_values($this->fieldDocumentKeys));
+        // The labelled attributes slice serves nothing on read: the model takes the raw values.
+        $excludable = array_merge(["attributes", "customAttributes"], ...array_values($this->fieldDocumentKeys));
 
         return array_values(array_diff(array_unique($excludable), $needed));
     }

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Plugin\Resolver;
 
+use GraphCommerce\CatalogStorefront\Model\Read\Prefill;
 use GraphCommerce\CatalogStorefront\Model\Read\ProductModelBuilder;
 use GraphCommerce\CatalogStorefront\Model\Storage\MetadataDocumentStorage;
 use Magento\Catalog\Model\CategoryFactory;
@@ -23,7 +24,7 @@ use Psr\Log\LoggerInterface;
  * the store's root category is left out, as core does. Every product of a
  * page registers its ids first and the documents are fetched in one request
  * when the first deferred value resolves, by id ascending as core's
- * collection returns them.
+ * collection returns them. The product count is the feed's, pre-filled.
  */
 class CategoriesFromDocuments implements ResetAfterRequestInterface
 {
@@ -115,6 +116,7 @@ class CategoriesFromDocuments implements ResetAfterRequestInterface
                     foreach (self::FIELDS as $key => $documentKey) {
                         $data[$key] = $document[$documentKey] ?? null;
                     }
+                    $data['children_count'] = (string)count((array)($document['children'] ?? []));
                     // Every requested field has a key, so the hydrator's plain data path answers all of them.
                     foreach ($requestedFields as $requestedField) {
                         $data[$requestedField] ??= null;
@@ -123,6 +125,7 @@ class CategoriesFromDocuments implements ResetAfterRequestInterface
                     $category->setData($data);
                     $category->setStoreId((int)$store->getId());
                     $categories[$id] = $this->hydrator->hydrateCategory($category, true);
+                    $categories[$id][Prefill::KEY] = ['product_count' => (int)($document['productCount'] ?? 0)];
                 }
             } catch (\Throwable $e) {
                 $this->logger->warning('catalog-storefront categories fallback: ' . $e->getMessage());
