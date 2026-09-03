@@ -32,7 +32,13 @@ ids in the feed instead of the labels.
   resolved, inventory = `stock`, variants = `variantIds` on the configurable
   parent, reviews = `reviews.r<review id>` with the vote percents where the
   review is visible). `Model/ProductPrice` holds the price semantics both sides
-  share.
+  share. `Model/Feed/CompositeLinks` keeps the grouped and bundle links by id
+  (`groupedParentIds` and `bundleParentIds` on the children, the child id
+  lists on the parent) from the products feed, which carries them by sku only,
+  written from whichever side the feed delivers last. The feed folds a fixed
+  bundle price type into the product type `bundle_fixed`;
+  `Model/Feed/BundleAttributesProvider` adds the sku and shipment type the
+  exporter lacks.
   `etc/et_schema.xml` extends the feed with what the read side needs and the
   exporter lacks: link position, option admin label and textual swatch value
   (`Plugin/Feed/*`), and a reviews provider that exports during indexing
@@ -42,9 +48,15 @@ ids in the feed instead of the labels.
   models from documents through `DocumentHydration`. A listing page is one
   multi-search request: the documents by id with the heavy keys the query does
   not select left out (`HEAVY_KEYS`, `attributes` only when a non-base field is
-  selected), and, when `price_range` is selected, the configurable price
-  aggregation: terms on `parentIds`, min and max of `priceIndex.<group key>`
-  over salable and over all enabled variants. `Model/Read/Prefill` then fills,
+  selected), and, when `price_range` is selected, the composite price data:
+  the configurable and the grouped price aggregation (terms on `parentIds`
+  and on `groupedParentIds`, min and max of `priceIndex.<group key>` over
+  salable and over all enabled children), the bundle selection documents by
+  `bundleParentIds`, and the bundles' option slices. A grouped range is the
+  lowest regular and lowest final child price, as core takes them; a bundle
+  range is `Model/Read/BundlePriceRange`, a port of core's bundle amount
+  calculator over the option slice and the selection documents.
+  `Model/Read/Prefill` then fills,
   on the product value the executor hands to child fields, the fields whose
   core resolvers only derive from the model and the document: uid, id,
   new_from_date, new_to_date, rating_summary, review_count, image, small_image
@@ -100,9 +112,17 @@ ids in the feed instead of the labels.
   A benchmark that flips the flag must do this, or both runs measure one path.
 - With immediate export, a full `indexer:reindex` of a feed skips rows whose
   feed hash is unchanged, so it does not repair a document store. To rebuild
-  the documents: drop the index, truncate the `cde_*` feed tables and
-  `catalog_data_exporter_product_reviews`, then reindex the products, prices,
-  stock, variants and reviews feeds.
+  the documents: drop the index, truncate `cde_products_feed`,
+  `cde_product_prices_feed`, `cde_product_variants_feed`,
+  `inventory_data_exporter_stock_status_feed` and
+  `catalog_data_exporter_product_reviews`, then reindex the products, stock,
+  prices, variants and reviews feeds. A mapping change needs this too.
+- The parity set needs the fixed bundle `GC-BUNDLE-FIXED`
+  (`dev/parity/fixtures/bundle-fixed.json`, POST it to `/rest/V1/products`
+  with an admin token, then reindex stock, price, search and the feeds): the
+  demo catalog has only a dynamic bundle with required radio options. The
+  harness fails a query that returns no product on either path, because a
+  hidden product passed vacuously for hours before that check existed.
 - After di.xml changes: `setup:di:compile`, `cache:flush` on the host and in
   the worker container, then restart the worker. After `et_schema.xml` changes
   every feed row changes hash, so the next reindex re-exports everything.
@@ -129,12 +149,12 @@ ids in the feed instead of the labels.
   200-item listing. Steady state of that listing, measured this way: 71ms over
   the wire, 62ms inside PHP: execute 56ms of which the products resolver is
   18ms (core search adapter 7ms with OpenSearch at 1ms, document multi-search
-  15ms with OpenSearch at 11 to 13ms, of which about 6ms is `_source`
-  filtering, model build 2ms), the other resolvers 4ms (151 resolver calls,
-  three of them the grouped and bundle price fallback at 1ms each), and the
-  webonyx walk over about 22000 fields 25ms; the plugins around the controller
-  1ms, response build 3ms (JSON render 0.7ms); 25 SQL queries in 4ms (grouped
-  and bundle price fallback, layer category). The state reset after the
+  16ms with OpenSearch at 12 to 17ms for the five searches, of which about 6ms
+  is `_source` filtering, model build 2ms), the other resolvers 2ms (150
+  resolver calls), and the webonyx walk over about 22000 fields 25ms; the
+  plugins around the controller 1ms, response build 3ms (JSON render 0.7ms);
+  14 SQL queries in 2.4ms (the layer's category loads, the config hash flag,
+  the stock resolver). The state reset after the
   response takes 22ms per request on the thread, which is throughput, not
   latency. PHP JIT (tracing and function mode) makes this workload 10 to 20%
   slower in the worker and, combined with the kept schema, produced erratic
@@ -151,7 +171,11 @@ ids in the feed instead of the labels.
 - Price rows are served only when the display currency is the base currency,
   catalog prices exclude tax and are displayed excluding tax, and fixed product
   taxes are off. Other setups fall back to core.
-- Bundle and grouped price_range fall back to core (child loads).
+- Grouped children with required customizable options are not excluded from
+  the grouped range as core's associated products collection does. A fixed
+  bundle with customizable options falls back to core, which adds their price
+  range. A percent bundle selection is a percent of the bundle's regular
+  price; core applies a catalog rule on the bundle first.
 - The feed exports the special price attribute without its from and to dates.
 - `configurable_options` falls back to core when `id` or `use_default` is
   selected: the feed carries no super attribute id.

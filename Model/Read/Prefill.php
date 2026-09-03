@@ -11,6 +11,7 @@ use Magento\CatalogInventory\Api\StockConfigurationInterface;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 use Magento\Downloadable\Model\Product\Type as DownloadableType;
 use Magento\Framework\GraphQl\Query\Uid;
+use Magento\GroupedProduct\Model\Product\Type\Grouped;
 use Magento\Framework\Pricing\PriceCurrencyInterface;
 use Magento\Review\Model\Review\Config as ReviewsConfig;
 use Magento\Store\Api\Data\StoreInterface;
@@ -44,13 +45,14 @@ class Prefill
         private readonly TaxConfig $taxConfig,
         private readonly WeeeHelper $weeeHelper,
         private readonly ProductPrice $productPrice,
+        private readonly BundlePriceRange $bundlePriceRange,
     ) {
     }
 
     /**
      * @param Product[] $models keyed by product id
      * @param array[] $documents keyed by product id
-     * @param array[] $ranges configurable price ranges keyed by parent id
+     * @param array $priceData composite price data as ProductDocumentStorage::priceData() returns it, or empty
      * @param string[] $requestedFields product fields the query selects; empty selects all
      */
     public function fill(
@@ -58,7 +60,7 @@ class Prefill
         array $documents,
         StoreInterface $store,
         string $groupKey,
-        array $ranges,
+        array $priceData,
         array $requestedFields
     ): void {
         $wanted = $requestedFields ? array_flip($requestedFields) : null;
@@ -105,7 +107,14 @@ class Prefill
             if ($priceServable) {
                 $range = match ($product->getTypeId()) {
                     Type::TYPE_SIMPLE, Type::TYPE_VIRTUAL, DownloadableType::TYPE_DOWNLOADABLE => $this->singleRange($document, $groupKey),
-                    Configurable::TYPE_CODE => $this->configurableRange($document, $ranges[$id] ?? null, $showOutOfStock),
+                    Configurable::TYPE_CODE => $this->configurableRange($document, $priceData['configurable'][$id] ?? null, $showOutOfStock),
+                    Grouped::TYPE_CODE => $this->groupedRange($priceData['grouped'][$id] ?? null, $showOutOfStock),
+                    Type::TYPE_BUNDLE => $this->bundlePriceRange->range(
+                        $document + ($priceData['bundleOptions'][$id] ?? []),
+                        $priceData['bundle'][$id] ?? [],
+                        $groupKey,
+                        $showOutOfStock
+                    ),
                     default => null,
                 };
                 if ($range !== null) {
@@ -139,6 +148,18 @@ class Prefill
             : $ranges['salable'];
 
         return $range ?? [0.0, 0.0, 0.0, 0.0];
+    }
+
+    /**
+     * Core takes, over the associated products, the lowest regular and the
+     * lowest final price each on its own, and the maximum equals the minimum;
+     * out-of-stock children count only when out-of-stock products are shown.
+     */
+    private function groupedRange(?array $ranges, bool $showOutOfStock): ?array
+    {
+        $range = $ranges === null ? null : ($showOutOfStock ? $ranges['all'] : $ranges['salable']);
+
+        return $range === null ? null : [$range[0], $range[1], $range[0], $range[1]];
     }
 
     private function priceRange(Product $product, array $document, array $range, string $currency): array

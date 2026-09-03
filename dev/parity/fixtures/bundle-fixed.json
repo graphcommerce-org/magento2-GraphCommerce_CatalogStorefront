@@ -1,0 +1,10 @@
+{"product":{"sku":"GC-BUNDLE-FIXED","name":"GC Fixed Bundle","attribute_set_id":4,"type_id":"bundle","price":100,"status":1,"visibility":4,"weight":1,
+ "extension_attributes":{"website_ids":[1],"stock_item":{"qty":10,"is_in_stock":true},
+  "bundle_product_options":[
+   {"option_id":0,"title":"Required radio","required":true,"type":"radio","position":1,"sku":"GC-BUNDLE-FIXED",
+    "product_links":[{"sku":"24-WG084","option_id":0,"qty":1,"position":1,"is_default":true,"price":10,"price_type":0,"can_change_quantity":0},
+                     {"sku":"24-WG088","option_id":0,"qty":2,"position":2,"is_default":false,"price":20,"price_type":1,"can_change_quantity":0}]},
+   {"option_id":0,"title":"Optional multi","required":false,"type":"checkbox","position":2,"sku":"GC-BUNDLE-FIXED",
+    "product_links":[{"sku":"24-WG081-blue","option_id":0,"qty":1,"position":1,"is_default":false,"price":5,"price_type":0,"can_change_quantity":0},
+                     {"sku":"24-WG082-blue","option_id":0,"qty":1,"position":2,"is_default":false,"price":7,"price_type":0,"can_change_quantity":0}]}]},
+ "custom_attributes":[{"attribute_code":"price_type","value":"1"},{"attribute_code":"sku_type","value":"1"},{"attribute_code":"weight_type","value":"1"},{"attribute_code":"shipment_type","value":"0"},{"attribute_code":"price_view","value":"0"},{"attribute_code":"special_price","value":"80"},{"attribute_code":"tax_class_id","value":"2"},{"attribute_code":"url_key","value":"gc-fixed-bundle"}]}}

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Model;
 
+use GraphCommerce\CatalogStorefront\Model\Feed\CompositeLinks;
 use GraphCommerce\CatalogStorefront\Model\Feed\ConfigurableOptionsBuilder;
 use GraphCommerce\CatalogStorefront\Model\Storage\ProductDocumentStorage;
 use Magento\Customer\Api\GroupManagementInterface;
@@ -41,6 +42,7 @@ class LocalExportFeed implements ExportFeedInterface
         private readonly GroupManagementInterface $groupManagement,
         private readonly ProductPrice $productPrice,
         private readonly ConfigurableOptionsBuilder $configurableOptionsBuilder,
+        private readonly CompositeLinks $compositeLinks,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -84,11 +86,13 @@ class LocalExportFeed implements ExportFeedInterface
                 $upserts[$store][(int)$row['productId']] = $row;
             }
         }
-        foreach ($upserts as $store => $documents) {
+        foreach (array_unique(array_merge(array_keys($upserts), array_keys($deletes))) as $store) {
+            $documents = $upserts[$store] ?? [];
+            foreach ($this->compositeLinks->upserts($store, $documents, $deletes[$store] ?? []) as $id => $links) {
+                $documents[$id] = array_replace($documents[$id] ?? [], $links);
+            }
             $this->storage->upsert($store, $documents);
-        }
-        foreach ($deletes as $store => $ids) {
-            $this->storage->delete($store, $ids);
+            $this->storage->delete($store, $deletes[$store] ?? []);
         }
     }
 

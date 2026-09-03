@@ -34,7 +34,10 @@ class Product implements EntityConfigInterface
             'dynamic' => false,
             'properties' => [
                 'sku' => ['type' => 'keyword'],
+                'type' => ['type' => 'keyword'],
                 'parentIds' => ['type' => 'keyword'],
+                'groupedParentIds' => ['type' => 'keyword'],
+                'bundleParentIds' => ['type' => 'keyword'],
                 'status' => ['type' => 'keyword'],
                 'stock' => ['properties' => ['isSalable' => ['type' => 'boolean']]],
                 'priceIndex' => ['type' => 'object', 'dynamic' => true],

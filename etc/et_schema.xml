@@ -7,6 +7,16 @@
         <field name="defaultLabel" type="String"/>
         <field name="textSwatchValue" type="String"/>
     </record>
+    <record name="Product">
+        <field name="skuType" type="String" provider="GraphCommerce\CatalogStorefront\Model\Feed\BundleAttributesProvider">
+            <using field="productId"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="shipmentType" type="String" provider="GraphCommerce\CatalogStorefront\Model\Feed\BundleAttributesProvider">
+            <using field="productId"/>
+            <using field="storeViewCode"/>
+        </field>
+    </record>
     <record name="Export">
         <field name="reviews" type="Review" repeated="true"
                provider="GraphCommerce\CatalogStorefront\Model\Feed\ReviewsDataProcessor">

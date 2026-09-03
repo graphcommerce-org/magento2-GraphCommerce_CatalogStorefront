@@ -60,13 +60,13 @@ class DocumentHydration
                 return null;
             }
             $groupKey = $this->groupKey($context);
-            [$documents, $ranges] = $this->storage->listing(
+            [$documents, $priceData] = $this->storage->listing(
                 $store->getCode(),
                 $ids,
                 $this->sourceExcludes($requestedFields),
                 in_array("price_range", $requestedFields, true) ? $groupKey : null,
             );
-            $models = $this->buildModels($store, $documents, $ranges, $groupKey, $requestedFields);
+            $models = $this->buildModels($store, $documents, $priceData, $groupKey, $requestedFields);
             $items = [];
             foreach ($ids as $id) {
                 if (!isset($models[$id])) {
@@ -90,14 +90,14 @@ class DocumentHydration
 
     /**
      * @param array[] $documents keyed by product id
-     * @param array[] $ranges configurable price ranges keyed by parent id
+     * @param array $priceData composite price data as ProductDocumentStorage::priceData() returns it, or empty
      * @param string[] $requestedFields product fields the query selects; empty selects all
      * @return Product[] keyed by product id
      */
     public function buildModels(
         StoreInterface $store,
         array $documents,
-        array $ranges,
+        array $priceData,
         string $groupKey,
         array $requestedFields
     ): array {
@@ -109,7 +109,7 @@ class DocumentHydration
                 $models[(int) $id] = $model;
             }
         }
-        $this->prefill->fill($models, $documents, $store, $groupKey, $ranges, $requestedFields);
+        $this->prefill->fill($models, $documents, $store, $groupKey, $priceData, $requestedFields);
 
         return $models;
     }

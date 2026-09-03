@@ -1,0 +1,15 @@
+{
+  products(filter: { sku: { eq: "GC-BUNDLE-FIXED" } }) {
+    items {
+      uid sku name __typename
+      ... on BundleProduct {
+        dynamic_price dynamic_sku dynamic_weight ship_bundle_items price_view
+        items { title type required option_id options { quantity is_default label uid price price_type product { sku } } }
+      }
+      price_range {
+        minimum_price { regular_price { value currency } final_price { value currency } discount { amount_off percent_off } }
+        maximum_price { regular_price { value currency } final_price { value currency } discount { amount_off percent_off } }
+      }
+    }
+  }
+}

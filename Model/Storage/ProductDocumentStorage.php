@@ -71,6 +71,8 @@ class ProductDocumentStorage
      */
     public function get(string $storeViewCode, array $ids, array $fields = ['*']): EntryIteratorInterface
     {
+        $this->ensureIndex($storeViewCode);
+
         return $this->query->getEntries($this->aliasName($storeViewCode), self::ENTITY, $ids, $fields);
     }
 
@@ -79,65 +81,79 @@ class ProductDocumentStorage
      */
     public function findBySku(string $storeViewCode, array $skus): EntryIteratorInterface
     {
+        $this->ensureIndex($storeViewCode);
+
         return $this->query->searchFilteredEntries($this->aliasName($storeViewCode), self::ENTITY, ['sku' => $skus]);
     }
 
     /**
-     * The documents of a listing page and the configurable price ranges of the
-     * page, in one request: a search by id with the heavy source fields the
-     * query does not need left out, and the price aggregation over the
-     * variants of every listed parent.
+     * The documents of a listing page and, when a group key is given, the
+     * price data of the page's composite products, in one multi-search.
      *
-     * @param int[] $ids
-     * @param string[] $sourceExcludes document keys to leave out
-     * @param string|null $groupKey price group key, null when no ranges are needed
-     * @return array{0: array<int, array>, 1: array} documents by id, ranges by parent id
+     * @return array{0: array[], 1: array} documents keyed by id, price data as priceData() returns it
      */
     public function listing(string $storeViewCode, array $ids, array $sourceExcludes, ?string $groupKey): array
     {
         $searches = [[
             'size' => count($ids),
-            'query' => ['ids' => ['values' => array_map('strval', $ids)]],
+            'query' => ['ids' => ['values' => array_values(array_map('strval', $ids))]],
             '_source' => $sourceExcludes ? ['excludes' => $sourceExcludes] : true,
         ]];
         if ($groupKey !== null) {
-            $searches[] = $this->priceAggregation($ids, $groupKey);
+            $searches = array_merge($searches, $this->priceSearches($ids, $groupKey));
         }
         $responses = $this->query->multiSearch($this->aliasName($storeViewCode), $searches);
-
         $documents = [];
         foreach ($responses[0]['hits']['hits'] ?? [] as $hit) {
             $documents[(int)$hit['_id']] = $hit['_source'];
         }
 
-        return [$documents, $groupKey === null ? [] : $this->parseRanges($responses[1] ?? [])];
+        return [$documents, $groupKey === null ? [] : $this->parsePriceData(array_slice($responses, 1))];
     }
 
     /**
-     * The configurable price ranges of the given parents for one customer group.
+     * Price data of composite products: the configurable and grouped price
+     * ranges per parent id (over salable and over all children), the bundle
+     * selection documents per parent id and sku, and the bundles' option
+     * slices, which a listing fetch leaves out of the product documents.
      *
-     * @param int[] $parentIds
-     * @return array<int, array{salable: ?array, all: ?array}> ranges as [minRegular, minFinal, maxRegular, maxFinal]
+     * @return array{configurable: array, grouped: array, bundle: array, bundleOptions: array}
      */
-    public function priceRanges(string $storeViewCode, array $parentIds, string $groupKey): array
+    public function priceData(string $storeViewCode, array $ids, string $groupKey): array
     {
-        $search = $this->priceAggregation($parentIds, $groupKey);
-
-        return $this->parseRanges(
-            ['aggregations' => $this->query->aggregate($this->aliasName($storeViewCode), $search['query'], $search['aggs'])]
+        return $this->parsePriceData(
+            $this->query->multiSearch($this->aliasName($storeViewCode), $this->priceSearches($ids, $groupKey))
         );
     }
 
-    /**
-     * Minimum and maximum regular and final price over the enabled variants
-     * of each parent, once over the salable variants and once over all. A
-     * variant without a price for the group does not count.
-     *
-     * @param int[] $parentIds
-     */
-    private function priceAggregation(array $parentIds, string $groupKey): array
+    private function priceSearches(array $parentIds, string $groupKey): array
     {
-        $parentIds = array_map('strval', $parentIds);
+        $parentIds = array_values(array_map('strval', $parentIds));
+
+        return [
+            $this->rangeAggregation('parentIds', $parentIds, $groupKey),
+            $this->rangeAggregation('groupedParentIds', $parentIds, $groupKey),
+            [
+                'size' => 1000,
+                'query' => ['bool' => ['filter' => [
+                    ['terms' => ['bundleParentIds' => $parentIds]],
+                    ['term' => ['status' => 'Enabled']],
+                ]]],
+                '_source' => ['sku', 'bundleParentIds', 'stock.isSalable', 'priceIndex.' . $groupKey],
+            ],
+            [
+                'size' => count($parentIds),
+                'query' => ['bool' => ['filter' => [
+                    ['ids' => ['values' => $parentIds]],
+                    ['terms' => ['type' => ['bundle', 'bundle_fixed']]],
+                ]]],
+                '_source' => ['optionsV2', 'shopperInputOptions'],
+            ],
+        ];
+    }
+
+    private function rangeAggregation(string $parentField, array $parentIds, string $groupKey): array
+    {
         $stats = [
             'minRegular' => ['min' => ['field' => 'priceIndex.' . $groupKey . '.regular']],
             'minFinal' => ['min' => ['field' => 'priceIndex.' . $groupKey . '.final']],
@@ -148,11 +164,11 @@ class ProductDocumentStorage
         return [
             'size' => 0,
             'query' => ['bool' => ['filter' => [
-                ['terms' => ['parentIds' => $parentIds]],
+                ['terms' => [$parentField => $parentIds]],
                 ['term' => ['status' => 'Enabled']],
             ]]],
             'aggs' => ['parents' => [
-                'terms' => ['field' => 'parentIds', 'size' => count($parentIds), 'include' => $parentIds],
+                'terms' => ['field' => $parentField, 'size' => count($parentIds), 'include' => $parentIds],
                 'aggs' => [
                     'salable' => ['filter' => ['term' => ['stock.isSalable' => true]], 'aggs' => $stats],
                     'all' => ['filter' => ['match_all' => new \stdClass()], 'aggs' => $stats],
@@ -161,9 +177,28 @@ class ProductDocumentStorage
         ];
     }
 
-    /**
-     * @return array<int, array{salable: ?array, all: ?array}>
-     */
+    private function parsePriceData(array $responses): array
+    {
+        $selections = [];
+        foreach ($responses[2]['hits']['hits'] ?? [] as $hit) {
+            foreach ((array)($hit['_source']['bundleParentIds'] ?? []) as $parentId) {
+                $selections[(int)$parentId][$hit['_source']['sku']] = $hit['_source'];
+            }
+        }
+
+        $bundleOptions = [];
+        foreach ($responses[3]['hits']['hits'] ?? [] as $hit) {
+            $bundleOptions[(int)$hit['_id']] = $hit['_source'];
+        }
+
+        return [
+            'configurable' => $this->parseRanges($responses[0] ?? []),
+            'grouped' => $this->parseRanges($responses[1] ?? []),
+            'bundle' => $selections,
+            'bundleOptions' => $bundleOptions,
+        ];
+    }
+
     private function parseRanges(array $response): array
     {
         $ranges = [];

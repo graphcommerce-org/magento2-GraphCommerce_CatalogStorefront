@@ -132,6 +132,12 @@ foreach ($queryFiles as $file) {
             printf("ERROR %s (%s path): %s\n", $name, $path, substr(json_encode($response['errors'][0]['message'] ?? $response['errors']), 0, 200));
             continue 2;
         }
+        // A query that returns no product compares nothing: a hidden product passes vacuously.
+        if (($response['data']['products']['items'] ?? null) === []) {
+            $failed++;
+            printf("EMPTY %s (%s path): no products returned\n", $name, $path);
+            continue 2;
+        }
     }
     $diffs = diffPaths(normalize($stock[$file]), normalize($document[$file]));
     if (!$diffs) {

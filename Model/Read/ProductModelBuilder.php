@@ -55,7 +55,7 @@ class ProductModelBuilder
             'entity_id' => (int)$document['productId'],
             'sku' => $document['sku'],
             'name' => $document['name'] ?? null,
-            'type_id' => $document['type'] ?? 'simple',
+            'type_id' => ($document['type'] ?? 'simple') === 'bundle_fixed' ? 'bundle' : ($document['type'] ?? 'simple'),
             'attribute_set_id' => 4,
             'status' => ($document['status'] ?? '') === 'Enabled'
                 ? Status::STATUS_ENABLED
@@ -78,6 +78,20 @@ class ProductModelBuilder
             'is_salable' => (int)($document['stock']['isSalable'] ?? $document['inStock'] ?? false),
         ];
 
+        // The feed folds a fixed bundle price type into the product type. The
+        // bundle attributes are strings, as core loads them: its enum lookups
+        // accept nothing else.
+        if (in_array($document['type'] ?? '', ['bundle', 'bundle_fixed'], true)) {
+            $data['price_type'] = ($document['type'] ?? '') === 'bundle_fixed' ? '1' : '0';
+            foreach (['skuType' => 'sku_type', 'weightType' => 'weight_type', 'shipmentType' => 'shipment_type'] as $key => $attribute) {
+                if (isset($document[$key])) {
+                    $data[$attribute] = (string)(int)$document[$key];
+                }
+            }
+            if (isset($document['priceView'])) {
+                $data['price_view'] = $document['priceView'] === 'as_low_as' ? '1' : '0';
+            }
+        }
         if (isset($document['linksPurchasedSeparately'])) {
             $data['links_purchased_separately'] = (int)$document['linksPurchasedSeparately'];
         }
