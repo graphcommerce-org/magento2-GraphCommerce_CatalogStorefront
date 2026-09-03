@@ -100,6 +100,9 @@ class DocumentStore
     }
 
     /**
+     * A missing index returns no documents instead of an error, so the read path
+     * needs no separate existence check per request.
+     *
      * @param int[] $entityIds
      * @return array<int, array> entity_id => document, misses omitted
      */
@@ -107,6 +110,7 @@ class DocumentStore
     {
         $result = $this->client()->query([
             'index' => $this->aliasName($storeId),
+            'ignore_unavailable' => true,
             'body' => [
                 'query' => ['ids' => ['values' => array_map(strval(...), $entityIds)]],
                 'size' => count($entityIds),

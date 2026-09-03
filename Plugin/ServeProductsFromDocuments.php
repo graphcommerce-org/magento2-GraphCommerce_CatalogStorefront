@@ -61,7 +61,7 @@ class ServeProductsFromDocuments
             foreach ($searchResult->getItems() as $item) {
                 $ids[] = (int)$item->getId();
             }
-            if (!$ids || !$this->documentStore->hasIndex($storeId)) {
+            if (!$ids) {
                 return $proceed($searchCriteria, $searchResult, $attributes, $context);
             }
 
