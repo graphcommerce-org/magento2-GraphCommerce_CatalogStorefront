@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
-    <type name="Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\ProductSearch">
-        <plugin name="graphcommerce_catalog_storefront_serve_from_documents"
-                type="GraphCommerce\CatalogStorefront\Plugin\ServeProductsFromDocuments"/>
-    </type>
-</config>

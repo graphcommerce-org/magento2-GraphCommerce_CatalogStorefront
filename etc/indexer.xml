@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Indexer/etc/indexer.xsd">
-    <indexer id="graphcommerce_catalog_documents"
-             view_id="graphcommerce_catalog_documents"
-             class="GraphCommerce\CatalogStorefront\Model\Indexer\ProductDocuments">
-        <title translate="true">Catalog Product Documents</title>
-        <description translate="true">Denormalised product documents in the search engine, one per store view, read by the catalog GraphQL layer</description>
-    </indexer>
-</config>
