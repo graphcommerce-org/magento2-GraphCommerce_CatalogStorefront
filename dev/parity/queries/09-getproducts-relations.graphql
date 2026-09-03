@@ -1,0 +1,28 @@
+fragment ProductPiece on ProductInterface {
+  uid
+  name
+  price_range {
+    maximum_price { discount { amount_off percent_off } final_price { currency value } regular_price { currency value } }
+    minimum_price { discount { amount_off percent_off } final_price { currency value } regular_price { currency value } }
+  }
+  thumbnail { disabled label position url }
+  quantity
+  max_sale_qty
+  media_gallery { disabled label position url }
+  quantity
+  url_suffix
+  url_rewrites { url }
+  description { html }
+}
+query GetProducts {
+  products(filter: {}) {
+    items {
+      __typename
+      ... on ConfigurableProduct { configurable_options { attribute_code } }
+      ...ProductPiece
+      related_products { ...ProductPiece }
+      upsell_products { ...ProductPiece }
+      crosssell_products { ...ProductPiece }
+    }
+  }
+}

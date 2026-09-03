@@ -30,6 +30,10 @@
         <plugin name="graphcommerce_catalog_storefront_price_range"
                 type="GraphCommerce\CatalogStorefront\Plugin\Resolver\PriceRangeFromDocument"/>
     </type>
+    <type name="Magento\CatalogInventoryGraphQl\Model\Resolver\MaxSaleQtyResolver">
+        <plugin name="graphcommerce_catalog_storefront_max_sale_qty"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\MaxSaleQtyFromConfig"/>
+    </type>
 
     <type name="GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\EntityConfigPool">
         <arguments>
