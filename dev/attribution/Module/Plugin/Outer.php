@@ -20,6 +20,11 @@ class Outer
     private static float $resolverTopLevel = 0;
     private static float $launchStart = 0;
 
+    public static function timed(string $key, \Closure $proceed, array $args)
+    {
+        return self::time($key, $proceed, $args);
+    }
+
     private static function time(string $key, \Closure $proceed, array $args)
     {
         $t = hrtime(true);
@@ -139,6 +144,41 @@ class Outer
     public function aroundCreate($subject, \Closure $proceed, ...$args)
     {
         return self::time('resolve_info_create', $proceed, $args);
+    }
+
+    public function aroundSetQuery($subject, \Closure $proceed, ...$args)
+    {
+        return self::time('fields_set_query', $proceed, $args);
+    }
+
+    public function aroundSerialize($subject, \Closure $proceed, ...$args)
+    {
+        return self::time('json_serialize', $proceed, $args);
+    }
+
+    public function aroundUnserialize($subject, \Closure $proceed, ...$args)
+    {
+        return self::time('json_unserialize', $proceed, $args);
+    }
+
+    public function aroundValidate($subject, \Closure $proceed, ...$args)
+    {
+        return self::time('argument_validate', $proceed, $args);
+    }
+
+    public function aroundGetLogData($subject, \Closure $proceed, ...$args)
+    {
+        return self::time('query_log_data', $proceed, $args);
+    }
+
+    public function aroundRenderResult($subject, \Closure $proceed, ...$args)
+    {
+        return self::time('json_render', $proceed, $args);
+    }
+
+    public function aroundValidateRequest($subject, \Closure $proceed, ...$args)
+    {
+        return self::time('validate_request', $proceed, $args);
     }
 
     public function aroundLoad($subject, \Closure $proceed, ...$args)

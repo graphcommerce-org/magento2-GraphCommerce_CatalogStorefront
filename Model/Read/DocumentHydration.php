@@ -16,29 +16,14 @@ use Magento\Store\Model\ScopeInterface;
 use Magento\Store\Model\StoreManagerInterface;
 use Psr\Log\LoggerInterface;
 
-/**
- * Rebuilds product models from feed documents for the catalog GraphQL read
- * path: the two data provider plugins and the linked products resolver.
- *
- * A listing page is one storage request: the documents with the heavy fields
- * the query does not select left out, and, when price_range is selected, the
- * configurable price ranges for the request's customer group.
- */
 class DocumentHydration
 {
     public const CONFIG_SERVE_READS = "graphcommerce/catalog_storefront/serve_reads";
 
-    public const PRICE_RANGE_KEY = "_gc_price_range";
-
-    /**
-     * @param array<string, string[]> $fieldDocumentKeys document keys a GraphQL field needs beyond the
-     *        base keys; a listing leaves out every such key its query does not select (di.xml)
-     * @param string[] $baseFields GraphQL fields served from the base keys; any other selected field
-     *        that is not in $fieldDocumentKeys is a custom attribute and keeps the attributes key (di.xml)
-     */
     public function __construct(
         private readonly ProductDocumentStorage $storage,
         private readonly ProductModelBuilder $modelBuilder,
+        private readonly Prefill $prefill,
         private readonly ProductSearchResultsInterfaceFactory $searchResultsFactory,
         private readonly ScopeConfigInterface $scopeConfig,
         private readonly StoreManagerInterface $storeManager,
@@ -54,9 +39,6 @@ class DocumentHydration
         return $this->scopeConfig->isSetFlag(self::CONFIG_SERVE_READS, ScopeInterface::SCOPE_STORE);
     }
 
-    /**
-     * The price group key of the request's customer.
-     */
     public function groupKey(?ContextInterface $context): string
     {
         $groupId =
@@ -65,12 +47,6 @@ class DocumentHydration
         return $this->productPrice->groupKey((int) $groupId);
     }
 
-    /**
-     * Rebuilds a result from a resolved id list, or returns null to fall back.
-     *
-     * @param int[] $ids in the order the caller resolved them
-     * @param string[] $requestedFields product fields selected by the query
-     */
     public function rebuildFromIds(
         array $ids,
         int $totalCount,
@@ -83,13 +59,14 @@ class DocumentHydration
             if (!$ids) {
                 return null;
             }
+            $groupKey = $this->groupKey($context);
             [$documents, $ranges] = $this->storage->listing(
                 $store->getCode(),
                 $ids,
                 $this->sourceExcludes($requestedFields),
-                in_array("price_range", $requestedFields, true) ? $this->groupKey($context) : null,
+                in_array("price_range", $requestedFields, true) ? $groupKey : null,
             );
-            $models = $this->buildModels($store, $documents, $ranges);
+            $models = $this->buildModels($store, $documents, $ranges, $groupKey, $requestedFields);
             $items = [];
             foreach ($ids as $id) {
                 if (!isset($models[$id])) {
@@ -112,34 +89,31 @@ class DocumentHydration
     }
 
     /**
-     * Documents without the products feed slice are left out.
-     *
-     * @param array<int, array> $documents product id => document
-     * @param array<int, array> $ranges configurable price ranges by parent id
-     * @return array<int, Product> product id => model
+     * @param array[] $documents keyed by product id
+     * @param array[] $ranges configurable price ranges keyed by parent id
+     * @param string[] $requestedFields product fields the query selects; empty selects all
+     * @return Product[] keyed by product id
      */
-    public function buildModels(StoreInterface $store, array $documents, array $ranges): array
-    {
+    public function buildModels(
+        StoreInterface $store,
+        array $documents,
+        array $ranges,
+        string $groupKey,
+        array $requestedFields
+    ): array {
         $storeId = (int) $store->getId();
         $models = [];
         foreach ($documents as $id => $document) {
             $model = $this->modelBuilder->build($document, $storeId);
-            if ($model === null) {
-                continue;
+            if ($model !== null) {
+                $models[(int) $id] = $model;
             }
-            if (isset($ranges[(int) $id])) {
-                $model->setData(self::PRICE_RANGE_KEY, $ranges[(int) $id]);
-            }
-            $models[(int) $id] = $model;
         }
+        $this->prefill->fill($models, $documents, $store, $groupKey, $ranges, $requestedFields);
 
         return $models;
     }
 
-    /**
-     * @param string[] $requestedFields
-     * @return string[] document keys to leave out of the fetch
-     */
     private function sourceExcludes(array $requestedFields): array
     {
         $needed = [];

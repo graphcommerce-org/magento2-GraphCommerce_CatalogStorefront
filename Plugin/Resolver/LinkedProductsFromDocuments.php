@@ -84,11 +84,12 @@ class LinkedProductsFromDocuments
                 }
                 $visibleIds = $this->visibility->getVisibleInCatalogIds();
                 $ranges = [];
+                $groupKey = $this->hydration->groupKey($context);
                 $parentIds = array_keys(array_filter($linkedDocuments, static fn(array $document) => !empty($document['variantIds'])));
                 if ($parentIds && in_array('price_range', $requestedFields, true)) {
-                    $ranges = $this->storage->priceRanges($store->getCode(), $parentIds, $this->hydration->groupKey($context));
+                    $ranges = $this->storage->priceRanges($store->getCode(), $parentIds, $groupKey);
                 }
-                foreach ($this->hydration->buildModels($store, $linkedDocuments, $ranges) as $model) {
+                foreach ($this->hydration->buildModels($store, $linkedDocuments, $ranges, $groupKey, $requestedFields) as $model) {
                     if ((int)$model->getStatus() === Status::STATUS_ENABLED
                         && in_array((int)$model->getVisibility(), $visibleIds, true)
                         && $model->isAvailable()

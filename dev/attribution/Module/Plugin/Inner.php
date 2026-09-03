@@ -7,6 +7,16 @@ class Inner
 {
     public static array $inner = [];
 
+    public function aroundDispatch($subject, \Closure $proceed, ...$args)
+    {
+        return Outer::timed('graphql_dispatch_inner', $proceed, $args);
+    }
+
+    public function aroundHasChanges($subject, \Closure $proceed, ...$args)
+    {
+        return Outer::timed('config_change_detect', $proceed, $args);
+    }
+
     public function aroundResolve($subject, \Closure $proceed, ...$args)
     {
         $class = get_parent_class($subject) && str_ends_with(get_class($subject), '\Interceptor') ? get_parent_class($subject) : get_class($subject);

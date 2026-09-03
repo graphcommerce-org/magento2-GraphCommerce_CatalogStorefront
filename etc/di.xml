@@ -56,14 +56,6 @@
         <plugin name="graphcommerce_catalog_storefront_option_value_details"
                 type="GraphCommerce\CatalogStorefront\Plugin\Feed\OptionValueDetails"/>
     </type>
-    <type name="Magento\ReviewGraphQl\Model\Resolver\Product\RatingSummary">
-        <plugin name="graphcommerce_catalog_storefront_rating_summary"
-                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\RatingSummaryFromDocument"/>
-    </type>
-    <type name="Magento\ReviewGraphQl\Model\Resolver\Product\ReviewCount">
-        <plugin name="graphcommerce_catalog_storefront_review_count"
-                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\ReviewCountFromDocument"/>
-    </type>
 
     <type name="Magento\ConfigurableProduct\Model\Product\Type\Configurable">
         <plugin name="graphcommerce_catalog_storefront_salable"
@@ -81,10 +73,6 @@
         <plugin name="graphcommerce_catalog_storefront_configurable_options"
                 type="GraphCommerce\CatalogStorefront\Plugin\Resolver\ConfigurableOptionsFromDocument"/>
     </type>
-    <type name="Magento\SwatchesGraphQl\Model\Resolver\Product\Options\SwatchData">
-        <plugin name="graphcommerce_catalog_storefront_swatch_data"
-                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\SwatchDataFromDocument"/>
-    </type>
     <type name="Magento\DownloadableGraphQl\Resolver\Product\Links">
         <plugin name="graphcommerce_catalog_storefront_downloadable_links"
                 type="GraphCommerce\CatalogStorefront\Plugin\Resolver\DownloadableLinksFromDocument"/>
@@ -92,10 +80,6 @@
     <type name="Magento\DownloadableGraphQl\Resolver\Product\Samples">
         <plugin name="graphcommerce_catalog_storefront_downloadable_samples"
                 type="GraphCommerce\CatalogStorefront\Plugin\Resolver\DownloadableSamplesFromDocument"/>
-    </type>
-    <type name="Magento\CatalogGraphQl\Model\Resolver\Product\MediaGallery\Url">
-        <plugin name="graphcommerce_catalog_storefront_image_url_memo"
-                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\ImageUrlMemo"/>
     </type>
     <type name="Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\AttributeOptionProvider">
         <plugin name="graphcommerce_catalog_storefront_facet_labels_memo"
@@ -105,6 +89,31 @@
         <plugin name="graphcommerce_catalog_storefront_field_name_memo"
                 type="GraphCommerce\CatalogStorefront\Plugin\Search\FieldNameMemo"/>
     </type>
+    <type name="GraphCommerce\CatalogStorefront\Plugin\GraphQl\ReuseSchema">
+        <arguments>
+            <argument name="prefilledFields" xsi:type="array">
+                <item name="ProductInterface" xsi:type="array">
+                    <item name="uid" xsi:type="string">uid</item>
+                    <item name="id" xsi:type="string">id</item>
+                    <item name="new_from_date" xsi:type="string">new_from_date</item>
+                    <item name="new_to_date" xsi:type="string">new_to_date</item>
+                    <item name="rating_summary" xsi:type="string">rating_summary</item>
+                    <item name="review_count" xsi:type="string">review_count</item>
+                    <item name="image" xsi:type="string">image</item>
+                    <item name="small_image" xsi:type="string">small_image</item>
+                    <item name="thumbnail" xsi:type="string">thumbnail</item>
+                    <item name="price_range" xsi:type="string">price_range</item>
+                </item>
+                <item name="ProductImage" xsi:type="array">
+                    <item name="url" xsi:type="string">url</item>
+                </item>
+                <item name="ConfigurableProductOptionsValues" xsi:type="array">
+                    <item name="uid" xsi:type="string">uid</item>
+                    <item name="swatch_data" xsi:type="string">swatch_data</item>
+                </item>
+            </argument>
+        </arguments>
+    </type>
     <type name="Magento\Framework\GraphQl\Schema\SchemaGeneratorInterface">
         <plugin name="graphcommerce_catalog_storefront_reuse_schema"
                 type="GraphCommerce\CatalogStorefront\Plugin\GraphQl\ReuseSchema"/>
@@ -112,10 +121,6 @@
     <type name="Magento\Framework\GraphQl\Query\QueryProcessor">
         <plugin name="graphcommerce_catalog_storefront_validate_once"
                 type="GraphCommerce\CatalogStorefront\Plugin\GraphQl\ValidateOncePerProcess"/>
-    </type>
-    <type name="Magento\CatalogGraphQl\Model\Resolver\Product\PriceRange">
-        <plugin name="graphcommerce_catalog_storefront_price_range"
-                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\PriceRangeFromDocument"/>
     </type>
     <type name="Magento\CatalogInventoryGraphQl\Model\Resolver\MaxSaleQtyResolver">
         <plugin name="graphcommerce_catalog_storefront_max_sale_qty"

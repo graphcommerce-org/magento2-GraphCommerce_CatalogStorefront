@@ -44,13 +44,22 @@ ids in the feed instead of the labels.
   not select left out (`HEAVY_KEYS`, `attributes` only when a non-base field is
   selected), and, when `price_range` is selected, the configurable price
   aggregation: terms on `parentIds`, min and max of `priceIndex.<group key>`
-  over salable and over all enabled variants. Per-field plugins in
-  `Plugin/Resolver/*` serve price_range (simple, virtual, downloadable,
-  configurable), media_gallery, url_rewrites, max_sale_qty,
-  configurable_options with swatch_data, downloadable links and samples,
-  rating_summary, review_count, and related, upsell and crosssell products
-  (fetched by sku). `Plugin/SalableFromDocument` answers the configurable and
-  bundle salability check from the inventory slice.
+  over salable and over all enabled variants. `Model/Read/Prefill` then fills,
+  on the product value the executor hands to child fields, the fields whose
+  core resolvers only derive from the model and the document: uid, id,
+  new_from_date, new_to_date, rating_summary, review_count, image, small_image
+  and thumbnail (url through `Model/Read/ImageUrl`, label) and price_range
+  (simple, virtual, downloadable, configurable). `ReuseSchema` routes those
+  fields (di.xml `prefilledFields`, per type or interface name) to the
+  pre-filled value and to the core resolver when the parent carries none, so
+  core-served products and what a document cannot answer keep the core path.
+  A pre-filled field costs the executor a plain array read instead of a
+  resolver call with its ResolveInfo object, argument validation and four
+  plugins (about 4µs per call). Per-field plugins in `Plugin/Resolver/*` serve
+  media_gallery, url_rewrites, max_sale_qty, configurable_options, downloadable
+  links and samples, and related, upsell and crosssell products (fetched by
+  sku). `Plugin/SalableFromDocument` answers the configurable and bundle
+  salability check from the inventory slice.
 - The product index mapping is `dynamic: false`; only `sku`, `parentIds`,
   `status`, `stock.isSalable` and the `priceIndex` floats are mapped, because
   requests filter or aggregate on them. Every field is stored in `_source`; rich
@@ -61,7 +70,7 @@ ids in the feed instead of the labels.
   aggregation after the index refresh (one second by default); the fetch by id
   is immediate.
 - Per-process memos, allowed because they hold metadata or pure derivations:
-  `ImageUrlMemo` (image URL per type, file and store), `FacetLabelsMemo`
+  `Model/Read/ImageUrl` (image URL per store, type and file), `FacetLabelsMemo`
   (facet attribute and option labels), `Plugin/Search/FieldNameMemo` (search
   index field name per attribute code and context; the core mapper otherwise
   loads the attribute for each of the 24 facet buckets on every request). A
@@ -76,10 +85,8 @@ ids in the feed instead of the labels.
   requests. Both hold state for the worker's lifetime; a schema or config
   change reaches a worker at its next restart.
 - `configurable_options` is built at index time (`Model/Feed/ConfigurableOptionsBuilder`,
-  document key `configurableOptions`) and returned as is; the per-value `uid`
-  and `swatch_data` fields still run through Magento's resolver wrapper, about
-  3µs per call, which a schema redeclaration would remove for document-served
-  products only at the cost of core-served ones.
+  document key `configurableOptions`) and returned as is; its values carry the
+  pre-filled `uid` and `swatch_data`.
 - The GraphCommerce ProductList query (`dev/parity/queries/13-*.graphql`, all
   fragments and injections resolved) runs on the document path with no catalog
   SQL: only per-process metadata and bootstrap queries remain.
@@ -119,16 +126,25 @@ ids in the feed instead of the labels.
   compile, flush, restart the worker, then
   `dev/attribution/run.sh <container> <proxy graphql url> <query file>`; disable
   and recompile afterwards. The instrumentation itself costs about 5ms on the
-  200-item listing. Steady state of that listing, measured this way: 86ms over
-  the wire, 78ms inside PHP: execute 71ms of which the products resolver is
-  17ms (core search adapter 7ms with OpenSearch at 1ms, document multi-search
+  200-item listing. Steady state of that listing, measured this way: 71ms over
+  the wire, 62ms inside PHP: execute 56ms of which the products resolver is
+  18ms (core search adapter 7ms with OpenSearch at 1ms, document multi-search
   15ms with OpenSearch at 11 to 13ms, of which about 6ms is `_source`
-  filtering, model build 2ms), the other resolvers 12ms (price_range 5ms,
-  configurable option value fields 3ms), and the executor walk 37ms (3806
-  ResolveInfo objects 6ms, plugin chains 7ms, webonyx over about 12000 fields
-  the rest); serialization 5ms; 25 SQL queries in 4ms (grouped and bundle price
-  fallback, layer category). The state reset after the response takes 22ms per
-  request on the thread, which is throughput, not latency.
+  filtering, model build 2ms), the other resolvers 4ms (151 resolver calls,
+  three of them the grouped and bundle price fallback at 1ms each), and the
+  webonyx walk over about 22000 fields 25ms; the plugins around the controller
+  1ms, response build 3ms (JSON render 0.7ms); 25 SQL queries in 4ms (grouped
+  and bundle price fallback, layer category). The state reset after the
+  response takes 22ms per request on the thread, which is throughput, not
+  latency. PHP JIT (tracing and function mode) makes this workload 10 to 20%
+  slower in the worker and, combined with the kept schema, produced erratic
+  "Unknown type Query" errors: keep it off.
+- If every `bin/magento` command fails with a missing `Interceptor` class, the
+  interception cache is poisoned and `cache:flush` cannot run either: flush
+  Redis directly (`docker exec project-backend-redis-1 redis-cli flushall`),
+  remove `generated/` and `var/cache/`, then compile. A plugin on the JSON
+  serializer causes exactly this, because bootstrap uses it before any
+  interceptor exists.
 
 ## Known gaps and deviations
 

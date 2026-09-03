@@ -16,8 +16,6 @@ use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
  */
 class ConfigurableOptionsFromDocument
 {
-    public const SWATCH_KEY = '_gc_swatch';
-
     private const UNSERVED_OPTION_FIELDS = ['id', 'use_default'];
 
     public function aroundResolve(

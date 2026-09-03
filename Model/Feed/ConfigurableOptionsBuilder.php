@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Model\Feed;
 
-use GraphCommerce\CatalogStorefront\Plugin\Resolver\ConfigurableOptionsFromDocument;
+use GraphCommerce\CatalogStorefront\Model\Read\Prefill;
 use Magento\Framework\GraphQl\Query\Uid;
 use Magento\Swatches\Helper\Media as SwatchMedia;
 use Magento\Swatches\Model\Swatch;
@@ -12,8 +12,8 @@ use Magento\Swatches\Model\Swatch;
  * Builds the configurable_options response shape from the optionsV2 slice at
  * index time, so a request returns it as is. The feed value id already is the
  * core value uid ("configurable/<attribute id>/<value index>"), so attribute
- * ids come from decoding it. Swatch data travels with the values and is handed
- * to the swatch_data resolver through SwatchDataFromDocument. Core returns the
+ * ids come from decoding it, and the id itself is the pre-filled value uid.
+ * Swatch data travels pre-filled with the values. Core returns the
  * admin label as both default_label and store_label, with use_default_value
  * always true, and lists the options in an undefined order (no ORDER BY); the
  * merchant's position order is used instead.
@@ -63,7 +63,7 @@ class ConfigurableOptionsBuilder
                     'store_label' => $optionValue['defaultLabel'] ?? $optionValue['label'] ?? null,
                     'use_default_value' => true,
                     'attribute_id' => $attributeId,
-                    ConfigurableOptionsFromDocument::SWATCH_KEY => $swatch,
+                    Prefill::KEY => ['uid' => (string)$optionValue['id'], 'swatch_data' => $swatch],
                 ];
             }
             if ($attributeId === null) {

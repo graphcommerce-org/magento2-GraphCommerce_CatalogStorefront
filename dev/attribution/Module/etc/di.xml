@@ -6,6 +6,7 @@
     </type>
     <type name="Magento\GraphQl\Controller\GraphQl">
         <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+        <plugin name="graphcommerce_attribution_inner" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Inner" sortOrder="1000"/>
     </type>
     <type name="Magento\Framework\GraphQl\Query\QueryProcessor">
         <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
@@ -50,5 +51,29 @@
     </type>
     <type name="Magento\Framework\Cache\Frontend\Adapter\Symfony">
         <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\Framework\GraphQl\Query\Fields">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\Framework\GraphQl\Query\Resolver\Argument\ValidatorInterface">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\GraphQl\Helper\Query\Logger\LogData">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\Framework\Controller\Result\Json">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\Framework\App\Area">
+        <plugin name="graphcommerce_attribution_area" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Area" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\GraphQl\Model\Query\ContextFactory">
+        <plugin name="graphcommerce_attribution_context" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Context" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\GraphQl\Controller\HttpRequestProcessor">
+        <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
+    </type>
+    <type name="Magento\Deploy\Model\DeploymentConfig\ChangeDetector">
+        <plugin name="graphcommerce_attribution_inner" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Inner" sortOrder="-1000"/>
     </type>
 </config>
