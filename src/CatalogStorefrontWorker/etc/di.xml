@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- Process memos: what a persistent worker keeps between requests, each under a generation. -->
+    <type name="Magento\Framework\GraphQl\Schema\SchemaGeneratorInterface">
+        <plugin name="graphcommerce_catalog_storefront_reuse_schema" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Query\ReuseSchema" sortOrder="10"/>
+    </type>
+    <type name="Magento\Framework\GraphQl\Query\QueryProcessor">
+        <plugin name="graphcommerce_catalog_storefront_validate_once" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Query\ValidateOncePerProcess"/>
+    </type>
+    <type name="Magento\CustomerGraphQl\CacheIdFactorProviders\CustomerTaxRateProvider">
+        <plugin name="graphcommerce_catalog_storefront_tax_rate_memo" type="GraphCommerce\CatalogStorefrontWorker\Plugin\CacheId\CustomerTaxRateMemo"/>
+    </type>
+    <type name="Magento\Deploy\Model\DeploymentConfig\ChangeDetector">
+        <plugin name="graphcommerce_catalog_storefront_config_change_memo" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Deploy\ConfigChangeMemo"/>
+    </type>
+    <type name="Magento\Tax\Model\Calculation">
+        <plugin name="graphcommerce_catalog_storefront_rate_request_memo" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Tax\RateRequestMemo"/>
+        <plugin name="graphcommerce_catalog_storefront_rate_memo" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Tax\RateMemo"/>
+    </type>
+    <type name="Magento\Customer\Api\GroupRepositoryInterface">
+        <plugin name="graphcommerce_catalog_storefront_group_memo" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Customer\GroupMemo"/>
+        <plugin name="graphcommerce_catalog_storefront_bump_tax" type="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpTax"/>
+    </type>
+    <type name="Magento\Directory\Model\ResourceModel\Currency">
+        <plugin name="graphcommerce_catalog_storefront_currency_rate_memo" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Directory\CurrencyRateMemo"/>
+        <plugin name="graphcommerce_catalog_storefront_bump_currency" type="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpCurrency"/>
+    </type>
+
+    <!-- The saves that lift a generation. -->
+    <virtualType name="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpTax" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Bump">
+        <arguments>
+            <argument name="name" xsi:type="const">GraphCommerce\CatalogStorefrontWorker\Model\Generation::TAX</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpCurrency" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Bump">
+        <arguments>
+            <argument name="name" xsi:type="const">GraphCommerce\CatalogStorefrontWorker\Model\Generation::CURRENCY</argument>
+        </arguments>
+    </virtualType>
+    <type name="Magento\Tax\Api\TaxRuleRepositoryInterface">
+        <plugin name="graphcommerce_catalog_storefront_bump_tax" type="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpTax"/>
+    </type>
+    <type name="Magento\Tax\Api\TaxRateRepositoryInterface">
+        <plugin name="graphcommerce_catalog_storefront_bump_tax" type="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpTax"/>
+    </type>
+    <type name="Magento\Tax\Api\TaxClassRepositoryInterface">
+        <plugin name="graphcommerce_catalog_storefront_bump_tax" type="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpTax"/>
+    </type>
+    <type name="Magento\Customer\Api\CustomerRepositoryInterface">
+        <plugin name="graphcommerce_catalog_storefront_bump_tax" type="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpTax"/>
+    </type>
+    <type name="Magento\Customer\Api\AddressRepositoryInterface">
+        <plugin name="graphcommerce_catalog_storefront_bump_tax" type="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpTax"/>
+    </type>
+</config>

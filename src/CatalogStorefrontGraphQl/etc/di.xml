@@ -44,18 +44,12 @@
     <type name="Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\RootCategoryProvider">
         <plugin name="graphcommerce_catalog_storefront_root_category" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Layer\RootCategoryFromStore"/>
     </type>
-    <type name="Magento\CustomerGraphQl\CacheIdFactorProviders\CustomerTaxRateProvider">
-        <plugin name="graphcommerce_catalog_storefront_tax_rate_memo" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\CacheId\CustomerTaxRateMemo"/>
-    </type>
     <type name="Magento\Framework\GraphQl\Schema\SchemaGeneratorInterface">
-        <plugin name="graphcommerce_catalog_storefront_reuse_schema" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query\ReuseSchema"/>
-    </type>
-    <type name="Magento\Framework\GraphQl\Query\QueryProcessor">
-        <plugin name="graphcommerce_catalog_storefront_validate_once" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query\ValidateOncePerProcess"/>
+        <plugin name="graphcommerce_catalog_storefront_route_prefilled_fields" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query\RoutePrefilledFields" sortOrder="20"/>
     </type>
 
     <!-- Fields the executor reads from the pre-filled value instead of calling the core resolver. -->
-    <type name="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query\ReuseSchema">
+    <type name="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query\RoutePrefilledFields">
         <arguments>
             <argument name="prefilledFields" xsi:type="array">
                 <item name="ProductInterface" xsi:type="array">

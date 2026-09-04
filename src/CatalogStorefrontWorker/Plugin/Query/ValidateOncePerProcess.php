@@ -1,8 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query;
+namespace GraphCommerce\CatalogStorefrontWorker\Plugin\Query;
 
+use GraphCommerce\CatalogStorefrontWorker\Model\Generation;
 use GraphQL\GraphQL;
 use GraphQL\Language\AST\DocumentNode;
 use GraphQL\Type\Schema;
@@ -18,13 +19,15 @@ use Magento\GraphQl\Model\Query\ContextInterface;
  *
  * The parser already caches the parsed document per query text, so the same
  * document object comes back for a repeated query. A document that produced
- * an error-free response was valid; later executions of it skip validation
- * by passing an empty rule set, the fast path webonyx provides. Validation
- * is the only step skipped: complexity limits apply on the first execution,
+ * an error-free response was valid under the config generation of that
+ * moment; later executions under the same generation skip validation by
+ * passing an empty rule set, the fast path webonyx provides. Validation is
+ * the only step skipped: complexity limits apply on the first execution,
  * resolvers and error handling run as always.
  */
 class ValidateOncePerProcess
 {
+    /** @var \WeakMap<DocumentNode, string> the config generation each document was validated under */
     private \WeakMap $validated;
 
     public function __construct(
@@ -32,6 +35,7 @@ class ValidateOncePerProcess
         private readonly ExceptionFormatter $exceptionFormatter,
         private readonly ErrorHandlerInterface $errorHandler,
         private readonly QueryDataFormatter $formatter,
+        private readonly Generation $generations,
     ) {
         $this->validated = new \WeakMap();
     }
@@ -46,10 +50,11 @@ class ValidateOncePerProcess
         ?string $operationName = null
     ): array {
         $document = is_string($source) ? $this->queryParser->parse($source) : $source;
-        if (!isset($this->validated[$document])) {
+        $generation = $this->generations->current(Generation::CONFIG);
+        if (($this->validated[$document] ?? null) !== $generation) {
             $result = $proceed($schema, $document, $contextValue, $variableValues, $operationName);
             if (!isset($result['errors'])) {
-                $this->validated[$document] = true;
+                $this->validated[$document] = $generation;
             }
 
             return $result;

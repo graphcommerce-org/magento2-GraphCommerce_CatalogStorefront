@@ -14,7 +14,7 @@
             </argument>
         </arguments>
     </type>
-    <type name="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query\ReuseSchema">
+    <type name="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query\RoutePrefilledFields">
         <arguments>
             <argument name="prefilledFields" xsi:type="array">
                 <item name="ProductInterface" xsi:type="array">
