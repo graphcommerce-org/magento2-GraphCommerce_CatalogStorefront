@@ -90,7 +90,7 @@ Content-Type: application/json
 {
   "size": 50,
   "_source": ["sku", "status", "stock.isSalable", "priceIndex"],
-  "query": { "term": { "parentIds": "62" } }
+  "query": { "term": { "parentIds": "1239" } }
 }
 
 ### The price range of a configurable, as the listing aggregates it
@@ -99,7 +99,7 @@ Content-Type: application/json
 
 {
   "size": 0,
-  "query": { "bool": { "filter": [ { "term": { "parentIds": "62" } }, { "term": { "status": "Enabled" } } ] } },
+  "query": { "bool": { "filter": [ { "term": { "parentIds": "1239" } }, { "term": { "status": "Enabled" } } ] } },
   "aggs": {
     "salable": {
       "filter": { "term": { "stock.isSalable": true } },
@@ -137,7 +137,7 @@ Content-Type: application/json
   "from": 0,
   "size": 5,
   "track_total_hits": true,
-  "query": { "term": { "productId": "1" } },
+  "query": { "term": { "productId": "1239" } },
   "sort": [ { "createdAt": "desc" }, { "reviewId": "asc" } ]
 }
 
@@ -147,7 +147,7 @@ Content-Type: application/json
 
 {
   "size": 0,
-  "query": { "terms": { "productId": ["1", "2", "3", "4"] } },
+  "query": { "terms": { "productId": ["1239", "1431", "1607", "1"] } },
   "aggs": {
     "groups": {
       "terms": { "field": "productId", "size": 4 },
