@@ -4,26 +4,25 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontBundleProductGraphQl\Model\Prefill;
 
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
-use GraphCommerce\CatalogStorefront\Model\Read\PriceDisplay;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillRequest;
 use Magento\Catalog\Model\Product\Type;
 
 /**
  * A bundle's price_details: its own price, that price after the bundle's
- * pay percent, and the discount between them.
+ * pay percent, and the discount between them, in the base currency before
+ * tax as core reads them from the model.
  */
 class PriceDetails implements PrefillerInterface
 {
     public function __construct(
-        private readonly PriceDisplay $priceDisplay,
         private readonly ProductPrice $productPrice,
     ) {
     }
 
     public function fill(array $models, array $documents, PrefillRequest $request): array
     {
-        if (!$request->selects('price_details') || !$this->priceDisplay->servable($request->store)) {
+        if (!$request->selects('price_details')) {
             return [];
         }
         $output = [];

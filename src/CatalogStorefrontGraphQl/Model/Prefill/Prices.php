@@ -4,23 +4,24 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontGraphQl\Model\Prefill;
 
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
-use GraphCommerce\CatalogStorefront\Model\Read\PriceDisplay;
+use GraphCommerce\CatalogStorefront\Model\Read\DisplayPrice;
 use GraphCommerce\CatalogStorefront\Model\Read\PriceRanges;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillRequest;
 use Magento\Catalog\Model\Product;
 use Magento\CatalogGraphQl\Model\Resolver\Product\Price\Discount;
 use Magento\Framework\Pricing\PriceCurrencyInterface;
+use Magento\Store\Api\Data\StoreInterface;
 
 /**
  * The price range, the deprecated price and the tier prices, from the price
- * rows and the range of the product's type.
- * Only a servable price display setup is answered.
+ * rows and the range of the product's type, in the request's display
+ * currency and tax setup.
  */
 class Prices implements PrefillerInterface
 {
     public function __construct(
-        private readonly PriceDisplay $priceDisplay,
+        private readonly DisplayPrice $displayPrice,
         private readonly PriceCurrencyInterface $priceCurrency,
         private readonly Discount $discount,
         private readonly ProductPrice $productPrice,
@@ -31,12 +32,13 @@ class Prices implements PrefillerInterface
     public function fill(array $models, array $documents, PrefillRequest $request): array
     {
         if (!$request->selects('price_range', 'price', 'price_tiers', 'tier_prices')
-            || !$this->priceDisplay->servable($request->store)
+            || !$this->displayPrice->servable($request->store)
         ) {
             return [];
         }
-        $currency = $request->store->getCurrentCurrencyCode();
-        $showOutOfStock = $this->priceDisplay->showOutOfStock($request->store);
+        $store = $request->store;
+        $currency = $store->getCurrentCurrencyCode();
+        $showOutOfStock = $this->displayPrice->showOutOfStock($store);
         $output = [];
         foreach ($models as $id => $product) {
             $document = $documents[$id] ?? [];
@@ -44,18 +46,40 @@ class Prices implements PrefillerInterface
             if ($range === null) {
                 continue;
             }
-            $priceRange = $this->priceRange($product, $document, $range, $currency);
-            $amount = static fn(float $value): array => ['amount' => ['value' => $value, 'currency' => $currency], 'adjustments' => []];
+            [$minRegular, $minFinal, $maxRegular, $maxFinal] = $range;
+            $display = [
+                'minRegular' => $this->displayPrice->regular($minRegular, $product, $store),
+                'minFinal' => $this->displayPrice->final($minFinal, $minRegular, $product, $store),
+                'maxRegular' => $this->displayPrice->regular($maxRegular, $product, $store),
+                'maxFinal' => $this->displayPrice->final($maxFinal, $maxRegular, $product, $store),
+            ];
+            $priceRange = [
+                'minimum_price' => $this->format($display['minRegular'], $display['minFinal'], $product, $currency),
+                'maximum_price' => $this->format($display['maxRegular'], $display['maxFinal'], $product, $currency),
+            ];
+            // Core adds the separately purchased link prices to the rounded maximum after the discount is computed.
+            if (!empty($document['linksPurchasedSeparately'])) {
+                $linkPrice = 0.0;
+                foreach ((array)($document['optionsV2'] ?? []) as $option) {
+                    if (($option['type'] ?? null) === 'downloadable') {
+                        $linkPrice += array_sum(array_column((array)($option['values'] ?? []), 'price'));
+                    }
+                }
+                if ($linkPrice > 0) {
+                    $priceRange['maximum_price']['regular_price']['value'] += $linkPrice;
+                    $priceRange['maximum_price']['final_price']['value'] += $linkPrice;
+                }
+            }
             $filled = [
                 'price_range' => $priceRange,
                 'price' => [
-                    'minimalPrice' => $amount($priceRange['minimum_price']['final_price']['value']),
-                    'regularPrice' => $amount($priceRange['minimum_price']['regular_price']['value']),
-                    'maximalPrice' => $amount($priceRange['maximum_price']['final_price']['value']),
+                    'minimalPrice' => $this->amount($display['minFinal'], $product, $store),
+                    'regularPrice' => $this->amount($display['minRegular'], $product, $store),
+                    'maximalPrice' => $this->amount($display['maxFinal'], $product, $store),
                 ],
             ];
             if ($request->selects('price_tiers', 'tier_prices')) {
-                $filled += $this->tiers($document, $request->groupKey, $priceRange['minimum_price']['regular_price']['value'], $currency);
+                $filled += $this->tiers($document, $request->groupKey, $display['minRegular'], $store);
             }
             $output[$id] = $filled;
         }
@@ -63,17 +87,48 @@ class Prices implements PrefillerInterface
         return $output;
     }
 
+    private function format(float $regular, float $final, Product $product, string $currency): array
+    {
+        return [
+            'regular_price' => ['value' => $this->priceCurrency->roundPrice($regular), 'currency' => $currency],
+            'final_price' => ['value' => $this->priceCurrency->roundPrice($final), 'currency' => $currency],
+            'discount' => $this->discount->getDiscountByDifference($regular, $final),
+            'model' => $product,
+        ];
+    }
+
+    /**
+     * The deprecated price shape: the unrounded amount and its tax adjustment
+     * when the amount carries one.
+     */
+    private function amount(float $value, Product $product, StoreInterface $store): array
+    {
+        $currency = $store->getCurrentCurrencyCode();
+        $tax = $this->displayPrice->taxAmount($value, $product, $store);
+
+        return [
+            'amount' => ['value' => $value, 'currency' => $currency],
+            'adjustments' => $tax ? [[
+                'code' => 'TAX',
+                'amount' => ['value' => $tax, 'currency' => $currency],
+                'description' => $this->displayPrice->taxIncluded($store) ? 'INCLUDED' : 'EXCLUDED',
+            ]] : [],
+        ];
+    }
+
     /**
      * The tier prices of the customer group's price row, as core lists them:
      * a percent tier's price is the percent off the product price, a fixed
-     * tier's its value; of two tiers for one quantity the lower price stays.
-     * The deprecated shape carries the group only as the feed has it: every
-     * tier reads as for all groups.
+     * tier's its value, converted and rounded without tax; the discount is
+     * against the display regular price. Of two tiers for one quantity the
+     * lower price stays. The deprecated shape carries the group only as the
+     * feed has it: every tier reads as for all groups.
      *
      * @return array{price_tiers: array[], tier_prices: array[]}
      */
-    private function tiers(array $document, string $groupKey, float $regularPrice, string $currency): array
+    private function tiers(array $document, string $groupKey, float $regularPrice, StoreInterface $store): array
     {
+        $currency = $store->getCurrentCurrencyCode();
         $row = $this->productPrice->row((array)($document['prices'] ?? []), $groupKey);
         $byQty = [];
         foreach ((array)($row['tierPrices'] ?? []) as $tier) {
@@ -82,7 +137,8 @@ class Prices implements PrefillerInterface
             $value = $this->priceCurrency->convertAndRound(
                 $percentage !== null
                     ? (float)$row['regular'] * (1 - $percentage / 100)
-                    : (float)($tier['price'] ?? 0)
+                    : (float)($tier['price'] ?? 0),
+                $store
             );
             if (isset($byQty[$qty]) && $byQty[$qty]['value'] <= $value) {
                 continue;
@@ -109,37 +165,5 @@ class Prices implements PrefillerInterface
         }
 
         return ['price_tiers' => $priceTiers, 'tier_prices' => $tierPrices];
-    }
-
-    private function priceRange(Product $product, array $document, array $range, string $currency): array
-    {
-        [$minRegular, $minFinal, $maxRegular, $maxFinal] = $range;
-        $format = fn(float $regular, float $final): array => [
-            'regular_price' => ['value' => $this->priceCurrency->roundPrice($regular), 'currency' => $currency],
-            'final_price' => ['value' => $this->priceCurrency->roundPrice($final), 'currency' => $currency],
-            'discount' => $this->discount->getDiscountByDifference($regular, $final),
-            'model' => $product,
-        ];
-        $result = [
-            'minimum_price' => $format($minRegular, $minFinal),
-            'maximum_price' => $format($maxRegular, $maxFinal),
-        ];
-
-        // Core adds the separately purchased link prices to the rounded maximum
-        // after the discount is computed.
-        if (!empty($document['linksPurchasedSeparately'])) {
-            $linkPrice = 0.0;
-            foreach ((array)($document['optionsV2'] ?? []) as $option) {
-                if (($option['type'] ?? null) === 'downloadable') {
-                    $linkPrice += array_sum(array_column((array)($option['values'] ?? []), 'price'));
-                }
-            }
-            if ($linkPrice > 0) {
-                $result['maximum_price']['regular_price']['value'] += $linkPrice;
-                $result['maximum_price']['final_price']['value'] += $linkPrice;
-            }
-        }
-
-        return $result;
     }
 }

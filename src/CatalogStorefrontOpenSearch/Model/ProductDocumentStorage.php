@@ -4,74 +4,42 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontOpenSearch\Model;
 
 use GraphCommerce\CatalogStorefrontApi\Storage\ProductDocumentStorageInterface;
-use GraphCommerce\CatalogStorefrontOpenSearch\Model\Client\CommandInterface;
-use GraphCommerce\CatalogStorefrontOpenSearch\Model\Client\Config;
-use GraphCommerce\CatalogStorefrontOpenSearch\Model\Client\DataDefinitionInterface;
-use GraphCommerce\CatalogStorefrontOpenSearch\Model\Client\QueryInterface;
 
 /**
  * Product documents per store view, one document per product, assembled from
  * feed slices: the products feed writes the base fields, the prices and stock
- * feeds patch their own key into the same document.
+ * feeds patch their own key into the same document. The composite price data
+ * aggregates the nested price index of the children by customer group.
  */
 class ProductDocumentStorage implements ProductDocumentStorageInterface
 {
     private const ENTITY = 'product';
 
-    /** @var array<string, bool> */
-    private array $ensured = [];
-
     public function __construct(
-        private readonly Config $config,
-        private readonly State $state,
-        private readonly DataDefinitionInterface $dataDefinition,
-        private readonly CommandInterface $command,
-        private readonly QueryInterface $query,
+        private readonly Client $client,
+        private readonly Index $index,
     ) {
     }
 
-    private function aliasName(string $storeViewCode): string
-    {
-        return $this->config->getAliasName() . '_' . $storeViewCode;
-    }
-
-    /**
-     * @param array<int, array> $documents entity_id => partial document
-     */
     public function upsert(string $storeViewCode, array $documents): void
     {
-        if (!$documents) {
-            return;
+        if ($documents) {
+            $this->client->upsert($this->index->ensure(self::ENTITY, $storeViewCode), $documents);
         }
-        $this->ensureIndex($storeViewCode);
-        $entries = [];
-        foreach ($documents as $id => $document) {
-            $entries[] = ['id' => $id] + $document;
-        }
-        $this->command->bulkUpdate($this->aliasName($storeViewCode), self::ENTITY, $entries);
     }
 
-    /**
-     * @param int[] $ids
-     */
     public function delete(string $storeViewCode, array $ids): void
     {
-        if (!$ids) {
-            return;
+        if ($ids) {
+            $this->client->delete($this->index->ensure(self::ENTITY, $storeViewCode), $ids);
         }
-        $this->ensureIndex($storeViewCode);
-        $this->command->bulkDelete($this->aliasName($storeViewCode), self::ENTITY, $ids);
     }
 
     public function get(string $storeViewCode, array $ids, array $fields = []): array
     {
-        if (!$ids) {
-            return [];
-        }
-        $this->ensureIndex($storeViewCode);
         $documents = [];
-        foreach ($this->query->getEntries($this->aliasName($storeViewCode), self::ENTITY, array_values($ids), $fields ?: ['*']) as $entry) {
-            $documents[(int)$entry->getId()] = $entry->getData();
+        foreach ($ids ? $this->client->get($this->indexName($storeViewCode), $ids, $fields) : [] as $id => $document) {
+            $documents[(int)$id] = $document;
         }
 
         return $documents;
@@ -82,10 +50,13 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
         if (!$skus) {
             return [];
         }
-        $this->ensureIndex($storeViewCode);
+        $response = $this->client->search($this->indexName($storeViewCode), [
+            'size' => count($skus),
+            'query' => ['terms' => ['sku' => array_values($skus)]],
+        ]);
         $documents = [];
-        foreach ($this->query->searchFilteredEntries($this->aliasName($storeViewCode), self::ENTITY, ['sku' => $skus]) as $entry) {
-            $documents[(int)$entry->getId()] = $entry->getData();
+        foreach ($response['hits']['hits'] ?? [] as $hit) {
+            $documents[(int)$hit['_id']] = $hit['_source'];
         }
 
         return $documents;
@@ -101,7 +72,7 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
         if ($groupKey !== null) {
             $searches = array_merge($searches, $this->priceSearches($ids, $groupKey));
         }
-        $responses = $this->query->multiSearch($this->aliasName($storeViewCode), $searches);
+        $responses = $this->client->multiSearch($this->indexName($storeViewCode), $searches);
         $documents = [];
         foreach ($responses[0]['hits']['hits'] ?? [] as $hit) {
             $documents[(int)$hit['_id']] = $hit['_source'];
@@ -113,7 +84,7 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
     public function priceData(string $storeViewCode, array $ids, string $groupKey): array
     {
         return $this->parsePriceData(
-            $this->query->multiSearch($this->aliasName($storeViewCode), $this->priceSearches($ids, $groupKey))
+            $this->client->multiSearch($this->indexName($storeViewCode), $this->priceSearches($ids, $groupKey))
         );
     }
 
@@ -130,7 +101,7 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
                     ['terms' => ['bundleParentIds' => $parentIds]],
                     ['term' => ['status' => 'Enabled']],
                 ]]],
-                '_source' => ['sku', 'bundleParentIds', 'stock.isSalable', 'priceIndex.' . $groupKey],
+                '_source' => ['sku', 'bundleParentIds', 'stock.isSalable', 'priceIndex'],
             ],
             [
                 'size' => count($parentIds),
@@ -143,14 +114,22 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
         ];
     }
 
+    /**
+     * Per parent, the minimum and maximum regular and final price of the
+     * children's price index entries for the group, over the salable children
+     * and over all enabled children.
+     */
     private function rangeAggregation(string $parentField, array $parentIds, string $groupKey): array
     {
-        $stats = [
-            'minRegular' => ['min' => ['field' => 'priceIndex.' . $groupKey . '.regular']],
-            'minFinal' => ['min' => ['field' => 'priceIndex.' . $groupKey . '.final']],
-            'maxRegular' => ['max' => ['field' => 'priceIndex.' . $groupKey . '.regular']],
-            'maxFinal' => ['max' => ['field' => 'priceIndex.' . $groupKey . '.final']],
-        ];
+        $group = ['nested' => ['path' => 'priceIndex'], 'aggs' => ['group' => [
+            'filter' => ['term' => ['priceIndex.group' => $groupKey]],
+            'aggs' => [
+                'minRegular' => ['min' => ['field' => 'priceIndex.regular']],
+                'minFinal' => ['min' => ['field' => 'priceIndex.final']],
+                'maxRegular' => ['max' => ['field' => 'priceIndex.regular']],
+                'maxFinal' => ['max' => ['field' => 'priceIndex.final']],
+            ],
+        ]]];
 
         return [
             'size' => 0,
@@ -161,8 +140,8 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
             'aggs' => ['parents' => [
                 'terms' => ['field' => $parentField, 'size' => count($parentIds), 'include' => $parentIds],
                 'aggs' => [
-                    'salable' => ['filter' => ['term' => ['stock.isSalable' => true]], 'aggs' => $stats],
-                    'all' => ['filter' => ['match_all' => new \stdClass()], 'aggs' => $stats],
+                    'salable' => ['filter' => ['term' => ['stock.isSalable' => true]], 'aggs' => ['prices' => $group]],
+                    'all' => ['filter' => ['match_all' => new \stdClass()], 'aggs' => ['prices' => $group]],
                 ],
             ]],
         ];
@@ -176,7 +155,6 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
                 $selections[(int)$parentId][$hit['_source']['sku']] = $hit['_source'];
             }
         }
-
         $bundleOptions = [];
         foreach ($responses[3]['hits']['hits'] ?? [] as $hit) {
             $bundleOptions[(int)$hit['_id']] = $hit['_source'];
@@ -195,7 +173,7 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
         $ranges = [];
         foreach ($response['aggregations']['parents']['buckets'] ?? [] as $bucket) {
             foreach (['salable', 'all'] as $mode) {
-                $stats = $bucket[$mode];
+                $stats = $bucket[$mode]['prices']['group'];
                 $ranges[(int)$bucket['key']][$mode] = isset($stats['minFinal']['value'])
                     ? [
                         (float)$stats['minRegular']['value'],
@@ -210,20 +188,8 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
         return $ranges;
     }
 
-    private function ensureIndex(string $storeViewCode): void
+    private function indexName(string $storeViewCode): string
     {
-        if (isset($this->ensured[$storeViewCode])) {
-            return;
-        }
-        $alias = $this->aliasName($storeViewCode);
-        if (!$this->dataDefinition->existsDataSource($alias)) {
-            $dataSource = $this->state->getCurrentDataSourceName([$storeViewCode]);
-            if (!$this->dataDefinition->existsDataSource($dataSource)) {
-                $this->dataDefinition->createDataSource($dataSource, []);
-                $this->dataDefinition->createEntity($dataSource, self::ENTITY, []);
-            }
-            $this->dataDefinition->createAlias($alias, $dataSource);
-        }
-        $this->ensured[$storeViewCode] = true;
+        return $this->client->indexName(self::ENTITY, $storeViewCode);
     }
 }

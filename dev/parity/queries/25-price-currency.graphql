@@ -1,0 +1,15 @@
+# @header Content-Currency: EUR
+query {
+  products(filter: { sku: { in: ["24-MB01", "24-WG080", "MH01", "24-WG085_Group", "GC-BUNDLE-FIXED", "240-LV04", "MJ01"] } }, pageSize: 20) {
+    items {
+      sku __typename
+      price_range {
+        minimum_price { regular_price { value currency } final_price { value currency } discount { amount_off percent_off } }
+        maximum_price { regular_price { value currency } final_price { value currency } discount { amount_off percent_off } }
+      }
+      price { minimalPrice { amount { value currency } adjustments { code amount { value currency } description } } regularPrice { amount { value currency } adjustments { code amount { value currency } description } } maximalPrice { amount { value currency } adjustments { code amount { value currency } description } } }
+      price_tiers { discount { amount_off percent_off } quantity final_price { value currency } }
+      ... on BundleProduct { price_details { main_price main_final_price discount_percentage } }
+    }
+  }
+}

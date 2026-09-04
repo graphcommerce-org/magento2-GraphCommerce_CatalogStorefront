@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Model\Read;
 
+use GraphCommerce\CatalogStorefront\Model\ProductPrice;
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
 use Magento\Catalog\Model\Product;
 use Magento\Catalog\Model\Product\Attribute\Source\Status;
@@ -21,8 +22,6 @@ use Magento\Catalog\Model\ProductFactory;
  */
 class ProductModelBuilder
 {
-    private const GUEST_CUSTOMER_GROUP = '0';
-
     /** Core holds the loaded tier price rows under this attribute; the feed's string form is not a model value. */
     private const NOT_MODEL_VALUES = ['tier_price'];
 
@@ -31,6 +30,7 @@ class ProductModelBuilder
 
     public function __construct(
         private readonly ProductFactory $productFactory,
+        private readonly ProductPrice $productPrice,
     ) {
     }
 
@@ -86,13 +86,9 @@ class ProductModelBuilder
             $data['links_purchased_separately'] = (int)$document['linksPurchasedSeparately'];
         }
 
-        foreach ((array)($document['prices'] ?? []) as $priceRow) {
-            if (($priceRow['customerGroupCode'] ?? null) === self::GUEST_CUSTOMER_GROUP
-                && isset($priceRow['regular'])
-            ) {
-                $data['price'] = $priceRow['regular'];
-                break;
-            }
+        $fallbackRow = $this->productPrice->row((array)($document['prices'] ?? []), ProductPrice::FALLBACK_GROUP);
+        if ($fallbackRow !== null) {
+            $data['price'] = $fallbackRow['regular'];
         }
 
         if (!empty($document['categoryData'])) {

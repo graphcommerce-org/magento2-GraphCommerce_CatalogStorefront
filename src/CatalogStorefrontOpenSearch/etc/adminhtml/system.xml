@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="catalog">
+            <group id="storefront_documents">
+                <field id="index_prefix" translate="label comment" type="text" sortOrder="60" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Index Prefix</label>
+                    <comment>The document indices are named prefix, entity and store view code, on the search engine connection of Stores > Configuration > Catalog > Catalog Search.</comment>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

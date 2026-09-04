@@ -3,6 +3,8 @@
     <module name="GraphCommerce_CatalogStorefrontOpenSearch">
         <sequence>
             <module name="GraphCommerce_CatalogStorefrontApi"/>
+            <module name="Magento_AdvancedSearch"/>
+            <module name="Magento_OpenSearch"/>
         </sequence>
     </module>
 </config>

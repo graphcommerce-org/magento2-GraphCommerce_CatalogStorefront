@@ -6,29 +6,56 @@ namespace GraphCommerce\CatalogStorefront\Model;
 /**
  * Price semantics shared by the feed writer and the read plugins.
  *
- * A product's price row is the customer group's own feed row when the feed
- * exported one (group-specific catalog rule, group or tier prices), else the
- * fallback row every product carries under group code "0". The final price is
- * the regular price lowered by the best discount or single-quantity tier
- * price, which is the minimum the core BasePrice takes over its providers.
+ * A product's price rows are the feed rows by customer group id: the group's
+ * own row when the feed exported one (group-specific catalog rule, group or
+ * tier prices), else the fallback row every product carries under group 0.
+ * The final price is the regular price lowered by the best discount or
+ * single-quantity tier price, which is the minimum the core BasePrice takes
+ * over its providers. The price index holds, per customer group, the regular
+ * and final price with the fallback resolved, as base currency floats before
+ * tax; the composite price aggregations run over it.
  */
 class ProductPrice
 {
-    public const FALLBACK_GROUP_KEY = 'g0';
+    public const FALLBACK_GROUP = '0';
 
     public function groupKey(int $customerGroupId): string
     {
-        return 'g' . sha1((string)$customerGroupId);
+        return (string)$customerGroupId;
     }
 
     /**
-     * @param array<string, array> $prices the document's price rows by group key
+     * @param array[] $prices the document's price rows, each with its `group`
      */
     public function row(array $prices, string $groupKey): ?array
     {
-        $row = $prices[$groupKey] ?? $prices[self::FALLBACK_GROUP_KEY] ?? null;
+        $fallback = null;
+        foreach ($prices as $row) {
+            $group = (string)($row['group'] ?? '');
+            if ($group === $groupKey && isset($row['regular'])) {
+                return $row;
+            }
+            if ($group === self::FALLBACK_GROUP) {
+                $fallback = $row;
+            }
+        }
 
-        return isset($row['regular']) ? $row : null;
+        return isset($fallback['regular']) ? $fallback : null;
+    }
+
+    /**
+     * @param array[] $index the document's price index entries
+     * @return array{regular: float, final: float}|null
+     */
+    public function indexEntry(array $index, string $groupKey): ?array
+    {
+        foreach ($index as $entry) {
+            if ((string)($entry['group'] ?? '') === $groupKey && isset($entry['regular'], $entry['final'])) {
+                return ['regular' => (float)$entry['regular'], 'final' => (float)$entry['final']];
+            }
+        }
+
+        return null;
     }
 
     /**

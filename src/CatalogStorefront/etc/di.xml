@@ -31,10 +31,29 @@
         <plugin name="graphcommerce_catalog_storefront_tier_price_percent" type="GraphCommerce\CatalogStorefront\Plugin\DataExporter\TierPricePercent"/>
     </type>
 
-    <!-- The category documents: filtered by id, url key, url path and parent, sorted by position. -->
+    <!-- The product documents: filtered and aggregated on sku, type, parents, status, salability and the
+         nested price index (one entry per customer group). The category documents: filtered by id, url key,
+         url path and parent, sorted by position. -->
     <type name="GraphCommerce\CatalogStorefrontApi\Storage\EntityMappings">
         <arguments>
             <argument name="mappings" xsi:type="array">
+                <item name="product" xsi:type="array">
+                    <item name="sku" xsi:type="string">keyword</item>
+                    <item name="type" xsi:type="string">keyword</item>
+                    <item name="parentIds" xsi:type="string">keyword</item>
+                    <item name="groupedParentIds" xsi:type="string">keyword</item>
+                    <item name="bundleParentIds" xsi:type="string">keyword</item>
+                    <item name="status" xsi:type="string">keyword</item>
+                    <item name="stock.isSalable" xsi:type="string">boolean</item>
+                    <item name="priceIndex" xsi:type="array">
+                        <item name="type" xsi:type="string">nested</item>
+                        <item name="fields" xsi:type="array">
+                            <item name="group" xsi:type="string">keyword</item>
+                            <item name="regular" xsi:type="string">float</item>
+                            <item name="final" xsi:type="string">float</item>
+                        </item>
+                    </item>
+                </item>
                 <item name="category" xsi:type="array">
                     <item name="id" xsi:type="string">integer</item>
                     <item name="parentId" xsi:type="string">keyword</item>
@@ -64,6 +83,9 @@
     </type>
     <type name="Magento\Elasticsearch\Model\Adapter\FieldMapper\FieldMapperResolver">
         <plugin name="graphcommerce_catalog_storefront_field_name_memo" type="GraphCommerce\CatalogStorefront\Plugin\Search\FieldNameMemo"/>
+    </type>
+    <type name="Magento\Framework\DB\Adapter\Pdo\Mysql">
+        <plugin name="graphcommerce_catalog_storefront_statement_recorder" type="GraphCommerce\CatalogStorefront\Plugin\Db\StatementRecorder"/>
     </type>
     <type name="Magento\Search\Model\Query">
         <plugin name="graphcommerce_catalog_storefront_search_term_recording" type="GraphCommerce\CatalogStorefront\Plugin\Search\SearchTermRecording"/>

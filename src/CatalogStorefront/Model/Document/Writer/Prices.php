@@ -11,12 +11,14 @@ use Magento\Customer\Model\Group;
 use Magento\Store\Model\StoreManagerInterface;
 
 /**
- * The prices slice keeps the feed rows by group key, fanned out to the store
- * views of the row's website. Next to it, priceIndex carries the regular and
- * final price per customer group with the fallback row already resolved, as
- * mapped floats the composite price aggregations read. A batch holds a
- * product's rows one group at a time, so the index is recomputed over the
- * rows already stored plus the batch.
+ * The prices slice keeps the feed rows by customer group id, fanned out to
+ * the store views of the row's website. Next to it, priceIndex carries one
+ * entry per customer group with the regular and final price and the fallback
+ * row already resolved, the nested list the composite price aggregations
+ * read. The feed names a group by the hash of its id and a batch holds a
+ * product's rows one group at a time, so both are recomputed over the rows
+ * already stored plus the batch. A group created after a row was exported
+ * gets its entry when the row exports again.
  */
 class Prices implements FeedWriterInterface
 {
@@ -34,35 +36,49 @@ class Prices implements FeedWriterInterface
         foreach ($this->storeManager->getStores() as $store) {
             $storesByWebsite[$store->getWebsite()->getCode()][] = $store->getCode();
         }
+        $groupIds = array_unique(array_merge(
+            [Group::NOT_LOGGED_IN_ID],
+            array_map(static fn($group) => (int)$group->getId(), $this->groupManagement->getLoggedInGroups())
+        ));
+        $groupByCode = [ProductPrice::FALLBACK_GROUP => ProductPrice::FALLBACK_GROUP];
+        foreach ($groupIds as $groupId) {
+            $groupByCode[sha1((string)$groupId)] = $this->productPrice->groupKey($groupId);
+        }
         $rowsByStore = [];
         foreach ($rows as $row) {
+            $group = $groupByCode[$row['customerGroupCode'] ?? ''] ?? null;
+            if ($group === null) {
+                continue;
+            }
+            unset($row['customerGroupCode']);
             foreach ($storesByWebsite[$row['websiteCode']] ?? [] as $store) {
-                // A string prefix keeps the group map a JSON object; a bare "0" key
-                // serializes as an array, and the doc merge replaces arrays wholesale.
-                $rowsByStore[$store][(int)$row['productId']]['g' . $row['customerGroupCode']] = $row;
+                $rowsByStore[$store][(int)$row['productId']][$group] = ['group' => $group] + $row;
             }
         }
-        $groupKeys = array_unique(array_merge(
-            [$this->productPrice->groupKey(Group::NOT_LOGGED_IN_ID)],
-            array_map(fn($group) => $this->productPrice->groupKey((int)$group->getId()), $this->groupManagement->getLoggedInGroups())
-        ));
 
         foreach ($rowsByStore as $store => $products) {
             $stored = [];
             foreach ($this->storage->get($store, array_keys($products), ['prices']) as $id => $document) {
-                $stored[$id] = (array)($document['prices'] ?? []);
+                foreach ((array)($document['prices'] ?? []) as $row) {
+                    $stored[$id][(string)$row['group']] = $row;
+                }
             }
             $upserts = [];
             foreach ($products as $productId => $groupRows) {
-                $prices = $groupRows + ($stored[$productId] ?? []);
+                $prices = array_values($groupRows + ($stored[$productId] ?? []));
                 $index = [];
-                foreach ($groupKeys as $groupKey) {
+                foreach ($groupIds as $groupId) {
+                    $groupKey = $this->productPrice->groupKey($groupId);
                     $row = $this->productPrice->row($prices, $groupKey);
                     if ($row !== null) {
-                        $index[$groupKey] = ['regular' => (float)$row['regular'], 'final' => $this->productPrice->finalPrice($row)];
+                        $index[] = [
+                            'group' => $groupKey,
+                            'regular' => (float)$row['regular'],
+                            'final' => $this->productPrice->finalPrice($row),
+                        ];
                     }
                 }
-                $upserts[$productId] = ['prices' => $groupRows, 'priceIndex' => $index];
+                $upserts[$productId] = ['prices' => $prices, 'priceIndex' => $index];
             }
             $this->storage->upsert($store, $upserts);
         }

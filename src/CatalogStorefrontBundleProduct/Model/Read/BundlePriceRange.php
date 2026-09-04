@@ -76,7 +76,7 @@ class BundlePriceRange implements PriceRangeInterface
                 if ($child === null) {
                     continue;
                 }
-                $childPrice = $child['priceIndex'][$groupKey] ?? null;
+                $childPrice = $this->productPrice->indexEntry((array)($child['priceIndex'] ?? []), $groupKey);
                 if ($fixed) {
                     $unitRegular = ($value['priceType'] ?? null) === 'percent'
                         ? $regular * (float)$value['price'] / 100
