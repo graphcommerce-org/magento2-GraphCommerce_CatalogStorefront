@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\GroupedProductGraphQl\Model\Resolver\GroupedItems">
+        <plugin name="graphcommerce_catalog_storefront_grouped_items" type="GraphCommerce\CatalogStorefrontGroupedProductGraphQl\Plugin\Resolver\GroupedItemsFromDocument"/>
+    </type>
+    <type name="GraphCommerce\CatalogStorefrontGraphQl\Model\DocumentHydration">
+        <arguments>
+            <argument name="prefillers" xsi:type="array">
+                <item name="groupedDeprecatedPrice" xsi:type="object">GraphCommerce\CatalogStorefrontGroupedProductGraphQl\Model\Prefill\DeprecatedPrice</item>
+            </argument>
+            <argument name="fieldDocumentKeys" xsi:type="array">
+                <item name="items" xsi:type="array"><item name="0" xsi:type="string">optionsV2</item></item>
+            </argument>
+        </arguments>
+    </type>
+</config>

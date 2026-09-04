@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontBundleProduct\Model\Read;
 
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
-use GraphCommerce\CatalogStorefrontApi\Read\PrefillRequest;
+use GraphCommerce\CatalogStorefrontApi\Read\DocumentContext;
 use GraphCommerce\CatalogStorefrontApi\Read\PriceRangeInterface;
 
 /**
@@ -35,10 +35,10 @@ class BundlePriceRange implements PriceRangeInterface
     ) {
     }
 
-    public function range(int $productId, array $document, PrefillRequest $request, bool $showOutOfStock): ?array
+    public function range(int $productId, array $document, DocumentContext $context, bool $showOutOfStock): ?array
     {
-        $priceData = $request->priceData();
-        $groupKey = $request->groupKey;
+        $priceData = $context->priceData();
+        $groupKey = $context->groupKey;
         // The bundle's option slice and its selection documents (by sku: stock, priceIndex) travel with the price data.
         $document += $priceData['bundleOptions'][$productId] ?? [];
         $selections = $priceData['bundle'][$productId] ?? [];

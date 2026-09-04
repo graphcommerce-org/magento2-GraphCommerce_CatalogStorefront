@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- The configurable_options response shape is built at index time and stored on the document. -->
+    <type name="GraphCommerce\CatalogStorefront\Model\Document\Writer\Products">
+        <arguments>
+            <argument name="fields" xsi:type="array">
+                <item name="configurableOptions" xsi:type="object">GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Model\Document\Field\ConfigurableOptions</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="Magento\ConfigurableProductGraphQl\Model\Resolver\Options">
+        <plugin name="graphcommerce_catalog_storefront_configurable_options" type="GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Plugin\Resolver\ConfigurableOptionsFromDocument"/>
+    </type>
+    <type name="Magento\ConfigurableProductGraphQl\Model\Resolver\OptionsSelectionMetadata">
+        <plugin name="graphcommerce_catalog_storefront_options_selection" type="GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Plugin\Resolver\OptionsSelectionFromDocuments"/>
+    </type>
+    <type name="Magento\ConfigurableProductGraphQl\Model\Resolver\ConfigurableVariant">
+        <plugin name="graphcommerce_catalog_storefront_variants" type="GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Plugin\Resolver\VariantsFromDocuments"/>
+    </type>
+    <type name="GraphCommerce\CatalogStorefrontGraphQl\Model\DocumentHydration">
+        <arguments>
+            <argument name="fieldDocumentKeys" xsi:type="array">
+                <item name="configurable_options" xsi:type="array"><item name="0" xsi:type="string">configurableOptions</item></item>
+                <item name="variants" xsi:type="array"><item name="0" xsi:type="string">configurableOptions</item></item>
+                <item name="configurable_product_options_selection" xsi:type="array"><item name="0" xsi:type="string">configurableOptions</item></item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query\ReuseSchema">
+        <arguments>
+            <argument name="prefilledFields" xsi:type="array">
+                <item name="ConfigurableProductOptionsSelection" xsi:type="array">
+                    <item name="media_gallery" xsi:type="string">media_gallery</item>
+                </item>
+                <item name="ConfigurableProductOptionsValues" xsi:type="array">
+                    <item name="uid" xsi:type="string">uid</item>
+                    <item name="swatch_data" xsi:type="string">swatch_data</item>
+                </item>
+            </argument>
+        </arguments>
+    </type>
+</config>

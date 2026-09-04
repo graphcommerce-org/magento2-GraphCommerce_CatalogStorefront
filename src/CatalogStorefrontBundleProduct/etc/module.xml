@@ -4,7 +4,6 @@
         <sequence>
             <module name="GraphCommerce_CatalogStorefront"/>
             <module name="Magento_BundleProductDataExporter"/>
-            <module name="Magento_BundleGraphQl"/>
         </sequence>
     </module>
 </config>

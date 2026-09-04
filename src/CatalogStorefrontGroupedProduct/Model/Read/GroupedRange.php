@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontGroupedProduct\Model\Read;
 
-use GraphCommerce\CatalogStorefrontApi\Read\PrefillRequest;
+use GraphCommerce\CatalogStorefrontApi\Read\DocumentContext;
 use GraphCommerce\CatalogStorefrontApi\Read\PriceRangeInterface;
 
 /**
@@ -13,9 +13,9 @@ use GraphCommerce\CatalogStorefrontApi\Read\PriceRangeInterface;
  */
 class GroupedRange implements PriceRangeInterface
 {
-    public function range(int $productId, array $document, PrefillRequest $request, bool $showOutOfStock): ?array
+    public function range(int $productId, array $document, DocumentContext $context, bool $showOutOfStock): ?array
     {
-        $ranges = $request->priceData()['grouped'][$productId] ?? null;
+        $ranges = $context->priceData()['grouped'][$productId] ?? null;
         $range = $ranges === null ? null : ($showOutOfStock ? $ranges['all'] : $ranges['salable']);
 
         return $range === null ? null : [$range[0], $range[1], $range[0], $range[1]];

@@ -56,39 +56,4 @@
             </argument>
         </arguments>
     </type>
-
-    <type name="Magento\ReviewGraphQl\Model\Resolver\Product\Reviews">
-        <plugin name="graphcommerce_catalog_storefront_reviews"
-                type="GraphCommerce\CatalogStorefrontReview\Plugin\Resolver\ReviewsFromDocument"/>
-    </type>
-    <type name="GraphCommerce\CatalogStorefront\Model\Read\DocumentHydration">
-        <arguments>
-            <argument name="prefillers" xsi:type="array">
-                <item name="reviews" xsi:type="object">GraphCommerce\CatalogStorefrontReview\Model\Read\Prefill\Reviews</item>
-            </argument>
-            <argument name="fieldDocumentKeys" xsi:type="array">
-                <item name="reviews" xsi:type="array"><item name="0" xsi:type="string">reviews</item></item>
-                <item name="rating_summary" xsi:type="array"><item name="0" xsi:type="string">reviews</item></item>
-                <item name="review_count" xsi:type="array"><item name="0" xsi:type="string">reviews</item></item>
-            </argument>
-            <argument name="baseFields" xsi:type="array">
-                <item name="rating_summary" xsi:type="string">rating_summary</item>
-                <item name="review_count" xsi:type="string">review_count</item>
-            </argument>
-        </arguments>
-    </type>
-    <type name="GraphCommerce\CatalogStorefront\Plugin\GraphQl\ReuseSchema">
-        <arguments>
-            <argument name="prefilledFields" xsi:type="array">
-                <item name="ProductInterface" xsi:type="array">
-                    <item name="rating_summary" xsi:type="string">rating_summary</item>
-                    <item name="review_count" xsi:type="string">review_count</item>
-                </item>
-                <item name="ProductReview" xsi:type="array">
-                    <item name="average_rating" xsi:type="string">average_rating</item>
-                    <item name="ratings_breakdown" xsi:type="string">ratings_breakdown</item>
-                </item>
-            </argument>
-        </arguments>
-    </type>
 </config>

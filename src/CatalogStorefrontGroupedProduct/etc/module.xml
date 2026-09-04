@@ -3,7 +3,7 @@
     <module name="GraphCommerce_CatalogStorefrontGroupedProduct">
         <sequence>
             <module name="GraphCommerce_CatalogStorefront"/>
-            <module name="Magento_GroupedProductGraphQl"/>
+            <module name="Magento_GroupedProduct"/>
         </sequence>
     </module>
 </config>

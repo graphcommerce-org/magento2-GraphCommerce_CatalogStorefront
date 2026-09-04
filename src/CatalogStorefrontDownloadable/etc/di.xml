@@ -1,26 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
-    <type name="Magento\DownloadableGraphQl\Resolver\Product\Links">
-        <plugin name="graphcommerce_catalog_storefront_downloadable_links"
-                type="GraphCommerce\CatalogStorefrontDownloadable\Plugin\Resolver\DownloadableLinksFromDocument"/>
-    </type>
-    <type name="Magento\DownloadableGraphQl\Resolver\Product\Samples">
-        <plugin name="graphcommerce_catalog_storefront_downloadable_samples"
-                type="GraphCommerce\CatalogStorefrontDownloadable\Plugin\Resolver\DownloadableSamplesFromDocument"/>
-    </type>
-    <type name="GraphCommerce\CatalogStorefront\Model\Read\Prefill\Prices">
+    <type name="GraphCommerce\CatalogStorefront\Model\Read\PriceRanges">
         <arguments>
             <argument name="ranges" xsi:type="array">
                 <item name="downloadable" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Read\Price\SingleRange</item>
-            </argument>
-        </arguments>
-    </type>
-    <type name="GraphCommerce\CatalogStorefront\Model\Read\DocumentHydration">
-        <arguments>
-            <argument name="fieldDocumentKeys" xsi:type="array">
-                <item name="downloadable_product_links" xsi:type="array"><item name="0" xsi:type="string">optionsV2</item></item>
-                <item name="downloadable_product_samples" xsi:type="array"><item name="0" xsi:type="string">samples</item></item>
-                <item name="links_purchased_separately" xsi:type="array"><item name="0" xsi:type="string">optionsV2</item></item>
             </argument>
         </arguments>
     </type>

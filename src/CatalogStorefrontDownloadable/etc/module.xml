@@ -3,7 +3,7 @@
     <module name="GraphCommerce_CatalogStorefrontDownloadable">
         <sequence>
             <module name="GraphCommerce_CatalogStorefront"/>
-            <module name="Magento_DownloadableGraphQl"/>
+            <module name="Magento_Downloadable"/>
         </sequence>
     </module>
 </config>

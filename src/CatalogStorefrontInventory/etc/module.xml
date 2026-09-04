@@ -4,8 +4,6 @@
         <sequence>
             <module name="GraphCommerce_CatalogStorefront"/>
             <module name="Magento_InventoryDataExporter"/>
-            <module name="Magento_CatalogInventoryGraphQl"/>
-            <module name="Magento_InventoryGraphQl"/>
         </sequence>
     </module>
 </config>

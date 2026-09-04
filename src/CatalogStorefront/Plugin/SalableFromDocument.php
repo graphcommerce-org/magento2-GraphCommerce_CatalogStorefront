@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Plugin;
 
-use GraphCommerce\CatalogStorefrontApi\Read\HydrationInterface;
+use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
 use Magento\Catalog\Model\Product;
 use Magento\Catalog\Model\Product\Attribute\Source\Status;
 use Magento\Catalog\Model\Product\Type\AbstractType;
@@ -20,7 +20,7 @@ class SalableFromDocument
 {
     public function aroundIsSalable(AbstractType $subject, \Closure $proceed, Product $product): bool
     {
-        $document = $product->getData(HydrationInterface::DOCUMENT_KEY);
+        $document = $product->getData(ProductDocumentsInterface::DOCUMENT_KEY);
         if (!is_array($document)) {
             return (bool)$proceed($product);
         }

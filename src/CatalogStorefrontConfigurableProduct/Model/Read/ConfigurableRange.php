@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Read;
 
-use GraphCommerce\CatalogStorefrontApi\Read\PrefillRequest;
+use GraphCommerce\CatalogStorefrontApi\Read\DocumentContext;
 use GraphCommerce\CatalogStorefrontApi\Read\PriceRangeInterface;
 
 /**
@@ -14,9 +14,9 @@ use GraphCommerce\CatalogStorefrontApi\Read\PriceRangeInterface;
  */
 class ConfigurableRange implements PriceRangeInterface
 {
-    public function range(int $productId, array $document, PrefillRequest $request, bool $showOutOfStock): ?array
+    public function range(int $productId, array $document, DocumentContext $context, bool $showOutOfStock): ?array
     {
-        $ranges = $request->priceData()['configurable'][$productId] ?? null;
+        $ranges = $context->priceData()['configurable'][$productId] ?? null;
         if ($ranges === null) {
             return null;
         }

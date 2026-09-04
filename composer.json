@@ -27,25 +27,41 @@
     "autoload": {
         "files": [
             "src/CatalogStorefrontApi/registration.php",
-            "src/CatalogStorefront/registration.php",
+            "src/CatalogStorefrontGraphQlApi/registration.php",
             "src/CatalogStorefrontOpenSearch/registration.php",
+            "src/CatalogStorefront/registration.php",
+            "src/CatalogStorefrontGraphQl/registration.php",
             "src/CatalogStorefrontInventory/registration.php",
+            "src/CatalogStorefrontInventoryGraphQl/registration.php",
             "src/CatalogStorefrontConfigurableProduct/registration.php",
+            "src/CatalogStorefrontConfigurableProductGraphQl/registration.php",
             "src/CatalogStorefrontBundleProduct/registration.php",
+            "src/CatalogStorefrontBundleProductGraphQl/registration.php",
             "src/CatalogStorefrontGroupedProduct/registration.php",
+            "src/CatalogStorefrontGroupedProductGraphQl/registration.php",
             "src/CatalogStorefrontDownloadable/registration.php",
-            "src/CatalogStorefrontReview/registration.php"
+            "src/CatalogStorefrontDownloadableGraphQl/registration.php",
+            "src/CatalogStorefrontReview/registration.php",
+            "src/CatalogStorefrontReviewGraphQl/registration.php"
         ],
         "psr-4": {
             "GraphCommerce\\CatalogStorefrontApi\\": "src/CatalogStorefrontApi/",
-            "GraphCommerce\\CatalogStorefront\\": "src/CatalogStorefront/",
+            "GraphCommerce\\CatalogStorefrontGraphQlApi\\": "src/CatalogStorefrontGraphQlApi/",
             "GraphCommerce\\CatalogStorefrontOpenSearch\\": "src/CatalogStorefrontOpenSearch/",
+            "GraphCommerce\\CatalogStorefront\\": "src/CatalogStorefront/",
+            "GraphCommerce\\CatalogStorefrontGraphQl\\": "src/CatalogStorefrontGraphQl/",
             "GraphCommerce\\CatalogStorefrontInventory\\": "src/CatalogStorefrontInventory/",
+            "GraphCommerce\\CatalogStorefrontInventoryGraphQl\\": "src/CatalogStorefrontInventoryGraphQl/",
             "GraphCommerce\\CatalogStorefrontConfigurableProduct\\": "src/CatalogStorefrontConfigurableProduct/",
+            "GraphCommerce\\CatalogStorefrontConfigurableProductGraphQl\\": "src/CatalogStorefrontConfigurableProductGraphQl/",
             "GraphCommerce\\CatalogStorefrontBundleProduct\\": "src/CatalogStorefrontBundleProduct/",
+            "GraphCommerce\\CatalogStorefrontBundleProductGraphQl\\": "src/CatalogStorefrontBundleProductGraphQl/",
             "GraphCommerce\\CatalogStorefrontGroupedProduct\\": "src/CatalogStorefrontGroupedProduct/",
+            "GraphCommerce\\CatalogStorefrontGroupedProductGraphQl\\": "src/CatalogStorefrontGroupedProductGraphQl/",
             "GraphCommerce\\CatalogStorefrontDownloadable\\": "src/CatalogStorefrontDownloadable/",
-            "GraphCommerce\\CatalogStorefrontReview\\": "src/CatalogStorefrontReview/"
+            "GraphCommerce\\CatalogStorefrontDownloadableGraphQl\\": "src/CatalogStorefrontDownloadableGraphQl/",
+            "GraphCommerce\\CatalogStorefrontReview\\": "src/CatalogStorefrontReview/",
+            "GraphCommerce\\CatalogStorefrontReviewGraphQl\\": "src/CatalogStorefrontReviewGraphQl/"
         }
     }
 }

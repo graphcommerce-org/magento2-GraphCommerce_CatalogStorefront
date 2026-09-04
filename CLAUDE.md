@@ -5,49 +5,64 @@ Catalog read model: feed documents in OpenSearch serve the catalog GraphQL read 
 ## Layout
 
 One composer package, one git repository, one Magento module per directory
-under `src/`, named as the module. Each module depends on the core modules it
-plugs into, so a shop without one of them (Bundle, Review) leaves that module
-disabled and the DI compile still passes:
+under `src/`, named as the module. The cut follows core: a base module holds
+what any frontend can use (feed patch-ups, document writers, model builder,
+price ranges, metadata readers), its `GraphQl` twin holds the resolver
+plugins, the prefillers and the schema plugins. A Hyvä or Luma integration
+adds `*Frontend` modules next to the `*GraphQl` ones and reuses the base
+modules. Each module depends only on the core modules it plugs into, so a
+shop without one of them leaves that module disabled and the DI compile still
+passes.
 
-- `CatalogStorefrontApi`: the contracts other modules code against.
+- `CatalogStorefrontApi`: the contracts any frontend codes against.
   `Storage\ProductDocumentStorageInterface` and
-  `Storage\MetadataDocumentStorageInterface` (the document stores, per entity
-  name for the metadata feeds), `Document\FeedWriterInterface` (writes one
+  `Storage\MetadataDocumentStorageInterface` (the document stores, entity name
+  per call for the metadata feeds), `Document\FeedWriterInterface` (writes one
   feed's rows), `Document\ProductDocumentFieldInterface` (a product document
-  field computed at index time), `Read\PrefillerInterface` (fills fields on
-  the product value, KEY), `Read\PrefillRequest` (store, group key, selected
-  fields, lazy composite price data), `Read\PriceRangeInterface` (the range of
-  one product type) and `Read\HydrationInterface` (documents and models by id,
-  DOCUMENT_KEY).
-- `CatalogStorefrontOpenSearch`: the storage interfaces implemented on
-  OpenSearch: the client (`Model/Client`, connection from the `catalog-store-front`
-  block of env.php, the product index mapping in `Client/Config/Product`, every
-  other entity unmapped), the blue/green alias state and the two stores.
-- `CatalogStorefront`: the core. Delivery of the feeds, the writers for the
+  field computed at index time), `Read\ProductDocumentsInterface` (documents
+  and models by id, DOCUMENT_KEY, the lazy composite price data),
+  `Read\DocumentContext` (store, group key, composite price data) and
+  `Read\PriceRangeInterface` (the range of one product type).
+- `CatalogStorefrontGraphQlApi`: the GraphQL contracts.
+  `Read\PrefillerInterface` (fills fields on the product value, KEY),
+  `Read\PrefillRequest` (a DocumentContext plus the selected fields) and
+  `Read\HydrationInterface` (models prefilled for a query).
+- `CatalogStorefrontOpenSearch`: the storage interfaces on OpenSearch: the
+  client (`Model/Client`, connection from the `catalog-store-front` block of
+  env.php, the product index mapping in `Client/Config/Product`, every other
+  entity unmapped), the blue/green alias state and the two stores.
+- `CatalogStorefront`: the base. Feed delivery and the writers for the
   products, prices, categories and attributes feeds, the composite links, the
   image URL field, the exporter patch-ups the core feeds need, the model
-  builder, the hydration with the prefiller list, the product and price
-  prefillers, the listing and layer plugins, categories, media gallery, URL
-  rewrites, custom attributes, product links, the salable plugin.
-- `CatalogStorefrontInventory`: the stock feed writer, the stock item feed
-  fields and the stock prefiller (stock_status, only_x_left_in_stock, quantity,
-  min and max sale qty; the MSI source item management service says which
-  types own a quantity).
-- `CatalogStorefrontConfigurableProduct`: the variants feed writer, the
-  configurable options document field, the option value details patch-up, the
-  configurable range, the variants, options and options selection resolvers.
-- `CatalogStorefrontBundleProduct`: the bundle attribute feed fields, the bundle
-  range, the price_details prefiller, the bundle items resolver.
-- `CatalogStorefrontGroupedProduct`: the grouped range, the deprecated price
-  rewrite for grouped products, the grouped items resolver.
-- `CatalogStorefrontDownloadable`: the downloadable links and samples resolvers,
-  the downloadable range registration.
-- `CatalogStorefrontReview`: the reviews and rating feeds made to export like
-  the modern ones, the review date feed field, their writers, the rating
-  documents reader, the reviews prefiller, the reviews resolver, the feed table
-  schema.
+  builder, `ProductDocuments`, `PriceRanges` (di.xml `ranges`, by type id),
+  `PriceDisplay`, `AttributeDocuments`, the serve_reads config, and the plugins
+  on non-GraphQL core: product links, the layer price step, the search field
+  name memo, the deployment config memo, salable.
+- `CatalogStorefrontGraphQl`: `DocumentHydration` with the prefiller list, the
+  product and price prefillers, the listing data provider plugins, the
+  resolver plugins for categories, media gallery, URL rewrites, custom
+  attributes and linked products, the layered navigation plugins, the cache id
+  memo, the schema and validation plugins.
+- `CatalogStorefrontInventory` / `...InventoryGraphQl`: the stock feed writer
+  and stock item feed fields / the stock prefiller (the MSI source item
+  management service says which types own a quantity).
+- `CatalogStorefrontConfigurableProduct` / `...ConfigurableProductGraphQl`: the
+  variants writer, the option value details patch-up, the configurable range /
+  the configurable options document field (a GraphQL shape stored at index
+  time), the variants, options and options selection resolvers.
+- `CatalogStorefrontBundleProduct` / `...BundleProductGraphQl`: the bundle
+  attribute feed fields, the bundle range / the price_details prefiller, the
+  bundle items resolver.
+- `CatalogStorefrontGroupedProduct` / `...GroupedProductGraphQl`: the grouped
+  range / the deprecated price rewrite, the grouped items resolver.
+- `CatalogStorefrontDownloadable` / `...DownloadableGraphQl`: the downloadable
+  range registration / the links and samples resolvers.
+- `CatalogStorefrontReview` / `...ReviewGraphQl`: the reviews and rating feeds
+  made to export like the modern ones, the review date field, their writers,
+  the rating documents reader, the feed table schema / the reviews prefiller,
+  the reviews resolver.
 
-Inside a module the folders name the stage of the pipeline:
+Inside a base module the folders name the stage of the pipeline:
 
 - `Model/DataExporter/` and `Plugin/DataExporter/`: patch-ups of
   commerce-data-export, run at index time, SQL allowed. `Provider/` classes are
@@ -58,22 +73,21 @@ Inside a module the folders name the stage of the pipeline:
   exporter's `ExportFeedInterface` and hands each batch to the `Writer/` of its
   feed; `Field/` classes compute product document fields; `CompositeLinks`
   keeps the composite relations by id.
-- `Model/Read/`: the request side. `DocumentHydration` builds models and runs
-  the `Prefill/` classes; `AttributeDocuments` and `RatingDocuments` read the
-  store view's metadata documents once per request; `Price/` holds the range
-  calculators.
-- `Plugin/Resolver/`, `Plugin/Layer/`, `Plugin/GraphQl/`: the request path
-  plugins on core.
+- `Model/Read/`: the request side any frontend shares: `ProductDocuments`,
+  `ProductModelBuilder`, `PriceRanges` and `Price/`, `AttributeDocuments`.
+
+Inside a GraphQl module: `Model/DocumentHydration`, `Model/Prefill/`,
+`Plugin/Resolver/`, `Plugin/DataProvider/`, `Plugin/Layer/`, `Plugin/Query/`.
 
 A module registers its parts in its own `etc/di.xml`: `writers` (by feed
-name) on `Delivery`, `fields` on the products writer, `prefillers`,
+name) on `Delivery`, `fields` on the products writer, `ranges` (by product
+type id) on `PriceRanges`, and on the GraphQL side `prefillers`,
 `priceFields`, `fieldDocumentKeys` and `baseFields` on `DocumentHydration`,
-`ranges` (by product type id) on the price prefiller, `prefilledFields` on
-`ReuseSchema`. Prefillers run in di.xml order, so a later one may rewrite what
-an earlier one filled. The composite price searches
+`prefilledFields` on `ReuseSchema`. Prefillers run in di.xml order, so a later
+one may rewrite what an earlier one filled. The composite price searches
 (`ProductDocumentStorageInterface::priceData`, by `parentIds`,
 `groupedParentIds` and `bundleParentIds`) and the fixed bundle type fold in
-the model builder stay in the core: they are feed shape, not core module
+the model builder stay in the base: they are feed shape, not core module
 classes.
 
 Development install in this project: every module directory is linked into
@@ -216,7 +230,7 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   needs beyond the documents it fetches per request:
   `Model/Read/AttributeDocuments` and `RatingDocuments` (the store view's
   attribute and rating documents; the facet labels come from them through
-  `Plugin/Layer/AttributeOptionsFromDocuments`, the rating scale for the
+  `Plugin/Layer/AttributeOptionsFromDocuments` (GraphQl), the rating scale for the
   review percents) and `Plugin/Search/FieldNameMemo` (search index field name
   per attribute code and context, the core mapper asks several times per
   attribute) are request-scoped. Derivations that used to be memos are made by
@@ -229,14 +243,14 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   (`CustomerTaxRateMemo`) and the deployment config check (`ConfigChangeMemo`).
   `etc/config.xml` turns on `dev/caching/cache_user_defined_attributes` so the
   EAV config serves user-defined attributes from cache instead of SQL.
-- `Plugin/GraphQl/ValidateOncePerProcess` validates a query document once per
-  process and executes repeats with an empty rule set. `Plugin/GraphQl/ReuseSchema`
+- `Plugin/Query/ValidateOncePerProcess` validates a query document once per
+  process and executes repeats with an empty rule set. `Plugin/Query/ReuseSchema`
   keeps one built schema per query shape: Magento prunes every type to the
   names the query uses, so a schema belongs to that name set, and its type map
   is materialized at build time because the type registry resets between
   requests. Both hold state for the worker's lifetime; a schema or config
   change reaches a worker at its next restart.
-- `configurable_options` is built at index time (`Model/Document/Field/ConfigurableOptions`,
+- `configurable_options` is built at index time (`Model/Document/Field/ConfigurableOptions` of the configurable GraphQl module,
   document key `configurableOptions`) and returned as is; its values carry the
   pre-filled `uid` and `swatch_data`.
 - The GraphCommerce ProductList query (`dev/parity/queries/13-*.graphql`, all

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Model\Read;
 
-use GraphCommerce\CatalogStorefrontApi\Read\HydrationInterface;
+use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
 use Magento\Catalog\Model\Product;
 use Magento\Catalog\Model\Product\Attribute\Source\Status;
 use Magento\Catalog\Model\Product\Visibility;
@@ -110,7 +110,7 @@ class ProductModelBuilder
 
         $product = $this->productFactory->create();
         $product->setData($data);
-        $product->setData(HydrationInterface::DOCUMENT_KEY, $document);
+        $product->setData(ProductDocumentsInterface::DOCUMENT_KEY, $document);
         $product->setStoreId($storeId);
         $product->setHasDataChanges(false);
 

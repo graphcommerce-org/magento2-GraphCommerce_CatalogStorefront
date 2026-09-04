@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Module/etc/module.xsd">
+    <module name="GraphCommerce_CatalogStorefrontDownloadableGraphQl">
+        <sequence>
+            <module name="GraphCommerce_CatalogStorefrontDownloadable"/>
+            <module name="GraphCommerce_CatalogStorefrontGraphQl"/>
+            <module name="Magento_DownloadableGraphQl"/>
+        </sequence>
+    </module>
+</config>

@@ -1,47 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
     <type name="Magento\Bundle\Model\Product\Type">
-        <plugin name="graphcommerce_catalog_storefront_salable"
-                type="GraphCommerce\CatalogStorefront\Plugin\SalableFromDocument"/>
+        <plugin name="graphcommerce_catalog_storefront_salable" type="GraphCommerce\CatalogStorefront\Plugin\SalableFromDocument"/>
     </type>
-    <type name="Magento\BundleGraphQl\Model\Resolver\BundleItems">
-        <plugin name="graphcommerce_catalog_storefront_bundle_items"
-                type="GraphCommerce\CatalogStorefrontBundleProduct\Plugin\Resolver\BundleItemsFromDocument"/>
-    </type>
-    <type name="GraphCommerce\CatalogStorefront\Model\Read\Prefill\Prices">
+    <type name="GraphCommerce\CatalogStorefront\Model\Read\PriceRanges">
         <arguments>
             <argument name="ranges" xsi:type="array">
                 <item name="bundle" xsi:type="object">GraphCommerce\CatalogStorefrontBundleProduct\Model\Read\BundlePriceRange</item>
-            </argument>
-        </arguments>
-    </type>
-    <type name="GraphCommerce\CatalogStorefront\Model\Read\DocumentHydration">
-        <arguments>
-            <argument name="prefillers" xsi:type="array">
-                <item name="bundlePriceDetails" xsi:type="object">GraphCommerce\CatalogStorefrontBundleProduct\Model\Read\Prefill\PriceDetails</item>
-            </argument>
-            <argument name="priceFields" xsi:type="array">
-                <item name="price_details" xsi:type="string">price_details</item>
-            </argument>
-            <argument name="fieldDocumentKeys" xsi:type="array">
-                <item name="items" xsi:type="array"><item name="0" xsi:type="string">optionsV2</item></item>
-                <item name="price_details" xsi:type="array"><item name="0" xsi:type="string">customAttributes</item></item>
-            </argument>
-        </arguments>
-    </type>
-    <type name="GraphCommerce\CatalogStorefront\Plugin\GraphQl\ReuseSchema">
-        <arguments>
-            <argument name="prefilledFields" xsi:type="array">
-                <item name="BundleProduct" xsi:type="array">
-                    <item name="price_details" xsi:type="string">price_details</item>
-                </item>
-                <item name="BundleItem" xsi:type="array">
-                    <item name="options" xsi:type="string">options</item>
-                    <item name="price_range" xsi:type="string">price_range</item>
-                </item>
-                <item name="BundleItemOption" xsi:type="array">
-                    <item name="label" xsi:type="string">label</item>
-                </item>
             </argument>
         </arguments>
     </type>
