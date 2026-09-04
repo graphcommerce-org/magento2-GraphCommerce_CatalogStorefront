@@ -34,7 +34,8 @@
         "graphcommerce/module-catalog-storefront-downloadable": "self.version",
         "graphcommerce/module-catalog-storefront-downloadable-graph-ql": "self.version",
         "graphcommerce/module-catalog-storefront-review": "self.version",
-        "graphcommerce/module-catalog-storefront-review-graph-ql": "self.version"
+        "graphcommerce/module-catalog-storefront-review-graph-ql": "self.version",
+        "graphcommerce/module-catalog-storefront-profiler": "self.version"
     },
     "suggest": {
         "magento/module-catalog-graph-ql": "GraphCommerce_CatalogStorefrontGraphQl serves catalog GraphQL from documents",
@@ -44,7 +45,8 @@
         "magento/module-bundle-product-data-exporter": "GraphCommerce_CatalogStorefrontBundleProduct serves bundle items and the bundle price range",
         "magento/module-grouped-product-graph-ql": "GraphCommerce_CatalogStorefrontGroupedProduct serves grouped items and the grouped price range",
         "magento/module-downloadable-graph-ql": "GraphCommerce_CatalogStorefrontDownloadable serves downloadable links and samples",
-        "magento/module-product-review-data-exporter": "GraphCommerce_CatalogStorefrontReview serves reviews and rating summaries"
+        "magento/module-product-review-data-exporter": "GraphCommerce_CatalogStorefrontReview serves reviews and rating summaries",
+        "mage-os/module-profiler": "GraphCommerce_CatalogStorefrontProfiler times the document store client in a trace"
     },
     "autoload": {
         "files": [
@@ -55,6 +57,7 @@
             "src/CatalogStorefrontGraphQl/registration.php",
             "src/CatalogStorefrontWorker/registration.php",
             "src/CatalogStorefrontExplorer/registration.php",
+            "src/CatalogStorefrontProfiler/registration.php",
             "src/CatalogStorefrontInventory/registration.php",
             "src/CatalogStorefrontInventoryGraphQl/registration.php",
             "src/CatalogStorefrontConfigurableProduct/registration.php",
@@ -76,6 +79,7 @@
             "GraphCommerce\\CatalogStorefrontGraphQl\\": "src/CatalogStorefrontGraphQl/",
             "GraphCommerce\\CatalogStorefrontWorker\\": "src/CatalogStorefrontWorker/",
             "GraphCommerce\\CatalogStorefrontExplorer\\": "src/CatalogStorefrontExplorer/",
+            "GraphCommerce\\CatalogStorefrontProfiler\\": "src/CatalogStorefrontProfiler/",
             "GraphCommerce\\CatalogStorefrontInventory\\": "src/CatalogStorefrontInventory/",
             "GraphCommerce\\CatalogStorefrontInventoryGraphQl\\": "src/CatalogStorefrontInventoryGraphQl/",
             "GraphCommerce\\CatalogStorefrontConfigurableProduct\\": "src/CatalogStorefrontConfigurableProduct/",

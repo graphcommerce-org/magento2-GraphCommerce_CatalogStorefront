@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- The document store client talks to OpenSearch directly, past Magento's SearchClient that MageOS_Profiler times. -->
+    <type name="GraphCommerce\CatalogStorefrontOpenSearch\Model\Client">
+        <plugin name="graphcommerce_catalog_storefront_profiler" type="GraphCommerce\CatalogStorefrontProfiler\Plugin\ClientProfiler" sortOrder="10"/>
+    </type>
+</config>
