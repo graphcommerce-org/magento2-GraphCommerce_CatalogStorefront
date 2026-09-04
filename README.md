@@ -88,6 +88,47 @@ Then add the `catalog-store-front` connection block to `app/etc/env.php` (see
 commerce-data-export indexers, and turn on Serve GraphQL From Documents. A composer install from the
 package registers every module through its autoload instead of the links.
 
+## Ideas and to do
+
+1. **Cart, wishlist and order products.** A cart item's product still loads from the
+   database. A plugin on the cart items data swaps in the document model by product
+   id; the quote keeps what it owns, the row price, the options and the quantity checks.
+2. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
+   product listing collection, the product page and the layered navigation read from the
+   base modules. The price rendering goes through the pricing system, so it needs its
+   own document-backed price providers.
+3. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
+4. **REST integration.** The product repository and the search API behind the same
+   document models, for headless setups that read the catalog over REST.
+5. **Split writer and reader deployments.** A minimal Mage-OS installation that only
+   holds the read side, distributed close to the shoppers. Reads need no catalog tables,
+   but a Magento bootstrap still needs a database and a cache for configuration, stores
+   and EAV metadata, so this is a read replica plus a local cache per region, with the
+   writers and the feeds in one place.
+6. **Route resolution from documents.** The `route` query and the URL rewrite lookup
+   still read the database. The documents carry the URL rewrites of a product; the
+   category and CMS routes need a small route index next to them.
+7. **Write conflicts under parallel feeds.** A retry on version conflict for the bulk
+   updates, and a re-read for the writers that merge into a stored document (prices,
+   variants, composite links), so parallel feed threads cannot lose an update.
+8. **Category attributes on the category documents.** Custom category attributes such
+   as SEO fields fall back to the database; a category attributes slice like the
+   product one serves them.
+9. **Stock per website.** The stock slice is written to every store view regardless of
+   stock id. Multi-source setups with a stock per website need the stock id mapped to
+   its store views.
+10. **More price display setups.** Prices are served only with the base currency, prices
+    excluding tax and no fixed product taxes. Currency conversion and tax-inclusive
+    display can be computed at read time from the same rows.
+11. **Strict mode for test environments.** A setting that reports a fallback to the
+    database instead of taking it silently, so a missing document or an unserved field
+    shows up outside the parity harness.
+12. **Search term analytics as its own concern.** Recording is off by default; when
+    search analytics comes back it belongs off the request path, in a queue or the
+    search engine's own logs.
+13. **Publishing.** One `composer.json` per module directory and a subtree split, so the
+    modules install separately while the repository stays one.
+
 ## Parity
 
 `dev/parity/run.php <endpoint>` runs every query in `dev/parity/queries/` against the
