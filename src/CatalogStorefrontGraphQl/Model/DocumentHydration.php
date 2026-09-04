@@ -50,7 +50,7 @@ class DocumentHydration implements HydrationInterface
 
     public function enabled(): bool
     {
-        return $this->config->serveReads();
+        return $this->config->serveGraphQl();
     }
 
     public function groupKey(?ContextInterface $context): string

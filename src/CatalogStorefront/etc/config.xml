@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
     <default>
-        <graphcommerce>
-            <catalog_storefront>
-                <serve_reads>0</serve_reads>
-            </catalog_storefront>
-        </graphcommerce>
+        <catalog>
+            <storefront_documents>
+                <index_enabled>1</index_enabled>
+                <serve_graphql>0</serve_graphql>
+                <record_search_terms>1</record_search_terms>
+            </storefront_documents>
+        </catalog>
         <!-- User-defined attributes come from the EAV cache; the search adapter otherwise loads each facet attribute with SQL. -->
         <dev>
             <caching>

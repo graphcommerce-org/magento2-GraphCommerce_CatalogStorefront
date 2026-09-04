@@ -9,7 +9,8 @@ slices into one product document per store view in OpenSearch, and serves catalo
 GraphQL reads from those documents. A request runs no SQL of its own; any miss falls
 back to the core resolver.
 
-Toggle with `graphcommerce/catalog_storefront/serve_reads`.
+Configured under Stores > Configuration > Catalog > Catalog > Catalog Storefront Document
+Store: storefront indexing, serving GraphQL from documents, and search term recording.
 
 ## Modules
 
@@ -84,7 +85,7 @@ bin/magento setup:di:compile
 
 Then add the `catalog-store-front` connection block to `app/etc/env.php` (see
 `src/CatalogStorefrontOpenSearch/Model/Client/Config.php` for the keys), run the
-commerce-data-export indexers, and turn on `serve_reads`. A composer install from the
+commerce-data-export indexers, and turn on Serve GraphQL From Documents. A composer install from the
 package registers every module through its autoload instead of the links.
 
 ## Parity

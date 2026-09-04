@@ -1,19 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
     <system>
-        <tab id="graphcommerce" translate="label" sortOrder="400">
-            <label>GraphCommerce</label>
-        </tab>
-        <section id="graphcommerce" translate="label" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1">
-            <label>Catalog Storefront</label>
-            <tab>graphcommerce</tab>
-            <resource>GraphCommerce_CatalogStorefront::config</resource>
-            <group id="catalog_storefront" translate="label" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
-                <label>Catalog Read Model</label>
-                <field id="serve_reads" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>Serve Catalog GraphQL From Documents</label>
+        <section id="catalog">
+            <group id="storefront_documents" translate="label comment" sortOrder="510" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Catalog Storefront Document Store</label>
+                <comment><![CDATA[The document store serves product and category reads from OpenSearch documents that the commerce-data-export feeds build, without database queries on the request. Part of the <a href="https://github.com/graphcommerce-org/magento2-GraphCommerce_CatalogStorefront" target="_blank">GraphCommerce_CatalogStorefront</a> modules.]]></comment>
+                <field id="index_enabled" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Enable Storefront Indexing</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                    <comment>Requires synced feeds. Requests fall back to the database when a document is missing.</comment>
+                    <comment>Writes the feeds into the document store as they export. The feeds mark their rows as exported either way, so after a period with indexing off the feed tables must be truncated and the feeds reindexed.</comment>
+                </field>
+                <field id="serve_graphql" translate="label comment" type="select" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Serve GraphQL From Documents</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Catalog GraphQL reads come from the documents. A product without a document falls back to the database.</comment>
+                </field>
+                <field id="record_search_terms" translate="label comment" type="select" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Record Search Terms</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Core records every search term and its popularity in the database, the last database write on a document-served listing. Off stops the search terms report and the search suggestions from updating.</comment>
                 </field>
             </group>
         </section>

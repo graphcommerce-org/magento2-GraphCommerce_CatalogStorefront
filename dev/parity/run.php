@@ -4,7 +4,7 @@
  *
  * Runs every query in queries/ against the same endpoint twice: once on the
  * stock database path and once on the document path, by toggling the
- * serve_reads flag. Reports PASS or a field-level diff per query. With
+ * serve_graphql flag. Reports PASS or a field-level diff per query. With
  * GC_WORKER_CONTAINER set and the attribution module enabled in the worker, a
  * document-path query that runs a SQL lookup fails too, with its statements:
  * the first rule of the module is that the request path runs none. Each
@@ -83,7 +83,7 @@ function gql(string $endpoint, string $query, string $tag = ''): array
 
 function setFlag(int $value): void
 {
-    exec(sprintf('bin/magento config:set graphcommerce/catalog_storefront/serve_reads %d 2>/dev/null', $value));
+    exec(sprintf('bin/magento config:set catalog/storefront_documents/serve_graphql %d 2>/dev/null', $value));
     // The GraphQL resolver cache must be cleared too, or a result cached under one
     // path is served under the other and parity passes falsely.
     exec('bin/magento cache:clean config graphql_query_resolver_result 2>/dev/null');

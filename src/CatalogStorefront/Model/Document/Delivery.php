@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Model\Document;
 
+use GraphCommerce\CatalogStorefront\Model\Config;
 use GraphCommerce\CatalogStorefrontApi\Document\FeedWriterInterface;
 use Magento\DataExporter\Model\ExportFeedInterface;
 use Magento\DataExporter\Model\FeedExportStatus;
@@ -14,8 +15,9 @@ use Psr\Log\LoggerInterface;
  * Local delivery for commerce-data-export feeds: each feed batch goes to the
  * writer registered for its feed name (di.xml `writers`), which writes its
  * slice of the documents. A feed without a writer is accepted and only
- * persisted in its feed table. A storage failure reports status 500, so the
- * feed machinery retries the batch by cron.
+ * persisted in its feed table, as is every feed while storefront indexing is
+ * off. A storage failure reports status 500, so the feed machinery retries the
+ * batch by cron.
  */
 class Delivery implements ExportFeedInterface
 {
@@ -27,6 +29,7 @@ class Delivery implements ExportFeedInterface
      */
     public function __construct(
         private readonly FeedExportStatusBuilder $feedExportStatusBuilder,
+        private readonly Config $config,
         private readonly LoggerInterface $logger,
         private readonly array $writers = [],
     ) {
@@ -34,6 +37,9 @@ class Delivery implements ExportFeedInterface
 
     public function export(array $data, FeedIndexMetadata $metadata): FeedExportStatus
     {
+        if (!$this->config->indexing()) {
+            return $this->feedExportStatusBuilder->build(self::STATUS_ACCEPTED, 'Storefront indexing is off');
+        }
         try {
             ($this->writers[$metadata->getFeedName()] ?? null)?->write($data);
         } catch (\Throwable $e) {

@@ -35,7 +35,9 @@ passes.
   products, prices, categories and attributes feeds, the composite links, the
   image URL field, the exporter patch-ups the core feeds need, the model
   builder, `ProductDocuments`, `PriceRanges` (di.xml `ranges`, by type id),
-  `PriceDisplay`, `AttributeDocuments`, the serve_reads config, and the plugins
+  `PriceDisplay`, `AttributeDocuments`, the configuration (`Model/Config`: storefront
+  indexing, serve GraphQL, search term recording; the group sits under Catalog >
+  Catalog in the admin), and the plugins
   on non-GraphQL core: product links, the layer price step, the search field
   name memo, the deployment config memo, salable.
 - `CatalogStorefrontGraphQl`: `DocumentHydration` with the prefiller list, the
@@ -112,7 +114,8 @@ registers all modules through composer autoload.
   unjudged first, so the gate sees the steady state and not the cache fill
   after the flush; each judged request is tagged with a header and its log
   line found by tag. All eighteen queries pass with no lookup; the search
-  listing's two writes (core records the search term) are printed. Add a query for every field a new plugin serves. A poison test
+  listing's two writes (core records the search term; the Record Search Terms
+  setting turns them off) are printed. Add a query for every field a new plugin serves. A poison test
   (edit a document in OpenSearch, see the change in the response) proves a
   field is live; the harness alone cannot. Product `sku` filters accept only
   `eq` and `in`; the harness fails a query that errors on either path.
@@ -262,7 +265,7 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
 - The FrankenPHP worker container has its own env file and its own Redis cache
   database. A host-side `cache:flush` or `config:set` never reaches it: flush
   inside the container (`docker exec project-backend-frankenphp-1 php
-  bin/magento cache:flush`) and restart the worker after a `serve_reads` flip.
+  bin/magento cache:flush`) and restart the worker after a `serve_graphql` flip.
   A benchmark that flips the flag must do this, or both runs measure one path.
 - With immediate export, a full `indexer:reindex` of a feed skips rows whose
   feed hash is unchanged, so it does not repair a document store. To rebuild

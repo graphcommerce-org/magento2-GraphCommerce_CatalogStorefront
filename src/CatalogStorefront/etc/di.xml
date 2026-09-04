@@ -46,6 +46,9 @@
     <type name="Magento\Elasticsearch\Model\Adapter\FieldMapper\FieldMapperResolver">
         <plugin name="graphcommerce_catalog_storefront_field_name_memo" type="GraphCommerce\CatalogStorefront\Plugin\Search\FieldNameMemo"/>
     </type>
+    <type name="Magento\Search\Model\Query">
+        <plugin name="graphcommerce_catalog_storefront_search_term_recording" type="GraphCommerce\CatalogStorefront\Plugin\Search\SearchTermRecording"/>
+    </type>
     <type name="Magento\Deploy\Model\DeploymentConfig\ChangeDetector">
         <plugin name="graphcommerce_catalog_storefront_config_change_memo" type="GraphCommerce\CatalogStorefront\Plugin\Deploy\ConfigChangeMemo"/>
     </type>
