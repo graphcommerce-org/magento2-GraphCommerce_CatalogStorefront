@@ -1,19 +1,38 @@
+// OpenSearch inspection of the document store, in the Dev Tools syntax of
+// OpenSearch Dashboards: the VS Code OpenSearch extension runs a request from
+// the cursor against the cluster configured in the extension. The store keeps
+// one index per entity and store view behind an alias; the alias is the stable
+// name, the index carries the version. Replace "default" for another store
+// view. The magento2_* indices are core's search indexes, not ours.
+
+// Every index with its document count and size
 GET _cat/indices?v&h=index,health,docs.count,store.size&s=index
+{}
 
+// Alias to index, which is the blue/green state of the store
 GET _cat/aliases?v&h=alias,index&s=alias
+{}
 
+// Mapping of the product index: only the filtered and aggregated fields are mapped
 GET catalog_storefront_default/_mapping
+{}
 
+// Mapping of the review index: the fields the review module declares
 GET catalog_storefront_review_default/_mapping
+{}
 
+// One product document by product id
 GET catalog_storefront_default/_doc/1
+{}
 
+// A product document by sku
 POST catalog_storefront_default/_search
 {
   "size": 1,
   "query": { "term": { "sku": "24-WG01" } }
 }
 
+// The keys a product document holds, without the large ones
 POST catalog_storefront_default/_search
 {
   "size": 1,
@@ -21,12 +40,14 @@ POST catalog_storefront_default/_search
   "_source": { "excludes": ["customAttributes", "optionsV2", "attributes", "media_gallery", "urlRewrites", "links", "categoryData"] }
 }
 
+// Products by type, to see how the catalog is composed
 POST catalog_storefront_default/_search
 {
   "size": 0,
   "aggs": { "types": { "terms": { "field": "type" } } }
 }
 
+// Products with the prices or the stock slice still missing
 POST catalog_storefront_default/_search
 {
   "size": 20,
@@ -42,6 +63,7 @@ POST catalog_storefront_default/_search
   }
 }
 
+// Salable products only, with their guest price index
 POST catalog_storefront_default/_search
 {
   "size": 10,
@@ -49,6 +71,7 @@ POST catalog_storefront_default/_search
   "query": { "term": { "stock.isSalable": true } }
 }
 
+// The variants of a configurable, through the parent id list on the children
 POST catalog_storefront_default/_search
 {
   "size": 50,
@@ -56,6 +79,7 @@ POST catalog_storefront_default/_search
   "query": { "term": { "parentIds": "1239" } }
 }
 
+// The price range of a configurable, as the listing aggregates it
 POST catalog_storefront_default/_search
 {
   "size": 0,
@@ -71,17 +95,22 @@ POST catalog_storefront_default/_search
   }
 }
 
+// Every category document of the store view
 POST catalog_storefront_category_default/_search
 {
   "size": 100,
   "_source": ["name", "path", "productCount", "isActive", "children"]
 }
 
+// One attribute document by code
 GET catalog_storefront_attribute_default/_doc/color
+{}
 
+// The rating documents: the scales the review percents are computed on
 POST catalog_storefront_rating_default/_search
 { "size": 10 }
 
+// The reviews of one product, newest first, as the reviews field pages them
 POST catalog_storefront_review_default/_search
 {
   "from": 0,
@@ -91,6 +120,7 @@ POST catalog_storefront_review_default/_search
   "sort": [ { "createdAt": "desc" }, { "reviewId": "asc" } ]
 }
 
+// The rating summary of a page of products, as the listing computes it
 POST catalog_storefront_review_default/_search
 {
   "size": 0,
@@ -103,10 +133,13 @@ POST catalog_storefront_review_default/_search
   }
 }
 
+// The products with the most reviews
 POST catalog_storefront_review_default/_search
 {
   "size": 0,
   "aggs": { "products": { "terms": { "field": "productId", "size": 10 } } }
 }
 
+// The refresh interval that bounds how soon a write is visible to aggregations
 GET catalog_storefront_default/_settings?filter_path=*.settings.index.refresh_interval,*.settings.index.number_of_shards
+{}
