@@ -1,64 +1,49 @@
-# OpenSearch inspection of the document store. Run a request with the HTTP
-# client of PhpStorm (the play icon next to a request). The store keeps one
-# index per entity and store view behind an alias; the alias is the stable
-# name, the index carries the version. The Magento search indexes
-# (magento2_product_*) are core's, not ours.
+# OpenSearch inspection of the document store, in the Dev Tools syntax of
+# OpenSearch Dashboards: the VS Code OpenSearch extension runs a request from
+# the cursor against the cluster configured in the extension. The store keeps
+# one index per entity and store view behind an alias; the alias is the stable
+# name, the index carries the version. Replace "default" for another store
+# view. The magento2_* indices are core's search indexes, not ours.
 
-@host = http://localhost:9200
-@store = default
-@products = catalog_storefront_{{store}}
-@categories = catalog_storefront_category_{{store}}
-@attributes = catalog_storefront_attribute_{{store}}
-@ratings = catalog_storefront_rating_{{store}}
-@reviews = catalog_storefront_review_{{store}}
+# Every index with its document count and size
+GET _cat/indices?v&h=index,health,docs.count,store.size&s=index
 
-### Every index with its document count and size
-GET {{host}}/_cat/indices?v&h=index,health,docs.count,store.size&s=index
+# Alias to index, which is the blue/green state of the store
+GET _cat/aliases?v&h=alias,index&s=alias
 
-### Alias to index, which is the blue/green state of the store
-GET {{host}}/_cat/aliases?v&h=alias,index&s=alias
+# Mapping of the product index: only the filtered and aggregated fields are mapped
+GET catalog_storefront_default/_mapping
 
-### Mapping of the product index: only the filtered and aggregated fields are mapped
-GET {{host}}/{{products}}/_mapping
+# Mapping of the review index: the fields the review module declares
+GET catalog_storefront_review_default/_mapping
 
-### Mapping of the review index: the fields the review module declares
-GET {{host}}/{{reviews}}/_mapping
+# One product document by product id
+GET catalog_storefront_default/_doc/1
 
-### One product document by product id
-GET {{host}}/{{products}}/_doc/1
-
-### A product document by sku
-POST {{host}}/{{products}}/_search
-Content-Type: application/json
-
+# A product document by sku
+POST catalog_storefront_default/_search
 {
   "size": 1,
   "query": { "term": { "sku": "24-WG01" } }
 }
 
-### The keys a product document holds, without the values
-POST {{host}}/{{products}}/_search
-Content-Type: application/json
-
+# The keys a product document holds, without the large ones
+POST catalog_storefront_default/_search
 {
   "size": 1,
   "query": { "term": { "sku": "24-WG01" } },
   "_source": { "excludes": ["customAttributes", "optionsV2", "attributes", "media_gallery", "urlRewrites", "links", "categoryData"] }
 }
 
-### Products by type, to see how the catalog is composed
-POST {{host}}/{{products}}/_search
-Content-Type: application/json
-
+# Products by type, to see how the catalog is composed
+POST catalog_storefront_default/_search
 {
   "size": 0,
   "aggs": { "types": { "terms": { "field": "type" } } }
 }
 
-### Products with the prices or the stock slice still missing
-POST {{host}}/{{products}}/_search
-Content-Type: application/json
-
+# Products with the prices or the stock slice still missing
+POST catalog_storefront_default/_search
 {
   "size": 20,
   "_source": ["sku", "type"],
@@ -73,30 +58,24 @@ Content-Type: application/json
   }
 }
 
-### Salable products only, with their guest price index
-POST {{host}}/{{products}}/_search
-Content-Type: application/json
-
+# Salable products only, with their guest price index
+POST catalog_storefront_default/_search
 {
   "size": 10,
   "_source": ["sku", "priceIndex", "stock.isSalable", "stock.qtyForSale"],
   "query": { "term": { "stock.isSalable": true } }
 }
 
-### The variants of a configurable, through the parent id list on the children
-POST {{host}}/{{products}}/_search
-Content-Type: application/json
-
+# The variants of a configurable, through the parent id list on the children
+POST catalog_storefront_default/_search
 {
   "size": 50,
   "_source": ["sku", "status", "stock.isSalable", "priceIndex"],
   "query": { "term": { "parentIds": "1239" } }
 }
 
-### The price range of a configurable, as the listing aggregates it
-POST {{host}}/{{products}}/_search
-Content-Type: application/json
-
+# The price range of a configurable, as the listing aggregates it
+POST catalog_storefront_default/_search
 {
   "size": 0,
   "query": { "bool": { "filter": [ { "term": { "parentIds": "1239" } }, { "term": { "status": "Enabled" } } ] } },
@@ -111,28 +90,22 @@ Content-Type: application/json
   }
 }
 
-### Every category document of the store view
-POST {{host}}/{{categories}}/_search
-Content-Type: application/json
-
+# Every category document of the store view
+POST catalog_storefront_category_default/_search
 {
   "size": 100,
   "_source": ["name", "path", "productCount", "isActive", "children"]
 }
 
-### One attribute document by code
-GET {{host}}/{{attributes}}/_doc/color
+# One attribute document by code
+GET catalog_storefront_attribute_default/_doc/color
 
-### The rating documents: the scales the review percents are computed on
-POST {{host}}/{{ratings}}/_search
-Content-Type: application/json
-
+# The rating documents: the scales the review percents are computed on
+POST catalog_storefront_rating_default/_search
 { "size": 10 }
 
-### The reviews of one product, newest first, as the reviews field pages them
-POST {{host}}/{{reviews}}/_search
-Content-Type: application/json
-
+# The reviews of one product, newest first, as the reviews field pages them
+POST catalog_storefront_review_default/_search
 {
   "from": 0,
   "size": 5,
@@ -141,10 +114,8 @@ Content-Type: application/json
   "sort": [ { "createdAt": "desc" }, { "reviewId": "asc" } ]
 }
 
-### The rating summary of a page of products, as the listing computes it
-POST {{host}}/{{reviews}}/_search
-Content-Type: application/json
-
+# The rating summary of a page of products, as the listing computes it
+POST catalog_storefront_review_default/_search
 {
   "size": 0,
   "query": { "terms": { "productId": ["1239", "1431", "1607", "1"] } },
@@ -156,14 +127,12 @@ Content-Type: application/json
   }
 }
 
-### The products with the most reviews
-POST {{host}}/{{reviews}}/_search
-Content-Type: application/json
-
+# The products with the most reviews
+POST catalog_storefront_review_default/_search
 {
   "size": 0,
   "aggs": { "products": { "terms": { "field": "productId", "size": 10 } } }
 }
 
-### Index settings: the refresh interval that bounds how soon a write is visible to aggregations
-GET {{host}}/{{products}}/_settings?filter_path=*.settings.index.refresh_interval,*.settings.index.number_of_shards
+# The refresh interval that bounds how soon a write is visible to aggregations
+GET catalog_storefront_default/_settings?filter_path=*.settings.index.refresh_interval,*.settings.index.number_of_shards

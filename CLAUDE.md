@@ -314,7 +314,7 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
 - `dev/os/get.os.http` holds the OpenSearch requests that show what the store
   built: the indices and aliases, the mappings, a product by id or sku, the
   slices still missing, the price and rating aggregations as the read side
-  runs them. Run them from PhpStorm's HTTP client.
+  runs them, in the Dev Tools syntax the VS Code OpenSearch extension runs.
 - `dev/attribution` prints the full latency stack of one query: wire, proxy
   chain, FrankenPHP, PHP launch, dispatch, parse, schema, execution, every
   resolver class by self time with the plugin chain around it, the search
