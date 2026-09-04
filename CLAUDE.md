@@ -114,8 +114,8 @@ registers all modules through composer autoload.
   unjudged first, so the gate sees the steady state and not the cache fill
   after the flush; each judged request is tagged with a header and its log
   line found by tag. All eighteen queries pass with no lookup; the search
-  listing's two writes (core records the search term; the Record Search Terms
-  setting turns them off) are printed. Add a query for every field a new plugin serves. A poison test
+  listing's two writes (core records the search term) appear only with the
+  Record Search Terms setting on; it is off by default. Add a query for every field a new plugin serves. A poison test
   (edit a document in OpenSearch, see the change in the response) proves a
   field is live; the harness alone cannot. Product `sku` filters accept only
   `eq` and `in`; the harness fails a query that errors on either path.
