@@ -77,10 +77,11 @@ class Parity extends Command
                 for ($run = 0; $run < $warm; $run++) {
                     $this->request($endpoint, $query, $mode, $headers);
                 }
-                // Judged twice: a process that has not served the shape yet fills its memos with a few
-                // lookups, and the gate judges the steady state, so the response with the fewer statements counts.
+                // Judged three times: a worker thread that has not served the shape yet fills its memos with
+                // a few lookups, and the gate judges the steady state, so the response with the fewest
+                // statements counts.
                 $best = null;
-                foreach ([1, 2] as $attempt) {
+                foreach ([1, 2, 3] as $attempt) {
                     $response = $this->request($endpoint, $query, $mode, $headers);
                     if ($best === null || count($response['extensions']['catalogStorefront']['sql'] ?? []) < count($best['extensions']['catalogStorefront']['sql'] ?? [])) {
                         $best = $response;
