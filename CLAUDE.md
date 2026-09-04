@@ -372,6 +372,10 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   website's store views.
 - A product with many reviews carries one small entry per review in its
   document; the aggregate is computed on read.
+- The metadata reads (attributes, ratings) page through the index in steps of
+  a thousand up to OpenSearch's result window, 10000 documents per store view
+  by default. The bundle selection search of a listing page caps at a thousand
+  children.
 - Intentional deviations. Core includes separately purchased downloadable link
   prices in the maximum price only when `links_purchased_separately` is loaded
   on the model, so its answer depends on the query; the document path always

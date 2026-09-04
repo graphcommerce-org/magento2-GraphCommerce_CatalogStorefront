@@ -15,7 +15,7 @@ use GraphCommerce\CatalogStorefrontOpenSearch\Model\Client\QueryInterface;
  */
 class MetadataDocumentStorage implements MetadataDocumentStorageInterface
 {
-    private const ALL_LIMIT = 1000;
+    private const PAGE = 1000;
 
     /** @var array<string, bool> */
     private array $ensured = [];
@@ -66,19 +66,26 @@ class MetadataDocumentStorage implements MetadataDocumentStorageInterface
         return $documents;
     }
 
+    /**
+     * Pages through the index up to its result window (10000 by default).
+     */
     public function all(string $entity, string $storeViewCode): array
     {
         $this->ensureIndex($entity, $storeViewCode);
-        $responses = $this->query->multiSearch(
-            $this->aliasName($entity, $storeViewCode),
-            [['size' => self::ALL_LIMIT, 'query' => ['match_all' => new \stdClass()]]]
-        );
         $documents = [];
-        foreach ($responses[0]['hits']['hits'] ?? [] as $hit) {
-            $documents[$hit['_id']] = $hit['_source'];
+        for ($from = 0; ; $from += self::PAGE) {
+            $responses = $this->query->multiSearch(
+                $this->aliasName($entity, $storeViewCode),
+                [['from' => $from, 'size' => self::PAGE, 'query' => ['match_all' => new \stdClass()]]]
+            );
+            $hits = $responses[0]['hits']['hits'] ?? [];
+            foreach ($hits as $hit) {
+                $documents[$hit['_id']] = $hit['_source'];
+            }
+            if (count($hits) < self::PAGE) {
+                return $documents;
+            }
         }
-
-        return $documents;
     }
 
     private function aliasName(string $entity, string $storeViewCode): string
