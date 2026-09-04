@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontReviewGraphQl\Plugin\Resolver;
 
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
-use GraphCommerce\CatalogStorefrontGraphQlApi\Read\HydrationInterface;
+use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
+use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
+use GraphCommerce\CatalogStorefrontReview\Model\Document\Writer\Reviews as ReviewDocuments;
 use GraphCommerce\CatalogStorefrontReview\Model\Read\RatingDocuments;
 use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Query\Resolver\ContextInterface;
@@ -14,17 +16,18 @@ use Magento\ReviewGraphQl\Model\Resolver\Product\Reviews;
 use Psr\Log\LoggerInterface;
 
 /**
- * Serves a product's reviews from the reviews slice of its document: the
- * reviews visible in the store view, newest first, paged as asked. Each
- * item carries its average rating and rating breakdown pre-filled (the vote
- * percents over the rating's scale, the rating names from the rating
- * documents) and the product's own model, which the core product resolver
- * takes as is. A page past the end keeps the core path, which reports it.
+ * Serves a product's reviews from the review documents: the reviews visible
+ * in the store view, newest first, paged by the store. Each item carries
+ * its average rating and rating breakdown pre-filled (the vote percents over
+ * the rating's scale, the rating names from the rating documents) and the
+ * product's own model, which the core product resolver takes as is. A page
+ * past the end keeps the core path, which reports it.
  */
 class ReviewsFromDocument
 {
     public function __construct(
         private readonly ReviewsConfig $reviewsConfig,
+        private readonly MetadataDocumentStorageInterface $reviews,
         private readonly RatingDocuments $ratingDocuments,
         private readonly LoggerInterface $logger,
     ) {
@@ -39,7 +42,7 @@ class ReviewsFromDocument
         ?array $value = null,
         ?array $args = null
     ) {
-        $document = ($value['model'] ?? null)?->getData(HydrationInterface::DOCUMENT_KEY);
+        $document = ($value['model'] ?? null)?->getData(ProductDocumentsInterface::DOCUMENT_KEY);
         $pageSize = (int)($args['pageSize'] ?? 0);
         $currentPage = (int)($args['currentPage'] ?? 0);
         if (!is_array($document) || !$this->reviewsConfig->isEnabled() || $pageSize < 1 || $currentPage < 1) {
@@ -48,15 +51,14 @@ class ReviewsFromDocument
 
         try {
             $storeViewCode = $context->getExtensionAttributes()->getStore()->getCode();
-            $reviews = [];
-            foreach ((array)($document['reviews'] ?? []) as $key => $review) {
-                if (is_array($review)) {
-                    $reviews[(int)substr((string)$key, 1)] = $review;
-                }
-            }
-            uksort($reviews, static fn(int $a, int $b) =>
-                [$reviews[$b]['createdAt'] ?? '', $a] <=> [$reviews[$a]['createdAt'] ?? '', $b]);
-            $total = count($reviews);
+            ['documents' => $reviews, 'total' => $total] = $this->reviews->find(
+                ReviewDocuments::ENTITY,
+                $storeViewCode,
+                ['productId' => (string)$value['model']->getId()],
+                [['createdAt', 'desc'], ['reviewId', 'asc']],
+                ($currentPage - 1) * $pageSize,
+                $pageSize
+            );
             $maxPages = (int)ceil($total / $pageSize);
             if ($currentPage > $maxPages && $total > 0) {
                 return $proceed($field, $context, $info, $value, $args);
@@ -64,7 +66,7 @@ class ReviewsFromDocument
 
             $items = [];
             $sku = $value['model']->getSku();
-            foreach (array_slice($reviews, ($currentPage - 1) * $pageSize, $pageSize, true) as $review) {
+            foreach ($reviews as $review) {
                 $percents = [];
                 $breakdown = [];
                 foreach ((array)($review['votes'] ?? []) as $ratingId => $vote) {

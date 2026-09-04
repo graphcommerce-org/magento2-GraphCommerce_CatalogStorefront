@@ -22,7 +22,9 @@ passes.
   field computed at index time), `Read\ProductDocumentsInterface` (documents
   and models by id, DOCUMENT_KEY, the lazy composite price data),
   `Read\DocumentContext` (store, group key, composite price data) and
-  `Read\PriceRangeInterface` (the range of one product type).
+  `Read\PriceRangeInterface` (the range of one product type), and
+  `Storage\EntityMappings` (the fields a metadata entity declares for
+  filtering, sorting and statistics).
 - `CatalogStorefrontGraphQlApi`: the GraphQL contracts.
   `Read\PrefillerInterface` (fills fields on the product value, KEY),
   `Read\PrefillRequest` (a DocumentContext plus the selected fields) and
@@ -61,9 +63,11 @@ passes.
 - `CatalogStorefrontDownloadable` / `...DownloadableGraphQl`: the downloadable
   range registration / the links and samples resolvers.
 - `CatalogStorefrontReview` / `...ReviewGraphQl`: the reviews and rating feeds
-  made to export like the modern ones, the review date field, their writers,
-  the rating documents reader, the feed table schema / the reviews prefiller,
-  the reviews resolver.
+  made to export like the modern ones, the review date field, their writers
+  (reviews become documents of their own, declared to the store through
+  `EntityMappings`), the rating documents reader, the feed table schema / the
+  reviews prefiller (one aggregation per page), the reviews resolver (a query
+  per page).
 
 Inside a base module the folders name the stage of the pipeline:
 
@@ -136,8 +140,9 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   (products = base, prices = `prices.g<group code>` plus `priceIndex.<group
   key>` with regular and final price per customer group and the fallback row
   resolved, inventory = `stock`, variants = `variantIds` on the configurable
-  parent, reviews = `reviews.r<review id>` with the vote percents where the
-  review is visible). `Model/ProductPrice` holds the price semantics both sides
+  parent). Reviews are documents of their own (entity `review`, one per
+  review and store view where it is visible, with the vote percents over the
+  rating's scale); the product document carries nothing about them. `Model/ProductPrice` holds the price semantics both sides
   share. `Model/Document/CompositeLinks` keeps the grouped and bundle links by id
   (`groupedParentIds` and `bundleParentIds` on the children, the child id
   lists on the parent) from the products feed, which carries them by sku only,
@@ -371,8 +376,9 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   `product_count` is the count at export time; `default_sort_by` is the
   feed's resolved value where core returns the unset attribute. A grouped
   item's `qty` follows the link attribute; core answers 1 on some queries.
-- A product with many reviews carries one small entry per review in its
-  document; the aggregate is computed on read.
+- rating_summary and review_count are one aggregation over the review
+  documents per page; the reviews field pages by query. Both see a written
+  review after the index refresh, one second by default.
 - The metadata reads (attributes, ratings) page through the index in steps of
   a thousand up to OpenSearch's result window, 10000 documents per store view
   by default. The bundle selection search of a listing page caps at a thousand

@@ -11,7 +11,7 @@ use GraphCommerce\CatalogStorefrontOpenSearch\Model\Client\QueryInterface;
 
 /**
  * One index per entity and store view (`<alias>_<entity>_<store view>`),
- * mapping nothing: the documents are read by id or all at once.
+ * mapping only the fields the entity declares.
  */
 class MetadataDocumentStorage implements MetadataDocumentStorageInterface
 {
@@ -86,6 +86,60 @@ class MetadataDocumentStorage implements MetadataDocumentStorageInterface
                 return $documents;
             }
         }
+    }
+
+    public function find(string $entity, string $storeViewCode, array $filter, array $sort, int $from, int $size): array
+    {
+        $this->ensureIndex($entity, $storeViewCode);
+        $responses = $this->query->multiSearch($this->aliasName($entity, $storeViewCode), [[
+            'from' => $from,
+            'size' => $size,
+            'track_total_hits' => true,
+            'query' => ['bool' => ['filter' => $this->terms($filter)]],
+            'sort' => array_map(static fn(array $order) => [$order[0] => ['order' => $order[1]]], $sort),
+        ]]);
+        $documents = [];
+        foreach ($responses[0]['hits']['hits'] ?? [] as $hit) {
+            $documents[$hit['_id']] = $hit['_source'];
+        }
+
+        return ['documents' => $documents, 'total' => (int)($responses[0]['hits']['total']['value'] ?? 0)];
+    }
+
+    public function stats(string $entity, string $storeViewCode, string $groupField, array $groups, string $valueField): array
+    {
+        if (!$groups) {
+            return [];
+        }
+        $this->ensureIndex($entity, $storeViewCode);
+        $groups = array_values(array_map('strval', $groups));
+        $responses = $this->query->multiSearch($this->aliasName($entity, $storeViewCode), [[
+            'size' => 0,
+            'query' => ['bool' => ['filter' => $this->terms([$groupField => $groups])]],
+            'aggs' => ['groups' => [
+                'terms' => ['field' => $groupField, 'size' => count($groups), 'include' => $groups],
+                'aggs' => ['avg' => ['avg' => ['field' => $valueField]]],
+            ]],
+        ]]);
+        $stats = [];
+        foreach ($responses[0]['aggregations']['groups']['buckets'] ?? [] as $bucket) {
+            $stats[(string)$bucket['key']] = ['count' => (int)$bucket['doc_count'], 'avg' => $bucket['avg']['value']];
+        }
+
+        return $stats;
+    }
+
+    /**
+     * @return array[] a terms clause per filtered field
+     */
+    private function terms(array $filter): array
+    {
+        $clauses = [];
+        foreach ($filter as $field => $values) {
+            $clauses[] = ['terms' => [$field => array_values(array_map('strval', (array)$values))]];
+        }
+
+        return $clauses;
     }
 
     private function aliasName(string $entity, string $storeViewCode): string

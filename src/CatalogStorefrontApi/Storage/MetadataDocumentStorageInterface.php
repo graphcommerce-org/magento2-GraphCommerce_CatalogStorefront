@@ -4,10 +4,11 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontApi\Storage;
 
 /**
- * The documents of the metadata feeds per store view, one store per entity
- * (categories by id, attributes by code, ratings by id), keyed as the feed
- * keys them. They are read by id or all at once. A storage module implements
- * it for one search engine.
+ * The documents of the feeds next to the products, one store per entity and
+ * store view (categories by id, attributes by code, ratings by id, reviews by
+ * id), keyed as the feed keys them. They are read by id, all at once, or by
+ * a filtered and sorted query over the fields the entity declares in
+ * `EntityMappings`. A storage module implements it for one search engine.
  */
 interface MetadataDocumentStorageInterface
 {
@@ -32,4 +33,21 @@ interface MetadataDocumentStorageInterface
      * @return array<int|string, array> every document of the store view, keyed by id
      */
     public function all(string $entity, string $storeViewCode): array;
+
+    /**
+     * One page of the documents matching a filter, over declared fields.
+     *
+     * @param array<string, scalar|scalar[]> $filter field to the value or values it must have
+     * @param array<array{0: string, 1: string}> $sort field and direction ('asc' or 'desc'), in order
+     * @return array{documents: array<int|string, array>, total: int} the page keyed by id, and the match count
+     */
+    public function find(string $entity, string $storeViewCode, array $filter, array $sort, int $from, int $size): array;
+
+    /**
+     * The document count and the average of a declared field per group.
+     *
+     * @param scalar[] $groups the group values to answer for
+     * @return array<string, array{count: int, avg: float|null}> keyed by group value; a group without documents is absent
+     */
+    public function stats(string $entity, string $storeViewCode, string $groupField, array $groups, string $valueField): array;
 }

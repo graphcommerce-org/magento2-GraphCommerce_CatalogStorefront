@@ -48,6 +48,19 @@
         </arguments>
     </virtualType>
 
+    <!-- The review documents: filtered by product, sorted newest first, averaged over the vote percents. -->
+    <type name="GraphCommerce\CatalogStorefrontApi\Storage\EntityMappings">
+        <arguments>
+            <argument name="mappings" xsi:type="array">
+                <item name="review" xsi:type="array">
+                    <item name="productId" xsi:type="string">keyword</item>
+                    <item name="reviewId" xsi:type="string">integer</item>
+                    <item name="createdAt" xsi:type="string">keyword</item>
+                    <item name="percents" xsi:type="string">float</item>
+                </item>
+            </argument>
+        </arguments>
+    </type>
     <type name="GraphCommerce\CatalogStorefront\Model\Document\Delivery">
         <arguments>
             <argument name="writers" xsi:type="array">

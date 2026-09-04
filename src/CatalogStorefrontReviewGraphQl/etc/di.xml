@@ -8,14 +8,10 @@
             <argument name="prefillers" xsi:type="array">
                 <item name="reviews" xsi:type="object">GraphCommerce\CatalogStorefrontReviewGraphQl\Model\Prefill\Reviews</item>
             </argument>
-            <argument name="fieldDocumentKeys" xsi:type="array">
-                <item name="reviews" xsi:type="array"><item name="0" xsi:type="string">reviews</item></item>
-                <item name="rating_summary" xsi:type="array"><item name="0" xsi:type="string">reviews</item></item>
-                <item name="review_count" xsi:type="array"><item name="0" xsi:type="string">reviews</item></item>
-            </argument>
             <argument name="baseFields" xsi:type="array">
                 <item name="rating_summary" xsi:type="string">rating_summary</item>
                 <item name="review_count" xsi:type="string">review_count</item>
+                <item name="reviews" xsi:type="string">reviews</item>
             </argument>
         </arguments>
     </type>
