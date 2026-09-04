@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <preference for="Magento\DataExporter\Model\ExportFeedInterface"
+                type="GraphCommerce\CatalogStorefront\Model\LocalExportFeed"/>
+    <preference for="GraphCommerce\CatalogStorefrontApi\Read\HydrationInterface"
+                type="GraphCommerce\CatalogStorefront\Model\Read\DocumentHydration"/>
+
+    <preference for="GraphCommerce\CatalogStorefront\Model\Storage\Client\CommandInterface"
+                type="GraphCommerce\CatalogStorefront\Model\Storage\Client\ElasticsearchCommand"/>
+    <preference for="GraphCommerce\CatalogStorefront\Model\Storage\Client\QueryInterface"
+                type="GraphCommerce\CatalogStorefront\Model\Storage\Client\ElasticsearchQuery"/>
+    <preference for="GraphCommerce\CatalogStorefront\Model\Storage\Client\DataDefinitionInterface"
+                type="GraphCommerce\CatalogStorefront\Model\Storage\Client\ElasticsearchDataDefinitionAdapter"/>
+
+    <!-- Write side: one applier per feed, the products feed run through the enrichers. -->
+    <type name="GraphCommerce\CatalogStorefront\Model\LocalExportFeed">
+        <arguments>
+            <argument name="appliers" xsi:type="array">
+                <item name="products" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Feed\Applier\Products</item>
+                <item name="prices" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Feed\Applier\Prices</item>
+                <item name="categories" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Feed\Applier\Categories</item>
+                <item name="productAttributes" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Feed\Applier\Attributes</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Feed\Applier\Products">
+        <arguments>
+            <argument name="enrichers" xsi:type="array">
+                <item name="imageUrls" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Feed\Enricher\ImageUrls</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="Magento\CatalogDataExporter\Model\Provider\Product\Links">
+        <plugin name="graphcommerce_catalog_storefront_link_position"
+                type="GraphCommerce\CatalogStorefront\Plugin\Feed\LinkPosition"/>
+    </type>
+    <type name="Magento\ProductPriceDataExporter\Model\Provider\ProductPrice">
+        <plugin name="graphcommerce_catalog_storefront_tier_price_percent"
+                type="GraphCommerce\CatalogStorefront\Plugin\Feed\TierPricePercent"/>
+    </type>
+
+    <!-- One metadata document store per feed entity. -->
+    <virtualType name="GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage" type="GraphCommerce\CatalogStorefront\Model\Storage\MetadataDocumentStorage">
+        <arguments><argument name="entity" xsi:type="string">category</argument></arguments>
+    </virtualType>
+    <virtualType name="GraphCommerce\CatalogStorefront\Model\Storage\AttributeDocumentStorage" type="GraphCommerce\CatalogStorefront\Model\Storage\MetadataDocumentStorage">
+        <arguments><argument name="entity" xsi:type="string">attribute</argument></arguments>
+    </virtualType>
+    <type name="GraphCommerce\CatalogStorefront\Model\Feed\Applier\Categories">
+        <arguments>
+            <argument name="categoryStorage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage</argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Feed\Applier\Attributes">
+        <arguments>
+            <argument name="attributeStorage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\AttributeDocumentStorage</argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Plugin\Resolver\CategoriesFromDocuments">
+        <arguments>
+            <argument name="categoryStorage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage</argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Plugin\Layer\CategoryFacetFromDocuments">
+        <arguments>
+            <argument name="categoryStorage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage</argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Plugin\Layer\PriceRangeStepFromDocument">
+        <arguments>
+            <argument name="categoryStorage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage</argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Read\AttributeMetadata">
+        <arguments>
+            <argument name="storage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\AttributeDocumentStorage</argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\EntityConfigPool">
+        <arguments>
+            <argument name="configs" xsi:type="array">
+                <item name="product" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\Product</item>
+                <item name="category" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\Category</item>
+                <item name="attribute" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\Attribute</item>
+            </argument>
+        </arguments>
+    </type>
+
+    <!-- Read side: the listing and the per-field plugins. -->
+    <type name="Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\ProductSearch">
+        <plugin name="graphcommerce_catalog_storefront_serve_search"
+                type="GraphCommerce\CatalogStorefront\Plugin\ServeSearchFromDocuments"/>
+    </type>
+    <type name="Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\Product">
+        <plugin name="graphcommerce_catalog_storefront_serve_filter"
+                type="GraphCommerce\CatalogStorefront\Plugin\ServeFilterFromDocuments"/>
+    </type>
+    <type name="Magento\CatalogGraphQl\Model\Resolver\Product\MediaGallery">
+        <plugin name="graphcommerce_catalog_storefront_media_gallery"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\MediaGalleryFromDocument"/>
+    </type>
+    <type name="Magento\UrlRewriteGraphQl\Model\Resolver\UrlRewrite">
+        <plugin name="graphcommerce_catalog_storefront_url_rewrites"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\UrlRewritesFromDocument"/>
+    </type>
+    <type name="Magento\RelatedProductGraphQl\Model\Resolver\Batch\AbstractLikedProducts">
+        <plugin name="graphcommerce_catalog_storefront_linked_products"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\LinkedProductsFromDocuments"/>
+    </type>
+    <type name="Magento\CatalogGraphQl\Model\Resolver\Categories">
+        <plugin name="graphcommerce_catalog_storefront_categories"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\CategoriesFromDocuments"/>
+    </type>
+    <type name="Magento\CatalogGraphQl\Model\Resolver\Product\ProductCustomAttributes">
+        <plugin name="graphcommerce_catalog_storefront_custom_attributes"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\CustomAttributesFromDocument"/>
+    </type>
+    <type name="Magento\Catalog\Model\ProductLink\ProductLinkQuery">
+        <plugin name="graphcommerce_catalog_storefront_product_links"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\ProductLinksFromDocuments"/>
+    </type>
+    <type name="Magento\EavGraphQl\Model\TypeResolver\AttributeValue">
+        <plugin name="graphcommerce_catalog_storefront_attribute_value_type"
+                type="GraphCommerce\CatalogStorefront\Plugin\Resolver\AttributeValueTypeFromDocument"/>
+    </type>
+    <type name="Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\AttributeOptionProvider">
+        <plugin name="graphcommerce_catalog_storefront_attribute_options"
+                type="GraphCommerce\CatalogStorefront\Plugin\Layer\AttributeOptionsFromDocuments"/>
+    </type>
+    <type name="Magento\Elasticsearch\Model\Adapter\FieldMapper\FieldMapperResolver">
+        <plugin name="graphcommerce_catalog_storefront_field_name_memo"
+                type="GraphCommerce\CatalogStorefront\Plugin\Search\FieldNameMemo"/>
+    </type>
+    <type name="Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\Builder\Category">
+        <plugin name="graphcommerce_catalog_storefront_category_facet"
+                type="GraphCommerce\CatalogStorefront\Plugin\Layer\CategoryFacetFromDocuments"/>
+    </type>
+    <type name="Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\Builder\Aggregations\Category\IncludeDirectChildrenOnly">
+        <plugin name="graphcommerce_catalog_storefront_category_facet"
+                type="GraphCommerce\CatalogStorefront\Plugin\Layer\CategoryFacetFromDocuments"/>
+    </type>
+    <type name="Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\RootCategoryProvider">
+        <plugin name="graphcommerce_catalog_storefront_root_category"
+                type="GraphCommerce\CatalogStorefront\Plugin\Layer\RootCategoryFromStore"/>
+    </type>
+    <type name="Magento\Catalog\Model\Layer\Filter\Price\Range">
+        <plugin name="graphcommerce_catalog_storefront_price_step"
+                type="GraphCommerce\CatalogStorefront\Plugin\Layer\PriceRangeStepFromDocument"/>
+    </type>
+    <type name="Magento\CustomerGraphQl\CacheIdFactorProviders\CustomerTaxRateProvider">
+        <plugin name="graphcommerce_catalog_storefront_tax_rate_memo"
+                type="GraphCommerce\CatalogStorefront\Plugin\CacheId\CustomerTaxRateMemo"/>
+    </type>
+    <type name="Magento\Deploy\Model\DeploymentConfig\ChangeDetector">
+        <plugin name="graphcommerce_catalog_storefront_config_change_memo"
+                type="GraphCommerce\CatalogStorefront\Plugin\Deploy\ConfigChangeMemo"/>
+    </type>
+    <type name="Magento\Framework\GraphQl\Schema\SchemaGeneratorInterface">
+        <plugin name="graphcommerce_catalog_storefront_reuse_schema"
+                type="GraphCommerce\CatalogStorefront\Plugin\GraphQl\ReuseSchema"/>
+    </type>
+    <type name="Magento\Framework\GraphQl\Query\QueryProcessor">
+        <plugin name="graphcommerce_catalog_storefront_validate_once"
+                type="GraphCommerce\CatalogStorefront\Plugin\GraphQl\ValidateOncePerProcess"/>
+    </type>
+
+    <!-- Fields the executor reads from the pre-filled value instead of calling the core resolver. -->
+    <type name="GraphCommerce\CatalogStorefront\Plugin\GraphQl\ReuseSchema">
+        <arguments>
+            <argument name="prefilledFields" xsi:type="array">
+                <item name="ProductInterface" xsi:type="array">
+                    <item name="uid" xsi:type="string">uid</item>
+                    <item name="id" xsi:type="string">id</item>
+                    <item name="new_from_date" xsi:type="string">new_from_date</item>
+                    <item name="new_to_date" xsi:type="string">new_to_date</item>
+                    <item name="image" xsi:type="string">image</item>
+                    <item name="small_image" xsi:type="string">small_image</item>
+                    <item name="thumbnail" xsi:type="string">thumbnail</item>
+                    <item name="price_range" xsi:type="string">price_range</item>
+                    <item name="price" xsi:type="string">price</item>
+                    <item name="price_tiers" xsi:type="string">price_tiers</item>
+                    <item name="tier_prices" xsi:type="string">tier_prices</item>
+                    <item name="websites" xsi:type="string">websites</item>
+                    <item name="media_gallery_entries" xsi:type="string">media_gallery_entries</item>
+                </item>
+                <item name="CategoryInterface" xsi:type="array">
+                    <item name="product_count" xsi:type="string">product_count</item>
+                </item>
+                <item name="ProductImage" xsi:type="array">
+                    <item name="url" xsi:type="string">url</item>
+                </item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Read\Prefill\Prices">
+        <arguments>
+            <argument name="ranges" xsi:type="array">
+                <item name="simple" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Read\Price\SingleRange</item>
+                <item name="virtual" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Read\Price\SingleRange</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Read\DocumentHydration">
+        <arguments>
+            <argument name="prefillers" xsi:type="array">
+                <item name="productFields" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Read\Prefill\ProductFields</item>
+                <item name="prices" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Read\Prefill\Prices</item>
+            </argument>
+            <argument name="priceFields" xsi:type="array">
+                <item name="price_range" xsi:type="string">price_range</item>
+                <item name="price" xsi:type="string">price</item>
+                <item name="price_tiers" xsi:type="string">price_tiers</item>
+                <item name="tier_prices" xsi:type="string">tier_prices</item>
+            </argument>
+            <!-- Document keys a listing fetch leaves out unless the query selects a field that needs them. -->
+            <argument name="fieldDocumentKeys" xsi:type="array">
+                <item name="description" xsi:type="array"><item name="0" xsi:type="string">description</item></item>
+                <item name="short_description" xsi:type="array"><item name="0" xsi:type="string">shortDescription</item></item>
+                <item name="media_gallery" xsi:type="array"><item name="0" xsi:type="string">media_gallery</item><item name="1" xsi:type="string">images</item><item name="2" xsi:type="string">videos</item></item>
+                <item name="media_gallery_entries" xsi:type="array"><item name="0" xsi:type="string">media_gallery</item><item name="1" xsi:type="string">images</item><item name="2" xsi:type="string">videos</item></item>
+                <item name="url_rewrites" xsi:type="array"><item name="0" xsi:type="string">urlRewrites</item></item>
+                <item name="related_products" xsi:type="array"><item name="0" xsi:type="string">links</item></item>
+                <item name="upsell_products" xsi:type="array"><item name="0" xsi:type="string">links</item></item>
+                <item name="crosssell_products" xsi:type="array"><item name="0" xsi:type="string">links</item></item>
+                <item name="categories" xsi:type="array"><item name="0" xsi:type="string">categoryData</item></item>
+                <item name="custom_attributesV2" xsi:type="array"><item name="0" xsi:type="string">customAttributes</item></item>
+                <item name="product_links" xsi:type="array"><item name="0" xsi:type="string">links</item><item name="1" xsi:type="string">optionsV2</item></item>
+                <item name="options" xsi:type="array"><item name="0" xsi:type="string">optionsV2</item><item name="1" xsi:type="string">shopperInputOptions</item></item>
+            </argument>
+            <!-- Product fields the model answers without the custom attributes slice. -->
+            <argument name="baseFields" xsi:type="array">
+                <item name="__typename" xsi:type="string">__typename</item>
+                <item name="uid" xsi:type="string">uid</item>
+                <item name="id" xsi:type="string">id</item>
+                <item name="sku" xsi:type="string">sku</item>
+                <item name="name" xsi:type="string">name</item>
+                <item name="url_key" xsi:type="string">url_key</item>
+                <item name="url_suffix" xsi:type="string">url_suffix</item>
+                <item name="type_id" xsi:type="string">type_id</item>
+                <item name="created_at" xsi:type="string">created_at</item>
+                <item name="updated_at" xsi:type="string">updated_at</item>
+                <item name="image" xsi:type="string">image</item>
+                <item name="small_image" xsi:type="string">small_image</item>
+                <item name="thumbnail" xsi:type="string">thumbnail</item>
+                <item name="price_range" xsi:type="string">price_range</item>
+                <item name="new_from_date" xsi:type="string">new_from_date</item>
+                <item name="new_to_date" xsi:type="string">new_to_date</item>
+                <item name="canonical_url" xsi:type="string">canonical_url</item>
+                <item name="price" xsi:type="string">price</item>
+                <item name="price_tiers" xsi:type="string">price_tiers</item>
+                <item name="tier_prices" xsi:type="string">tier_prices</item>
+                <item name="websites" xsi:type="string">websites</item>
+                <item name="attribute_set_id" xsi:type="string">attribute_set_id</item>
+            </argument>
+        </arguments>
+    </type>
+</config>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="GraphCommerce\CatalogStorefront\Model\LocalExportFeed">
+        <arguments>
+            <argument name="appliers" xsi:type="array">
+                <item name="inventoryStockStatus" xsi:type="object">GraphCommerce\CatalogStorefrontInventory\Model\Feed\Applier\Stock</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Read\DocumentHydration">
+        <arguments>
+            <argument name="prefillers" xsi:type="array">
+                <item name="stock" xsi:type="object">GraphCommerce\CatalogStorefrontInventory\Model\Read\Prefill\Stock</item>
+            </argument>
+            <argument name="baseFields" xsi:type="array">
+                <item name="stock_status" xsi:type="string">stock_status</item>
+                <item name="only_x_left_in_stock" xsi:type="string">only_x_left_in_stock</item>
+                <item name="quantity" xsi:type="string">quantity</item>
+                <item name="min_sale_qty" xsi:type="string">min_sale_qty</item>
+                <item name="max_sale_qty" xsi:type="string">max_sale_qty</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Plugin\GraphQl\ReuseSchema">
+        <arguments>
+            <argument name="prefilledFields" xsi:type="array">
+                <item name="ProductInterface" xsi:type="array">
+                    <item name="stock_status" xsi:type="string">stock_status</item>
+                    <item name="only_x_left_in_stock" xsi:type="string">only_x_left_in_stock</item>
+                    <item name="quantity" xsi:type="string">quantity</item>
+                    <item name="min_sale_qty" xsi:type="string">min_sale_qty</item>
+                    <item name="max_sale_qty" xsi:type="string">max_sale_qty</item>
+                </item>
+            </argument>
+        </arguments>
+    </type>
+</config>

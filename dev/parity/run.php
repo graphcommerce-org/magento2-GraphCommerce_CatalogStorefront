@@ -13,7 +13,7 @@
  *
  * Usage, from the Magento root, against the worker's own host name:
  *   GC_WORKER_CONTAINER=project-backend-frankenphp-1 \
- *   php app/code/GraphCommerce/CatalogStorefront/dev/parity/run.php https://worker.localhost.reachdigital.io/graphql
+ *   php packages/magento2-GraphCommerce_CatalogStorefront/dev/parity/run.php https://worker.localhost.reachdigital.io/graphql
  */
 declare(strict_types=1);
 

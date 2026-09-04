@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Module/etc/module.xsd">
+    <module name="GraphCommerce_CatalogStorefrontInventory">
+        <sequence>
+            <module name="GraphCommerce_CatalogStorefront"/>
+            <module name="Magento_InventoryDataExporter"/>
+            <module name="Magento_CatalogInventoryGraphQl"/>
+            <module name="Magento_InventoryGraphQl"/>
+        </sequence>
+    </module>
+</config>

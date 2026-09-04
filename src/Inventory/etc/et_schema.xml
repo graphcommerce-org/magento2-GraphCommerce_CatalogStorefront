@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_DataExporter:etc/et_schema.xsd">
+    <record name="StockItemStatus">
+        <field name="minQty" type="Float" provider="GraphCommerce\CatalogStorefrontInventory\Model\Feed\StockItemProvider">
+            <using field="productId"/>
+            <using field="stockId"/>
+        </field>
+        <field name="minSaleQty" type="Float" provider="GraphCommerce\CatalogStorefrontInventory\Model\Feed\StockItemProvider">
+            <using field="productId"/>
+            <using field="stockId"/>
+        </field>
+        <field name="maxSaleQty" type="Float" provider="GraphCommerce\CatalogStorefrontInventory\Model\Feed\StockItemProvider">
+            <using field="productId"/>
+            <using field="stockId"/>
+        </field>
+    </record>
+</config>

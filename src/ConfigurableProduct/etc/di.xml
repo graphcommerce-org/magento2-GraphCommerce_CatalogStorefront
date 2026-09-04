@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="GraphCommerce\CatalogStorefront\Model\LocalExportFeed">
+        <arguments>
+            <argument name="appliers" xsi:type="array">
+                <item name="variants" xsi:type="object">GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Feed\Applier\Variants</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Feed\Applier\Products">
+        <arguments>
+            <argument name="enrichers" xsi:type="array">
+                <item name="configurableOptions" xsi:type="object">GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Feed\Enricher\ConfigurableOptions</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="Magento\ConfigurableProductDataExporter\Model\Provider\Product\Options">
+        <plugin name="graphcommerce_catalog_storefront_option_value_details"
+                type="GraphCommerce\CatalogStorefrontConfigurableProduct\Plugin\Feed\OptionValueDetails"/>
+    </type>
+
+    <type name="Magento\ConfigurableProduct\Model\Product\Type\Configurable">
+        <plugin name="graphcommerce_catalog_storefront_salable"
+                type="GraphCommerce\CatalogStorefront\Plugin\SalableFromDocument"/>
+    </type>
+    <type name="Magento\ConfigurableProductGraphQl\Model\Resolver\Options">
+        <plugin name="graphcommerce_catalog_storefront_configurable_options"
+                type="GraphCommerce\CatalogStorefrontConfigurableProduct\Plugin\Resolver\ConfigurableOptionsFromDocument"/>
+    </type>
+    <type name="Magento\ConfigurableProductGraphQl\Model\Resolver\OptionsSelectionMetadata">
+        <plugin name="graphcommerce_catalog_storefront_options_selection"
+                type="GraphCommerce\CatalogStorefrontConfigurableProduct\Plugin\Resolver\OptionsSelectionFromDocuments"/>
+    </type>
+    <type name="Magento\ConfigurableProductGraphQl\Model\Resolver\ConfigurableVariant">
+        <plugin name="graphcommerce_catalog_storefront_variants"
+                type="GraphCommerce\CatalogStorefrontConfigurableProduct\Plugin\Resolver\VariantsFromDocuments"/>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Read\Prefill\Prices">
+        <arguments>
+            <argument name="ranges" xsi:type="array">
+                <item name="configurable" xsi:type="object">GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Read\ConfigurableRange</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Read\DocumentHydration">
+        <arguments>
+            <argument name="fieldDocumentKeys" xsi:type="array">
+                <item name="configurable_options" xsi:type="array"><item name="0" xsi:type="string">configurableOptions</item></item>
+                <item name="variants" xsi:type="array"><item name="0" xsi:type="string">configurableOptions</item></item>
+                <item name="configurable_product_options_selection" xsi:type="array"><item name="0" xsi:type="string">configurableOptions</item></item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Plugin\GraphQl\ReuseSchema">
+        <arguments>
+            <argument name="prefilledFields" xsi:type="array">
+                <item name="ConfigurableProductOptionsSelection" xsi:type="array">
+                    <item name="media_gallery" xsi:type="string">media_gallery</item>
+                </item>
+                <item name="ConfigurableProductOptionsValues" xsi:type="array">
+                    <item name="uid" xsi:type="string">uid</item>
+                    <item name="swatch_data" xsi:type="string">swatch_data</item>
+                </item>
+            </argument>
+        </arguments>
+    </type>
+</config>

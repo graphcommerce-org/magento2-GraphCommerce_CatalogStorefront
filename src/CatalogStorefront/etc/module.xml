@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Module/etc/module.xsd">
+    <module name="GraphCommerce_CatalogStorefront">
+        <sequence>
+            <module name="GraphCommerce_CatalogStorefrontApi"/>
+            <module name="Magento_DataExporter"/>
+            <module name="Magento_CatalogDataExporter"/>
+            <module name="Magento_ProductPriceDataExporter"/>
+            <module name="Magento_CatalogGraphQl"/>
+        </sequence>
+    </module>
+</config>
