@@ -272,7 +272,11 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   write on the document path (core records a search term's popularity) is
   printed as `WRITE`, not failed: the rule forbids lookups.
 - After di.xml changes: `setup:di:compile`, `cache:flush` on the host and in
-  the worker container, then restart the worker. After `et_schema.xml` changes
+  the worker container, then restart the worker. After a module link in
+  `app/code` changes target, reload the host php-fpm masters too
+  (`kill -USR2 $(pgrep -f 'php-fpm: master')`): with `opcache.revalidate_path`
+  off, opcache keeps the resolved symlink target and the backend host name
+  fails on the old registration path. After `et_schema.xml` changes
   every feed row changes hash, so the next reindex re-exports everything.
 - The worker runs 25 PHP threads, each with its own process state (memos,
   kept schemas, validated documents). Sequential requests alternate between
