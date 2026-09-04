@@ -216,7 +216,10 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   is), categories (`categoryData` is what the category product index holds:
   assignments and anchor ancestors, so only the store root is left out; the
   category documents are fetched once per request for the whole page and
-  hydrated through core's category hydrator), and custom_attributesV2
+  hydrated through core's category hydrator; the categories and categoryList
+  queries resolve their id, uid, url key, url path and parent filters on the
+  category documents, with breadcrumbs from the path and the active children
+  nested to the depth the query selects, `Model/CategoryDocuments`), and custom_attributesV2
   (`customAttributes` on the document: the raw store view value of every
   attribute of the product's attribute set that has one, plus tier_price the
   way the load backend sets it, `Model/DataExporter/Provider/CustomAttributes`; the
@@ -379,8 +382,7 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   `tier_prices` read every tier as for all groups, which the price feed does
   not carry. `media_gallery_entries` ids and uids count from one per product;
   the feed carries no gallery value ids. A category's
-  `product_count` is the count at export time; `default_sort_by` is the
-  feed's resolved value where core returns the unset attribute. A grouped
+  `product_count` is the count at export time. A grouped
   item's `qty` follows the link attribute; core answers 1 on some queries.
 - rating_summary and review_count are one aggregation over the review
   documents per page; the reviews field pages by query. Both see a written

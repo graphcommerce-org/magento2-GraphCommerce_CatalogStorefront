@@ -1,0 +1,35 @@
+{
+  categories(filters: { url_path: { eq: "gear/bags" } }) {
+    items {
+      uid
+      default_sort_by
+      available_sort_by
+      name
+      url_path
+      include_in_menu
+      breadcrumbs {
+        category_uid
+        category_name
+        category_url_path
+        category_level
+      }
+      description
+      display_mode
+      children {
+        uid
+        include_in_menu
+        name
+        url_path
+        level
+        is_anchor
+        image
+      }
+      meta_title
+      meta_description
+      meta_keywords
+      image
+      level
+      is_anchor
+    }
+  }
+}

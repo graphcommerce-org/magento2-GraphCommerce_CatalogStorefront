@@ -20,6 +20,12 @@
     <type name="Magento\CatalogGraphQl\Model\Resolver\Categories">
         <plugin name="graphcommerce_catalog_storefront_categories" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Resolver\CategoriesFromDocuments"/>
     </type>
+    <type name="Magento\CatalogGraphQl\Model\Resolver\CategoriesQuery">
+        <plugin name="graphcommerce_catalog_storefront_category_list" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Resolver\CategoryListFromDocuments"/>
+    </type>
+    <type name="Magento\CatalogGraphQl\Model\Resolver\CategoryList">
+        <plugin name="graphcommerce_catalog_storefront_category_list" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Resolver\CategoryListFromDocuments"/>
+    </type>
     <type name="Magento\CatalogGraphQl\Model\Resolver\Product\ProductCustomAttributes">
         <plugin name="graphcommerce_catalog_storefront_custom_attributes" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Resolver\CustomAttributesFromDocument"/>
     </type>
@@ -69,6 +75,7 @@
                 </item>
                 <item name="CategoryInterface" xsi:type="array">
                     <item name="product_count" xsi:type="string">product_count</item>
+                    <item name="breadcrumbs" xsi:type="string">breadcrumbs</item>
                 </item>
                 <item name="ProductImage" xsi:type="array">
                     <item name="url" xsi:type="string">url</item>

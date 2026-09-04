@@ -24,10 +24,29 @@
     <type name="Magento\CatalogDataExporter\Model\Provider\Product\Links">
         <plugin name="graphcommerce_catalog_storefront_link_position" type="GraphCommerce\CatalogStorefront\Plugin\DataExporter\LinkPosition"/>
     </type>
+    <type name="Magento\CatalogDataExporter\Model\Provider\Category\DefaultSortBy">
+        <plugin name="graphcommerce_catalog_storefront_category_default_sort_by" type="GraphCommerce\CatalogStorefront\Plugin\DataExporter\CategoryDefaultSortBy"/>
+    </type>
     <type name="Magento\ProductPriceDataExporter\Model\Provider\ProductPrice">
         <plugin name="graphcommerce_catalog_storefront_tier_price_percent" type="GraphCommerce\CatalogStorefront\Plugin\DataExporter\TierPricePercent"/>
     </type>
 
+    <!-- The category documents: filtered by id, url key, url path and parent, sorted by position. -->
+    <type name="GraphCommerce\CatalogStorefrontApi\Storage\EntityMappings">
+        <arguments>
+            <argument name="mappings" xsi:type="array">
+                <item name="category" xsi:type="array">
+                    <item name="id" xsi:type="string">integer</item>
+                    <item name="parentId" xsi:type="string">keyword</item>
+                    <item name="urlKey" xsi:type="string">keyword</item>
+                    <item name="urlPath" xsi:type="string">keyword</item>
+                    <item name="position" xsi:type="string">integer</item>
+                    <item name="isActive" xsi:type="string">integer</item>
+                    <item name="level" xsi:type="string">integer</item>
+                </item>
+            </argument>
+        </arguments>
+    </type>
     <!-- Read side shared by every frontend. -->
     <type name="GraphCommerce\CatalogStorefront\Model\Read\PriceRanges">
         <arguments>
