@@ -106,6 +106,17 @@
     <type name="Magento\Catalog\Model\Layer\Filter\Price\Range">
         <plugin name="graphcommerce_catalog_storefront_price_step" type="GraphCommerce\CatalogStorefront\Plugin\Layer\PriceRangeStepFromDocument"/>
     </type>
+    <!-- The `single` price navigation step calculation: one range, served from the search response. -->
+    <type name="Magento\Framework\Search\Dynamic\Algorithm\Repository">
+        <arguments>
+            <argument name="algorithms" xsi:type="array">
+                <item name="single" xsi:type="string">GraphCommerce\CatalogStorefront\Model\Layer\SingleRange</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="Magento\Elasticsearch\SearchAdapter\Aggregation\Builder\Dynamic">
+        <plugin name="graphcommerce_catalog_storefront_single_price_range" type="GraphCommerce\CatalogStorefront\Plugin\Layer\SingleRangeFromResponse"/>
+    </type>
     <type name="Magento\Elasticsearch\Model\Adapter\FieldMapper\FieldMapperResolver">
         <plugin name="graphcommerce_catalog_storefront_field_name_memo" type="GraphCommerce\CatalogStorefront\Plugin\Search\FieldNameMemo"/>
     </type>

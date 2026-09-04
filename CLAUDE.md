@@ -44,8 +44,8 @@ passes.
   configuration (`Model/Config`: storefront indexing, serve GraphQL, request
   override, strict mode, search term recording; the group sits under Catalog >
   Catalog in the admin), `Model/Strict` (the strict mode report) and the plugins
-  on non-GraphQL core: product links, the layer price step, the search field
-  name memo, salable, the SQL statement recorder.
+  on non-GraphQL core: product links, the layer price step, the single price
+  range mode, the search field name memo, salable, the SQL statement recorder.
 - `CatalogStorefrontGraphQl`: `Model/Mode` (the request's path), `DocumentHydration`
   with the prefiller list, the product and price prefillers, the listing data
   provider plugins, the resolver plugins for categories, media gallery, URL
@@ -192,7 +192,16 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   view names, direct children and their activity for a category-filtered
   query); `RootCategoryFromStore` takes the root category id from the store
   model; `PriceRangeStepFromDocument` reads the current category's price step
-  from its document; `Plugin/CacheId/CustomerTaxRateMemo` keeps the response cache id's
+  from its document; `Model/Layer/SingleRange` is the `single` price navigation
+  step calculation (Stores > Configuration > Catalog > Layered Navigation): one
+  range from the lowest to the highest price of the result, the bounds a price
+  slider reads, where core's modes run two or three more search queries for
+  intervals no headless frontend shows; `SingleRangeFromResponse` serves it
+  from the extended stats the search response already carries, so the price
+  bucket costs no follow-up query and no category step lookup. Both paths
+  share the mode, so parity holds; the MySQL-era
+  `Magento\Catalog\Model\Layer\Filter\Price` has no `single` algorithm and is
+  not used with a search engine; `Plugin/CacheId/CustomerTaxRateMemo` keeps the response cache id's
   tax factor per store, group and customer per process;
   `Plugin/Deploy/ConfigChangeMemo` answers core's deployment config hash check
   once per process (a detected change is not kept, so an import lifts it). With

@@ -36,6 +36,11 @@ Stores > Configuration > Catalog > Catalog > Catalog Storefront Document Store:
 | Record Search Terms | Off by default: the search terms report and the suggestions stop updating, the request path stops writing. |
 | Index Prefix | The indices are named prefix, entity and store view code, for example `catalog_storefront_product_default`. |
 
+Stores > Configuration > Catalog > Catalog > Layered Navigation > Price Navigation Step
+Calculation gets a fourth option, Single range: the `price` aggregation is one option from
+the lowest to the highest price of the result, the bounds a price slider reads. Core's
+modes split it into intervals with two or three more search queries per listing.
+
 ## Modules
 
 The root package registers one module per directory under `src/`, and each directory is a
