@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefront\Plugin\Resolver;
 
 use GraphCommerce\CatalogStorefrontApi\Read\HydrationInterface;
-use GraphCommerce\CatalogStorefront\Model\Storage\ProductDocumentStorage;
+use GraphCommerce\CatalogStorefrontApi\Storage\ProductDocumentStorageInterface;
 use Magento\Catalog\Model\Product\Attribute\Source\Status;
 use Magento\Catalog\Model\Product\Visibility;
 use Magento\Framework\GraphQl\Config\Element\Field;
@@ -33,7 +33,7 @@ class LinkedProductsFromDocuments
 
     public function __construct(
         private readonly HydrationInterface $hydration,
-        private readonly ProductDocumentStorage $storage,
+        private readonly ProductDocumentStorageInterface $storage,
         private readonly Visibility $visibility,
         private readonly LoggerInterface $logger,
     ) {
@@ -77,10 +77,7 @@ class LinkedProductsFromDocuments
             $linked = [];
             $skus = array_values(array_unique(array_merge([], ...array_values($skusByProduct))));
             if ($skus) {
-                $linkedDocuments = [];
-                foreach ($this->storage->findBySku($store->getCode(), $skus) as $entry) {
-                    $linkedDocuments[(int)$entry->getId()] = $entry->getData();
-                }
+                $linkedDocuments = $this->storage->findBySku($store->getCode(), $skus);
                 $visibleIds = $this->visibility->getVisibleInCatalogIds();
                 foreach ($this->hydration->models($store, $context, $linkedDocuments, $requestedFields) as $model) {
                     if ((int)$model->getStatus() === Status::STATUS_ENABLED

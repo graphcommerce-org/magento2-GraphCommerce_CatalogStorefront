@@ -13,7 +13,8 @@
         "magento/module-store": "*",
         "magento/module-data-exporter": "*",
         "magento/module-catalog-data-exporter": "*",
-        "magento/module-product-price-data-exporter": "*"
+        "magento/module-product-price-data-exporter": "*",
+        "opensearch-project/opensearch-php": "*"
     },
     "suggest": {
         "magento/module-inventory-data-exporter": "GraphCommerce_CatalogStorefrontInventory serves the stock fields",
@@ -25,24 +26,26 @@
     },
     "autoload": {
         "files": [
-            "src/Api/registration.php",
+            "src/CatalogStorefrontApi/registration.php",
             "src/CatalogStorefront/registration.php",
-            "src/Inventory/registration.php",
-            "src/ConfigurableProduct/registration.php",
-            "src/BundleProduct/registration.php",
-            "src/GroupedProduct/registration.php",
-            "src/Downloadable/registration.php",
-            "src/Review/registration.php"
+            "src/CatalogStorefrontOpenSearch/registration.php",
+            "src/CatalogStorefrontInventory/registration.php",
+            "src/CatalogStorefrontConfigurableProduct/registration.php",
+            "src/CatalogStorefrontBundleProduct/registration.php",
+            "src/CatalogStorefrontGroupedProduct/registration.php",
+            "src/CatalogStorefrontDownloadable/registration.php",
+            "src/CatalogStorefrontReview/registration.php"
         ],
         "psr-4": {
-            "GraphCommerce\\CatalogStorefrontApi\\": "src/Api/",
+            "GraphCommerce\\CatalogStorefrontApi\\": "src/CatalogStorefrontApi/",
             "GraphCommerce\\CatalogStorefront\\": "src/CatalogStorefront/",
-            "GraphCommerce\\CatalogStorefrontInventory\\": "src/Inventory/",
-            "GraphCommerce\\CatalogStorefrontConfigurableProduct\\": "src/ConfigurableProduct/",
-            "GraphCommerce\\CatalogStorefrontBundleProduct\\": "src/BundleProduct/",
-            "GraphCommerce\\CatalogStorefrontGroupedProduct\\": "src/GroupedProduct/",
-            "GraphCommerce\\CatalogStorefrontDownloadable\\": "src/Downloadable/",
-            "GraphCommerce\\CatalogStorefrontReview\\": "src/Review/"
+            "GraphCommerce\\CatalogStorefrontOpenSearch\\": "src/CatalogStorefrontOpenSearch/",
+            "GraphCommerce\\CatalogStorefrontInventory\\": "src/CatalogStorefrontInventory/",
+            "GraphCommerce\\CatalogStorefrontConfigurableProduct\\": "src/CatalogStorefrontConfigurableProduct/",
+            "GraphCommerce\\CatalogStorefrontBundleProduct\\": "src/CatalogStorefrontBundleProduct/",
+            "GraphCommerce\\CatalogStorefrontGroupedProduct\\": "src/CatalogStorefrontGroupedProduct/",
+            "GraphCommerce\\CatalogStorefrontDownloadable\\": "src/CatalogStorefrontDownloadable/",
+            "GraphCommerce\\CatalogStorefrontReview\\": "src/CatalogStorefrontReview/"
         }
     }
 }

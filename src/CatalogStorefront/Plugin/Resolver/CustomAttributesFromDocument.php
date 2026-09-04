@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Plugin\Resolver;
 
-use GraphCommerce\CatalogStorefront\Model\Read\AttributeMetadata;
+use GraphCommerce\CatalogStorefront\Model\Read\AttributeDocuments;
 use GraphCommerce\CatalogStorefrontApi\Read\HydrationInterface;
 use Magento\Catalog\Api\Data\ProductAttributeInterface;
 use Magento\Catalog\Model\FilterProductCustomAttribute;
@@ -41,7 +41,7 @@ class CustomAttributesFromDocument implements ResetAfterRequestInterface
     ];
 
     public function __construct(
-        private readonly AttributeMetadata $attributeMetadata,
+        private readonly AttributeDocuments $attributeDocuments,
         private readonly FilterProductCustomAttribute $filterCustomAttribute,
         private readonly LoggerInterface $logger,
     ) {
@@ -116,7 +116,7 @@ class CustomAttributesFromDocument implements ResetAfterRequestInterface
     private function attributes(string $storeViewCode, array $filters): array
     {
         $attributes = array_filter(
-            $this->attributeMetadata->all($storeViewCode),
+            $this->attributeDocuments->all($storeViewCode),
             static function (array $attribute) use ($filters): bool {
                 if (empty($attribute['visible']) || ($attribute['dataType'] ?? '') === 'static') {
                     return false;

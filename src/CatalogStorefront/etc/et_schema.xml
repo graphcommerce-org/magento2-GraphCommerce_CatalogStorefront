@@ -8,22 +8,22 @@
         <field name="value" type="String"/>
     </record>
     <record name="Product">
-        <field name="attributeSetId" type="Int" provider="GraphCommerce\CatalogStorefront\Model\Feed\AttributeSetProvider">
+        <field name="attributeSetId" type="Int" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeSet">
             <using field="productId"/>
             <using field="storeViewCode"/>
         </field>
-        <field name="customAttributes" type="ProductCustomAttribute" repeated="true" provider="GraphCommerce\CatalogStorefront\Model\Feed\CustomAttributesProvider">
+        <field name="customAttributes" type="ProductCustomAttribute" repeated="true" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\CustomAttributes">
             <using field="productId"/>
             <using field="storeViewCode"/>
             <using field="type"/>
         </field>
     </record>
     <record name="Category">
-        <field name="filterPriceRange" type="String" provider="GraphCommerce\CatalogStorefront\Model\Feed\CategoryPriceStepProvider">
+        <field name="filterPriceRange" type="String" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\CategoryPriceStep">
             <using field="categoryId"/>
             <using field="storeViewCode"/>
         </field>
-        <field name="productCount" type="Int" provider="GraphCommerce\CatalogStorefront\Model\Feed\CategoryProductCountProvider">
+        <field name="productCount" type="Int" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\CategoryProductCount">
             <using field="categoryId"/>
             <using field="storeViewCode"/>
         </field>
@@ -33,19 +33,19 @@
         <field name="label" type="String"/>
     </record>
     <record name="ProductAttributeMetadata">
-        <field name="attributeId" type="Int" provider="GraphCommerce\CatalogStorefront\Model\Feed\AttributeLayerProvider">
+        <field name="attributeId" type="Int" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeLayer">
             <using field="id"/>
             <using field="storeViewCode"/>
         </field>
-        <field name="options" type="ProductAttributeOption" repeated="true" provider="GraphCommerce\CatalogStorefront\Model\Feed\AttributeOptionsProvider">
+        <field name="options" type="ProductAttributeOption" repeated="true" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeOptions">
             <using field="id"/>
             <using field="storeViewCode"/>
         </field>
-        <field name="position" type="Int" provider="GraphCommerce\CatalogStorefront\Model\Feed\AttributeLayerProvider">
+        <field name="position" type="Int" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeLayer">
             <using field="id"/>
             <using field="storeViewCode"/>
         </field>
-        <field name="filterableMode" type="Int" provider="GraphCommerce\CatalogStorefront\Model\Feed\AttributeLayerProvider">
+        <field name="filterableMode" type="Int" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeLayer">
             <using field="id"/>
             <using field="storeViewCode"/>
         </field>

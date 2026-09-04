@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefront\Plugin\Resolver;
 
 use GraphCommerce\CatalogStorefrontApi\Read\HydrationInterface;
-use GraphCommerce\CatalogStorefront\Model\Storage\ProductDocumentStorage;
+use GraphCommerce\CatalogStorefrontApi\Storage\ProductDocumentStorageInterface;
 use Magento\Catalog\Api\Data\ProductLinkInterfaceFactory;
 use Magento\Catalog\Model\ProductLink\Data\ListCriteria;
 use Magento\Catalog\Model\ProductLink\Data\ListResult;
@@ -24,7 +24,7 @@ class ProductLinksFromDocuments
     private const LINK_TYPES = ['related', 'upsell', 'crosssell', 'associated'];
 
     public function __construct(
-        private readonly ProductDocumentStorage $storage,
+        private readonly ProductDocumentStorageInterface $storage,
         private readonly ProductLinkInterfaceFactory $productLinkFactory,
         private readonly LoggerInterface $logger,
     ) {
@@ -76,10 +76,9 @@ class ProductLinksFromDocuments
             $skus = array_values(array_unique($skus));
             if ($skus) {
                 $store = $criteria[array_key_first($criteria)]->getBelongsToProduct()->getStore()->getCode();
-                foreach ($this->storage->findBySku($store, $skus) as $entry) {
-                    $data = $entry->getData();
+                foreach ($this->storage->findBySku($store, $skus) as $id => $data) {
                     $types[$data['sku']] = ($data['type'] ?? 'simple') === 'bundle_fixed' ? 'bundle' : ($data['type'] ?? 'simple');
-                    $ids[$data['sku']] = (int)$entry->getId();
+                    $ids[$data['sku']] = $id;
                 }
             }
 

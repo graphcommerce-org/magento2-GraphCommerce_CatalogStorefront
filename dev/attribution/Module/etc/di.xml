@@ -37,13 +37,13 @@
     <type name="Magento\OpenSearch\SearchAdapter\Adapter">
         <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
     </type>
-    <type name="GraphCommerce\CatalogStorefront\Model\Storage\Client\ElasticsearchQuery">
+    <type name="GraphCommerce\CatalogStorefrontOpenSearch\Model\Client\Query">
         <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
     </type>
     <type name="Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\ProductSearch">
         <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
     </type>
-    <type name="GraphCommerce\CatalogStorefront\Model\Storage\ProductDocumentStorage">
+    <type name="GraphCommerce\CatalogStorefrontOpenSearch\Model\ProductDocumentStorage">
         <plugin name="graphcommerce_attribution_outer" type="GraphCommerce\CatalogStorefrontAttribution\Plugin\Outer" sortOrder="-1000"/>
     </type>
     <type name="GraphCommerce\CatalogStorefront\Model\Read\DocumentHydration">

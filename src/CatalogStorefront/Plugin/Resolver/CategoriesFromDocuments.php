@@ -5,7 +5,7 @@ namespace GraphCommerce\CatalogStorefront\Plugin\Resolver;
 
 use GraphCommerce\CatalogStorefrontApi\Read\PrefillerInterface;
 use GraphCommerce\CatalogStorefrontApi\Read\HydrationInterface;
-use GraphCommerce\CatalogStorefront\Model\Storage\MetadataDocumentStorage;
+use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
 use Magento\Catalog\Model\CategoryFactory;
 use Magento\CatalogGraphQl\Model\AttributesJoiner;
 use Magento\CatalogGraphQl\Model\Category\Hydrator;
@@ -60,7 +60,7 @@ class CategoriesFromDocuments implements ResetAfterRequestInterface
     private array $loaded = [];
 
     public function __construct(
-        private readonly MetadataDocumentStorage $categoryStorage,
+        private readonly MetadataDocumentStorageInterface $storage,
         private readonly CategoryFactory $categoryFactory,
         private readonly Hydrator $hydrator,
         private readonly AttributesJoiner $attributesJoiner,
@@ -99,7 +99,7 @@ class CategoriesFromDocuments implements ResetAfterRequestInterface
         return $this->valueFactory->create(function () use ($proceed, $field, $context, $info, $value, $args, $store, $storeViewCode, $ids) {
             try {
                 if (!empty($this->pending[$storeViewCode])) {
-                    $fetched = $this->categoryStorage->get($storeViewCode, array_keys($this->pending[$storeViewCode]));
+                    $fetched = $this->storage->get('category', $storeViewCode, array_keys($this->pending[$storeViewCode]));
                     foreach (array_keys($this->pending[$storeViewCode]) as $id) {
                         $this->loaded[$storeViewCode][$id] = $fetched[$id] ?? null;
                     }

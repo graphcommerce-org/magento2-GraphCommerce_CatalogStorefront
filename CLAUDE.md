@@ -5,52 +5,81 @@ Catalog read model: feed documents in OpenSearch serve the catalog GraphQL read 
 ## Layout
 
 One composer package, one git repository, one Magento module per directory
-under `src/`; paths in this file are relative to the module that owns the
-class. Each module depends on the core modules it plugs into, so a shop
-without one of them (Bundle, Review) leaves that module disabled and the DI
-compile still passes:
+under `src/`, named as the module. Each module depends on the core modules it
+plugs into, so a shop without one of them (Bundle, Review) leaves that module
+disabled and the DI compile still passes:
 
-- `src/Api` (`GraphCommerce_CatalogStorefrontApi`): the contracts other
-  modules code against. `Read\PrefillerInterface` (fills fields on the product
-  value, KEY), `Read\PrefillRequest` (store, group key, selected fields, lazy
-  composite price data), `Read\PriceRangeInterface` (the range of one product
-  type), `Read\HydrationInterface` (documents and models by id, DOCUMENT_KEY),
-  `Feed\FeedApplierInterface` (writes one feed's rows) and
-  `Feed\ProductDocumentEnricherInterface` (adds to product documents at index
-  time).
-- `src/CatalogStorefront`: storage, the export feed and its appliers for the
-  products, prices, categories and attributes feeds, the model builder, the
-  hydration with the prefiller list, the product and price prefillers, the
-  listing and layer plugins, categories, media gallery, URL rewrites, custom
-  attributes, product links, the salable plugin.
-- `src/Inventory`: the stock feed applier, the stock item provider and the
-  stock prefiller (stock_status, only_x_left_in_stock, quantity, min and max
-  sale qty; the MSI source item management service says which types own a
-  quantity).
-- `src/ConfigurableProduct`: the variants feed applier, the configurable
-  options enricher, the option value details feed plugin, the configurable
-  range, the variants, options and options selection resolvers.
-- `src/BundleProduct`: the bundle attributes provider, the bundle range, the
-  price_details prefiller, the bundle items resolver.
-- `src/GroupedProduct`: the grouped range, the deprecated price rewrite for
-  grouped products, the grouped items resolver.
-- `src/Downloadable`: the downloadable links and samples resolvers, the
-  downloadable range registration.
-- `src/Review`: the reviews and rating metadata processors and appliers, the
-  rating storage, the rating metadata reader, the reviews prefiller, the
-  reviews resolver, the feed table schema.
+- `CatalogStorefrontApi`: the contracts other modules code against.
+  `Storage\ProductDocumentStorageInterface` and
+  `Storage\MetadataDocumentStorageInterface` (the document stores, per entity
+  name for the metadata feeds), `Document\FeedWriterInterface` (writes one
+  feed's rows), `Document\ProductDocumentFieldInterface` (a product document
+  field computed at index time), `Read\PrefillerInterface` (fills fields on
+  the product value, KEY), `Read\PrefillRequest` (store, group key, selected
+  fields, lazy composite price data), `Read\PriceRangeInterface` (the range of
+  one product type) and `Read\HydrationInterface` (documents and models by id,
+  DOCUMENT_KEY).
+- `CatalogStorefrontOpenSearch`: the storage interfaces implemented on
+  OpenSearch: the client (`Model/Client`, connection from the `catalog-store-front`
+  block of env.php, the product index mapping in `Client/Config/Product`, every
+  other entity unmapped), the blue/green alias state and the two stores.
+- `CatalogStorefront`: the core. Delivery of the feeds, the writers for the
+  products, prices, categories and attributes feeds, the composite links, the
+  image URL field, the exporter patch-ups the core feeds need, the model
+  builder, the hydration with the prefiller list, the product and price
+  prefillers, the listing and layer plugins, categories, media gallery, URL
+  rewrites, custom attributes, product links, the salable plugin.
+- `CatalogStorefrontInventory`: the stock feed writer, the stock item feed
+  fields and the stock prefiller (stock_status, only_x_left_in_stock, quantity,
+  min and max sale qty; the MSI source item management service says which
+  types own a quantity).
+- `CatalogStorefrontConfigurableProduct`: the variants feed writer, the
+  configurable options document field, the option value details patch-up, the
+  configurable range, the variants, options and options selection resolvers.
+- `CatalogStorefrontBundleProduct`: the bundle attribute feed fields, the bundle
+  range, the price_details prefiller, the bundle items resolver.
+- `CatalogStorefrontGroupedProduct`: the grouped range, the deprecated price
+  rewrite for grouped products, the grouped items resolver.
+- `CatalogStorefrontDownloadable`: the downloadable links and samples resolvers,
+  the downloadable range registration.
+- `CatalogStorefrontReview`: the reviews and rating feeds made to export like
+  the modern ones, the review date feed field, their writers, the rating
+  documents reader, the reviews prefiller, the reviews resolver, the feed table
+  schema.
 
-A module registers its parts in its own `etc/di.xml`: `appliers` (by feed
-name) and `enrichers` on the export feed and the products applier,
-`prefillers`, `priceFields`, `fieldDocumentKeys` and `baseFields` on
-`DocumentHydration`, `ranges` (by product type id) on the price prefiller,
-`prefilledFields` on `ReuseSchema`. Prefillers run in di.xml order, so a later
-one may rewrite what an earlier one filled. The composite price searches
-(`ProductDocumentStorage::priceData`, by `parentIds`, `groupedParentIds` and
-`bundleParentIds`) and the fixed bundle type fold in the model builder stay in
-the core module: they are feed shape, not core module classes. In this project
-every module directory is linked into `app/code/GraphCommerce/<module name>`;
-an install from the package registers all of them through composer autoload.
+Inside a module the folders name the stage of the pipeline:
+
+- `Model/DataExporter/` and `Plugin/DataExporter/`: patch-ups of
+  commerce-data-export, run at index time, SQL allowed. `Provider/` classes are
+  et_schema field providers that add fields to the exporter's existing records
+  (nothing here is a new feed); `Processor/` classes make a legacy feed export
+  like the modern ones; the plugins fix what an exporter provider leaves out.
+- `Model/Document/`: the document store side. `Delivery` implements the
+  exporter's `ExportFeedInterface` and hands each batch to the `Writer/` of its
+  feed; `Field/` classes compute product document fields; `CompositeLinks`
+  keeps the composite relations by id.
+- `Model/Read/`: the request side. `DocumentHydration` builds models and runs
+  the `Prefill/` classes; `AttributeDocuments` and `RatingDocuments` read the
+  store view's metadata documents once per request; `Price/` holds the range
+  calculators.
+- `Plugin/Resolver/`, `Plugin/Layer/`, `Plugin/GraphQl/`: the request path
+  plugins on core.
+
+A module registers its parts in its own `etc/di.xml`: `writers` (by feed
+name) on `Delivery`, `fields` on the products writer, `prefillers`,
+`priceFields`, `fieldDocumentKeys` and `baseFields` on `DocumentHydration`,
+`ranges` (by product type id) on the price prefiller, `prefilledFields` on
+`ReuseSchema`. Prefillers run in di.xml order, so a later one may rewrite what
+an earlier one filled. The composite price searches
+(`ProductDocumentStorageInterface::priceData`, by `parentIds`,
+`groupedParentIds` and `bundleParentIds`) and the fixed bundle type fold in
+the model builder stay in the core: they are feed shape, not core module
+classes.
+
+Development install in this project: every module directory is linked into
+`app/code/GraphCommerce/<module name>` (see README), the attribution module
+from `dev/attribution/Module` next to them. An install from the package
+registers all modules through composer autoload.
 
 ## Rules
 
@@ -80,31 +109,30 @@ an install from the package registers all of them through composer autoload.
 document's `customAttributes` (option ids, tax class id, dates, prices as the
 entity tables hold them) and decodes the feed's status and visibility labels
 through static maps, so no metadata lookup is left on the request path; the
-writer (`Model/Feed/Enricher/ImageUrls`) resolves only the image URLs.
+writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
 
 ## Shape
 
-- Write: `LocalExportFeed` hands each feed batch to its applier
-  (`Model/Feed/Applier/*`, di.xml `appliers`); together they build one document per store view
+- Write: `Model/Document/Delivery` hands each feed batch to its writer
+  (`Model/Document/Writer/*`, di.xml `writers`); together they build one document per store view
   (products = base, prices = `prices.g<group code>` plus `priceIndex.<group
   key>` with regular and final price per customer group and the fallback row
   resolved, inventory = `stock`, variants = `variantIds` on the configurable
   parent, reviews = `reviews.r<review id>` with the vote percents where the
   review is visible). `Model/ProductPrice` holds the price semantics both sides
-  share. `Model/Feed/CompositeLinks` keeps the grouped and bundle links by id
+  share. `Model/Document/CompositeLinks` keeps the grouped and bundle links by id
   (`groupedParentIds` and `bundleParentIds` on the children, the child id
   lists on the parent) from the products feed, which carries them by sku only,
   written from whichever side the feed delivers last. The feed folds a fixed
   bundle price type into the product type `bundle_fixed`;
-  `Model/Feed/BundleAttributesProvider` adds the sku and shipment type the
+  `Model/DataExporter/Provider/BundleAttributes` adds the sku and shipment type the
   exporter lacks. The categories feed lands as one category document per
-  store view (`Model/Storage/MetadataDocumentStorage`, one instance per feed
-  entity in di.xml, index `<alias>_<entity>_<store view>`, read by id or all
+  store view (`MetadataDocumentStorageInterface`, one entity name per feed, index `<alias>_<entity>_<store view>`, read by id or all
   at once). The product attributes feed lands the same way, keyed by attribute
   code and extended with the options in store view labels, the layer position
-  and the filterable mode (`Model/Feed/AttributeOptionsProvider`,
-  `AttributeLayerProvider`); the rating metadata feed lands keyed by rating id,
-  exported during indexing like the reviews (`Model/Feed/RatingMetadataDataProcessor`,
+  and the filterable mode (`Model/DataExporter/Provider/AttributeOptions`,
+  `AttributeLayer`); the rating metadata feed lands keyed by rating id,
+  exported during indexing like the reviews (`Model/DataExporter/Processor/Ratings`,
   `etc/db_schema.xml` adds the modern columns to its table, di.xml gives its
   indexer the generic serializer). The reviews slice keeps each review's votes
   as rating id to value; the read side turns them into percents with the
@@ -121,8 +149,8 @@ writer (`Model/Feed/Enricher/ImageUrls`) resolves only the image URLs.
   these, a listing request runs no SQL.
   `etc/et_schema.xml` extends the feed with what the read side needs and the
   exporter lacks: link position, option admin label and textual swatch value
-  (`Plugin/Feed/*`), and a reviews provider that exports during indexing
-  (`Model/Feed/ReviewsDataProcessor`; `etc/db_schema.xml` adds the modern feed
+  (`Plugin/DataExporter/*`), and a reviews provider that exports during indexing
+  (`Model/DataExporter/Processor/Reviews`; `etc/db_schema.xml` adds the modern feed
   columns to the exporter's own `catalog_data_exporter_product_reviews`).
 - Read: `ServeSearchFromDocuments` / `ServeFilterFromDocuments` rebuild product
   models from documents through `DocumentHydration`. A listing page is one
@@ -146,7 +174,7 @@ writer (`Model/Feed/Enricher/ImageUrls`) resolves only the image URLs.
   configured threshold), quantity (the stock slice's quantity, null when the
   not-available message hides it), min_sale_qty and max_sale_qty (the stock
   slice carries the item's own minimum and sale quantities, null where it
-  takes the configured value, `Model/Feed/StockItemProvider`) and price_range
+  takes the configured value, `Model/DataExporter/Provider/StockItem`) and price_range
   (simple, virtual, downloadable, configurable). `ReuseSchema`
   routes those fields (di.xml `prefilledFields`, per type or interface name)
   to the pre-filled value and to the core resolver when the parent carries
@@ -168,7 +196,7 @@ writer (`Model/Feed/Enricher/ImageUrls`) resolves only the image URLs.
   hydrated through core's category hydrator), and custom_attributesV2
   (`customAttributes` on the document: the raw store view value of every
   attribute of the product's attribute set that has one, plus tier_price the
-  way the load backend sets it, `Model/Feed/CustomAttributesProvider`; the
+  way the load backend sets it, `Model/DataExporter/Provider/CustomAttributes`; the
   attribute documents give the visible non-static list by attribute id, the
   frontend input and the options, source model options included). Documents
   fetched outside a listing go through `DocumentHydration::documents` and
@@ -186,13 +214,13 @@ writer (`Model/Feed/Enricher/ImageUrls`) resolves only the image URLs.
   is immediate.
 - Nothing derived from catalog data is held across requests. What a request
   needs beyond the documents it fetches per request:
-  `Model/Read/AttributeMetadata` and `RatingMetadata` (the store view's
+  `Model/Read/AttributeDocuments` and `RatingDocuments` (the store view's
   attribute and rating documents; the facet labels come from them through
   `Plugin/Layer/AttributeOptionsFromDocuments`, the rating scale for the
   review percents) and `Plugin/Search/FieldNameMemo` (search index field name
   per attribute code and context, the core mapper asks several times per
   attribute) are request-scoped. Derivations that used to be memos are made by
-  the writer instead: `Model/Feed/Enricher/ImageUrls` puts the image
+  the writer instead: `Model/Document/Field/ImageUrls` puts the image
   media paths on the product document;
   the category price step travels on the category document. The state that
   does live for a process lifetime derives from the query text or the
@@ -208,7 +236,7 @@ writer (`Model/Feed/Enricher/ImageUrls`) resolves only the image URLs.
   is materialized at build time because the type registry resets between
   requests. Both hold state for the worker's lifetime; a schema or config
   change reaches a worker at its next restart.
-- `configurable_options` is built at index time (`Model/Feed/Enricher/ConfigurableOptions`,
+- `configurable_options` is built at index time (`Model/Document/Field/ConfigurableOptions`,
   document key `configurableOptions`) and returned as is; its values carry the
   pre-filled `uid` and `swatch_data`.
 - The GraphCommerce ProductList query (`dev/parity/queries/13-*.graphql`, all

@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefront\Model\Read;
 
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
-use GraphCommerce\CatalogStorefront\Model\Storage\ProductDocumentStorage;
+use GraphCommerce\CatalogStorefrontApi\Storage\ProductDocumentStorageInterface;
 use GraphCommerce\CatalogStorefrontApi\Read\HydrationInterface;
 use GraphCommerce\CatalogStorefrontApi\Read\PrefillerInterface;
 use GraphCommerce\CatalogStorefrontApi\Read\PrefillRequest;
@@ -31,7 +31,7 @@ class DocumentHydration implements HydrationInterface
      * @param string[] $priceFields product fields whose value needs the composite price data
      */
     public function __construct(
-        private readonly ProductDocumentStorage $storage,
+        private readonly ProductDocumentStorageInterface $storage,
         private readonly ProductModelBuilder $modelBuilder,
         private readonly ProductSearchResultsInterfaceFactory $searchResultsFactory,
         private readonly ScopeConfigInterface $scopeConfig,
@@ -113,14 +113,7 @@ class DocumentHydration implements HydrationInterface
 
     public function documents(string $storeViewCode, array $ids): array
     {
-        $documents = [];
-        if ($ids) {
-            foreach ($this->storage->get($storeViewCode, array_values(array_unique($ids))) as $entry) {
-                $documents[(int)$entry->getId()] = $entry->getData();
-            }
-        }
-
-        return $documents;
+        return $this->storage->get($storeViewCode, array_values(array_unique($ids)));
     }
 
     public function models(StoreInterface $store, ?ContextInterface $context, array $documents, array $requestedFields): array

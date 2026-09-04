@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_DataExporter:etc/et_schema.xsd">
+    <record name="Review">
+        <field name="createdAt" type="String" provider="GraphCommerce\CatalogStorefrontReview\Model\DataExporter\Provider\ReviewDate">
+            <using field="reviewId"/>
+        </field>
+    </record>
+    <record name="Export">
+        <field name="reviews" type="Review" repeated="true"
+               provider="GraphCommerce\CatalogStorefrontReview\Model\DataExporter\Processor\Reviews">
+            <using field="review_id"/>
+        </field>
+        <field name="ratingMetadata" type="RatingMetadata" repeated="true"
+               provider="GraphCommerce\CatalogStorefrontReview\Model\DataExporter\Processor\Ratings">
+            <using field="rating_id"/>
+        </field>
+    </record>
+</config>

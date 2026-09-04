@@ -1,90 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
     <preference for="Magento\DataExporter\Model\ExportFeedInterface"
-                type="GraphCommerce\CatalogStorefront\Model\LocalExportFeed"/>
+                type="GraphCommerce\CatalogStorefront\Model\Document\Delivery"/>
     <preference for="GraphCommerce\CatalogStorefrontApi\Read\HydrationInterface"
                 type="GraphCommerce\CatalogStorefront\Model\Read\DocumentHydration"/>
 
-    <preference for="GraphCommerce\CatalogStorefront\Model\Storage\Client\CommandInterface"
-                type="GraphCommerce\CatalogStorefront\Model\Storage\Client\ElasticsearchCommand"/>
-    <preference for="GraphCommerce\CatalogStorefront\Model\Storage\Client\QueryInterface"
-                type="GraphCommerce\CatalogStorefront\Model\Storage\Client\ElasticsearchQuery"/>
-    <preference for="GraphCommerce\CatalogStorefront\Model\Storage\Client\DataDefinitionInterface"
-                type="GraphCommerce\CatalogStorefront\Model\Storage\Client\ElasticsearchDataDefinitionAdapter"/>
 
-    <!-- Write side: one applier per feed, the products feed run through the enrichers. -->
-    <type name="GraphCommerce\CatalogStorefront\Model\LocalExportFeed">
+    <!-- Write side: one writer per feed, the products feed run through the document fields. -->
+    <type name="GraphCommerce\CatalogStorefront\Model\Document\Delivery">
         <arguments>
-            <argument name="appliers" xsi:type="array">
-                <item name="products" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Feed\Applier\Products</item>
-                <item name="prices" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Feed\Applier\Prices</item>
-                <item name="categories" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Feed\Applier\Categories</item>
-                <item name="productAttributes" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Feed\Applier\Attributes</item>
+            <argument name="writers" xsi:type="array">
+                <item name="products" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Writer\Products</item>
+                <item name="prices" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Writer\Prices</item>
+                <item name="categories" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Writer\Categories</item>
+                <item name="productAttributes" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Writer\Attributes</item>
             </argument>
         </arguments>
     </type>
-    <type name="GraphCommerce\CatalogStorefront\Model\Feed\Applier\Products">
+    <type name="GraphCommerce\CatalogStorefront\Model\Document\Writer\Products">
         <arguments>
-            <argument name="enrichers" xsi:type="array">
-                <item name="imageUrls" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Feed\Enricher\ImageUrls</item>
+            <argument name="fields" xsi:type="array">
+                <item name="imageUrls" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Field\ImageUrls</item>
             </argument>
         </arguments>
     </type>
     <type name="Magento\CatalogDataExporter\Model\Provider\Product\Links">
         <plugin name="graphcommerce_catalog_storefront_link_position"
-                type="GraphCommerce\CatalogStorefront\Plugin\Feed\LinkPosition"/>
+                type="GraphCommerce\CatalogStorefront\Plugin\DataExporter\LinkPosition"/>
     </type>
     <type name="Magento\ProductPriceDataExporter\Model\Provider\ProductPrice">
         <plugin name="graphcommerce_catalog_storefront_tier_price_percent"
-                type="GraphCommerce\CatalogStorefront\Plugin\Feed\TierPricePercent"/>
+                type="GraphCommerce\CatalogStorefront\Plugin\DataExporter\TierPricePercent"/>
     </type>
 
-    <!-- One metadata document store per feed entity. -->
-    <virtualType name="GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage" type="GraphCommerce\CatalogStorefront\Model\Storage\MetadataDocumentStorage">
-        <arguments><argument name="entity" xsi:type="string">category</argument></arguments>
-    </virtualType>
-    <virtualType name="GraphCommerce\CatalogStorefront\Model\Storage\AttributeDocumentStorage" type="GraphCommerce\CatalogStorefront\Model\Storage\MetadataDocumentStorage">
-        <arguments><argument name="entity" xsi:type="string">attribute</argument></arguments>
-    </virtualType>
-    <type name="GraphCommerce\CatalogStorefront\Model\Feed\Applier\Categories">
-        <arguments>
-            <argument name="categoryStorage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage</argument>
-        </arguments>
-    </type>
-    <type name="GraphCommerce\CatalogStorefront\Model\Feed\Applier\Attributes">
-        <arguments>
-            <argument name="attributeStorage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\AttributeDocumentStorage</argument>
-        </arguments>
-    </type>
-    <type name="GraphCommerce\CatalogStorefront\Plugin\Resolver\CategoriesFromDocuments">
-        <arguments>
-            <argument name="categoryStorage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage</argument>
-        </arguments>
-    </type>
-    <type name="GraphCommerce\CatalogStorefront\Plugin\Layer\CategoryFacetFromDocuments">
-        <arguments>
-            <argument name="categoryStorage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage</argument>
-        </arguments>
-    </type>
-    <type name="GraphCommerce\CatalogStorefront\Plugin\Layer\PriceRangeStepFromDocument">
-        <arguments>
-            <argument name="categoryStorage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\CategoryDocumentStorage</argument>
-        </arguments>
-    </type>
-    <type name="GraphCommerce\CatalogStorefront\Model\Read\AttributeMetadata">
-        <arguments>
-            <argument name="storage" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\AttributeDocumentStorage</argument>
-        </arguments>
-    </type>
-    <type name="GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\EntityConfigPool">
-        <arguments>
-            <argument name="configs" xsi:type="array">
-                <item name="product" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\Product</item>
-                <item name="category" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\Category</item>
-                <item name="attribute" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\Attribute</item>
-            </argument>
-        </arguments>
-    </type>
 
     <!-- Read side: the listing and the per-field plugins. -->
     <type name="Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\ProductSearch">

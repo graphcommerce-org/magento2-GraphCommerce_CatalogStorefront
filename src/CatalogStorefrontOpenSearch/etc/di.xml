@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <preference for="GraphCommerce\CatalogStorefrontApi\Storage\ProductDocumentStorageInterface"
+                type="GraphCommerce\CatalogStorefrontOpenSearch\Model\ProductDocumentStorage"/>
+    <preference for="GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface"
+                type="GraphCommerce\CatalogStorefrontOpenSearch\Model\MetadataDocumentStorage"/>
+    <preference for="GraphCommerce\CatalogStorefrontOpenSearch\Model\Client\CommandInterface"
+                type="GraphCommerce\CatalogStorefrontOpenSearch\Model\Client\Command"/>
+    <preference for="GraphCommerce\CatalogStorefrontOpenSearch\Model\Client\QueryInterface"
+                type="GraphCommerce\CatalogStorefrontOpenSearch\Model\Client\Query"/>
+    <preference for="GraphCommerce\CatalogStorefrontOpenSearch\Model\Client\DataDefinitionInterface"
+                type="GraphCommerce\CatalogStorefrontOpenSearch\Model\Client\DataDefinition"/>
+    <!-- Index mappings per entity; an entity without one maps nothing. -->
+    <type name="GraphCommerce\CatalogStorefrontOpenSearch\Model\Client\Config\EntityConfigPool">
+        <arguments>
+            <argument name="configs" xsi:type="array">
+                <item name="product" xsi:type="object">GraphCommerce\CatalogStorefrontOpenSearch\Model\Client\Config\Product</item>
+            </argument>
+        </arguments>
+    </type>
+</config>

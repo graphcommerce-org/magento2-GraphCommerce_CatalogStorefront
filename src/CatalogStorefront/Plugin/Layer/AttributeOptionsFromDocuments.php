@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Plugin\Layer;
 
-use GraphCommerce\CatalogStorefront\Model\Read\AttributeMetadata;
+use GraphCommerce\CatalogStorefront\Model\Read\AttributeDocuments;
 use Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\AttributeOptionProvider;
 use Magento\Store\Model\StoreManagerInterface;
 
@@ -20,7 +20,7 @@ class AttributeOptionsFromDocuments
     private const FILTERABLE_WITHOUT_RESULTS = 2;
 
     public function __construct(
-        private readonly AttributeMetadata $attributeMetadata,
+        private readonly AttributeDocuments $attributeDocuments,
         private readonly StoreManagerInterface $storeManager,
     ) {
     }
@@ -35,7 +35,7 @@ class AttributeOptionsFromDocuments
         if (!$optionIds) {
             return [];
         }
-        $attributes = $this->attributeMetadata->all($this->storeManager->getStore($storeId)->getCode());
+        $attributes = $this->attributeDocuments->all($this->storeManager->getStore($storeId)->getCode());
         if (!$attributes) {
             return $proceed($optionIds, $storeId, $attributeCodes);
         }
