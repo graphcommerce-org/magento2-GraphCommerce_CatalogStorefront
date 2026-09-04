@@ -8,7 +8,7 @@
                     <item name="label" xsi:type="string">Catalog</item>
                     <item name="header" xsi:type="const">GraphCommerce\CatalogStorefrontGraphQl\Model\Mode::HEADER</item>
                     <item name="options" xsi:type="array">
-                        <item name="" xsi:type="string">Store setting</item>
+                        <item name="" xsi:type="string">Default</item>
                         <item name="documents" xsi:type="string">Documents</item>
                         <item name="core" xsi:type="string">Database</item>
                     </item>

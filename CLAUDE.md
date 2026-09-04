@@ -61,7 +61,7 @@ passes.
   rule, rate and class repositories, the customer, address and group
   repositories, or the currency rate resource bumps the tax or currency
   generation (`Plugin/Bump`). Not needed under php-fpm.
-- `CatalogStorefrontExplorer`: the Catalog switcher (Store setting, Documents,
+- `CatalogStorefrontExplorer`: the Catalog switcher (Default, Documents,
   Database) of the MageOS_GraphQLAdminHtml explorer, through its
   `headerSwitchers` block argument.
 - `CatalogStorefrontInventory` / `...InventoryGraphQl`: the stock feed writer
