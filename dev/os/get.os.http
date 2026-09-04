@@ -1,0 +1,169 @@
+# OpenSearch inspection of the document store. Run a request with the HTTP
+# client of PhpStorm (the play icon next to a request). The store keeps one
+# index per entity and store view behind an alias; the alias is the stable
+# name, the index carries the version. The Magento search indexes
+# (magento2_product_*) are core's, not ours.
+
+@host = http://localhost:9200
+@store = default
+@products = catalog_storefront_{{store}}
+@categories = catalog_storefront_category_{{store}}
+@attributes = catalog_storefront_attribute_{{store}}
+@ratings = catalog_storefront_rating_{{store}}
+@reviews = catalog_storefront_review_{{store}}
+
+### Every index with its document count and size
+GET {{host}}/_cat/indices?v&h=index,health,docs.count,store.size&s=index
+
+### Alias to index, which is the blue/green state of the store
+GET {{host}}/_cat/aliases?v&h=alias,index&s=alias
+
+### Mapping of the product index: only the filtered and aggregated fields are mapped
+GET {{host}}/{{products}}/_mapping
+
+### Mapping of the review index: the fields the review module declares
+GET {{host}}/{{reviews}}/_mapping
+
+### One product document by product id
+GET {{host}}/{{products}}/_doc/1
+
+### A product document by sku
+POST {{host}}/{{products}}/_search
+Content-Type: application/json
+
+{
+  "size": 1,
+  "query": { "term": { "sku": "24-WG01" } }
+}
+
+### The keys a product document holds, without the values
+POST {{host}}/{{products}}/_search
+Content-Type: application/json
+
+{
+  "size": 1,
+  "query": { "term": { "sku": "24-WG01" } },
+  "_source": { "excludes": ["customAttributes", "optionsV2", "attributes", "media_gallery", "urlRewrites", "links", "categoryData"] }
+}
+
+### Products by type, to see how the catalog is composed
+POST {{host}}/{{products}}/_search
+Content-Type: application/json
+
+{
+  "size": 0,
+  "aggs": { "types": { "terms": { "field": "type" } } }
+}
+
+### Products with the prices or the stock slice still missing
+POST {{host}}/{{products}}/_search
+Content-Type: application/json
+
+{
+  "size": 20,
+  "_source": ["sku", "type"],
+  "query": {
+    "bool": {
+      "should": [
+        { "bool": { "must_not": { "exists": { "field": "priceIndex" } } } },
+        { "bool": { "must_not": { "exists": { "field": "stock" } } } }
+      ],
+      "minimum_should_match": 1
+    }
+  }
+}
+
+### Salable products only, with their guest price index
+POST {{host}}/{{products}}/_search
+Content-Type: application/json
+
+{
+  "size": 10,
+  "_source": ["sku", "priceIndex", "stock.isSalable", "stock.qtyForSale"],
+  "query": { "term": { "stock.isSalable": true } }
+}
+
+### The variants of a configurable, through the parent id list on the children
+POST {{host}}/{{products}}/_search
+Content-Type: application/json
+
+{
+  "size": 50,
+  "_source": ["sku", "status", "stock.isSalable", "priceIndex"],
+  "query": { "term": { "parentIds": "62" } }
+}
+
+### The price range of a configurable, as the listing aggregates it
+POST {{host}}/{{products}}/_search
+Content-Type: application/json
+
+{
+  "size": 0,
+  "query": { "bool": { "filter": [ { "term": { "parentIds": "62" } }, { "term": { "status": "Enabled" } } ] } },
+  "aggs": {
+    "salable": {
+      "filter": { "term": { "stock.isSalable": true } },
+      "aggs": {
+        "minFinal": { "min": { "field": "priceIndex.g0.final" } },
+        "maxFinal": { "max": { "field": "priceIndex.g0.final" } }
+      }
+    }
+  }
+}
+
+### Every category document of the store view
+POST {{host}}/{{categories}}/_search
+Content-Type: application/json
+
+{
+  "size": 100,
+  "_source": ["name", "path", "productCount", "isActive", "children"]
+}
+
+### One attribute document by code
+GET {{host}}/{{attributes}}/_doc/color
+
+### The rating documents: the scales the review percents are computed on
+POST {{host}}/{{ratings}}/_search
+Content-Type: application/json
+
+{ "size": 10 }
+
+### The reviews of one product, newest first, as the reviews field pages them
+POST {{host}}/{{reviews}}/_search
+Content-Type: application/json
+
+{
+  "from": 0,
+  "size": 5,
+  "track_total_hits": true,
+  "query": { "term": { "productId": "1" } },
+  "sort": [ { "createdAt": "desc" }, { "reviewId": "asc" } ]
+}
+
+### The rating summary of a page of products, as the listing computes it
+POST {{host}}/{{reviews}}/_search
+Content-Type: application/json
+
+{
+  "size": 0,
+  "query": { "terms": { "productId": ["1", "2", "3", "4"] } },
+  "aggs": {
+    "groups": {
+      "terms": { "field": "productId", "size": 4 },
+      "aggs": { "avg": { "avg": { "field": "percents" } } }
+    }
+  }
+}
+
+### The products with the most reviews
+POST {{host}}/{{reviews}}/_search
+Content-Type: application/json
+
+{
+  "size": 0,
+  "aggs": { "products": { "terms": { "field": "productId", "size": 10 } } }
+}
+
+### Index settings: the refresh interval that bounds how soon a write is visible to aggregations
+GET {{host}}/{{products}}/_settings?filter_path=*.settings.index.refresh_interval,*.settings.index.number_of_shards

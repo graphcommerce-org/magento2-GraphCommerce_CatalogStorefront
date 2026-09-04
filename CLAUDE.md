@@ -311,6 +311,10 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   handshake add 2 to 7ms, and the first request after a few idle seconds
   pays 40 to 60ms of wake-up over the wire (15 to 25ms inside PHP, spread
   evenly over OpenSearch, MySQL and Redis).
+- `dev/os/get.os.http` holds the OpenSearch requests that show what the store
+  built: the indices and aliases, the mappings, a product by id or sku, the
+  slices still missing, the price and rating aggregations as the read side
+  runs them. Run them from PhpStorm's HTTP client.
 - `dev/attribution` prints the full latency stack of one query: wire, proxy
   chain, FrankenPHP, PHP launch, dispatch, parse, schema, execution, every
   resolver class by self time with the plugin chain around it, the search
