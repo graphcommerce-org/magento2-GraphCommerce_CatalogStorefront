@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontGraphQl\Plugin\Resolver;
 
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\HydrationInterface;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
 use Magento\UrlRewriteGraphQl\Model\Resolver\UrlRewrite;
@@ -15,6 +16,11 @@ use Magento\UrlRewriteGraphQl\Model\Resolver\UrlRewrite;
  */
 class UrlRewritesFromDocument
 {
+    public function __construct(
+        private readonly Strict $strict,
+    ) {
+    }
+
     public function aroundResolve(
         UrlRewrite $subject,
         \Closure $proceed,
@@ -26,7 +32,12 @@ class UrlRewritesFromDocument
     ): array {
         $product = $value['model'] ?? null;
         $document = $product?->getData(HydrationInterface::DOCUMENT_KEY);
-        if (!is_array($document) || !array_key_exists('urlRewrites', $document)) {
+        if (!is_array($document)) {
+            return $proceed($field, $context, $info, $value, $args);
+        }
+        if (!array_key_exists('urlRewrites', $document)) {
+            $this->strict->fallback(self::class, 'document without urlRewrites');
+
             return $proceed($field, $context, $info, $value, $args);
         }
 

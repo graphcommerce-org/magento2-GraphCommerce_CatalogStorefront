@@ -12,7 +12,7 @@ use Magento\Framework\GraphQl\Query\Resolver\ContextInterface;
 use Magento\Framework\GraphQl\Query\Resolver\ValueFactory;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
 use Magento\Framework\ObjectManager\ResetAfterRequestInterface;
-use Psr\Log\LoggerInterface;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 
 /**
  * Serves a product's categories from the category documents. The product
@@ -36,7 +36,7 @@ class CategoriesFromDocuments implements ResetAfterRequestInterface
         private readonly CategoryDocuments $categoryDocuments,
         private readonly AttributesJoiner $attributesJoiner,
         private readonly ValueFactory $valueFactory,
-        private readonly LoggerInterface $logger,
+        private readonly Strict $strict,
     ) {
     }
 
@@ -93,7 +93,7 @@ class CategoriesFromDocuments implements ResetAfterRequestInterface
                     $this->categoryDocuments->breadcrumbs($store, $categories, $documents);
                 }
             } catch (\Throwable $e) {
-                $this->logger->warning('catalog-storefront categories fallback: ' . $e->getMessage());
+                $this->strict->exception(self::class, $e);
 
                 return $proceed($field, $context, $info, $value, $args);
             }

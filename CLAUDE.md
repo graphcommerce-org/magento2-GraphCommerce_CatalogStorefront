@@ -29,24 +29,41 @@ passes.
   `Read\PrefillerInterface` (fills fields on the product value, KEY),
   `Read\PrefillRequest` (a DocumentContext plus the selected fields) and
   `Read\HydrationInterface` (models prefilled for a query).
-- `CatalogStorefrontOpenSearch`: the storage interfaces on OpenSearch: the
-  client (`Model/Client`, connection from the `catalog-store-front` block of
-  env.php, the product index mapping in `Client/Config/Product`, every other
-  entity unmapped), the blue/green alias state and the two stores.
+- `CatalogStorefrontOpenSearch`: the storage interfaces on OpenSearch:
+  `Model/Client` (core's OpenSearch client from the engine resolver, so the
+  document store shares the search engine connection; one request per
+  method; the id travels in the source under `id`), `Model/Index` (one index
+  per entity and store view, named `<prefix>_<entity>_<store view>`, created
+  on first write with the entity's `EntityMappings` fields and nothing else
+  mapped) and the two stores.
 - `CatalogStorefront`: the base. Feed delivery and the writers for the
   products, prices, categories and attributes feeds, the composite links, the
   image URL field, the exporter patch-ups the core feeds need, the model
   builder, `ProductDocuments`, `PriceRanges` (di.xml `ranges`, by type id),
-  `PriceDisplay`, `AttributeDocuments`, the configuration (`Model/Config`: storefront
-  indexing, serve GraphQL, search term recording; the group sits under Catalog >
-  Catalog in the admin), and the plugins
+  `DisplayPrice` (currency and tax at read time), `AttributeDocuments`, the
+  configuration (`Model/Config`: storefront indexing, serve GraphQL, request
+  override, strict mode, search term recording; the group sits under Catalog >
+  Catalog in the admin), `Model/Strict` (the strict mode report) and the plugins
   on non-GraphQL core: product links, the layer price step, the search field
-  name memo, the deployment config memo, salable.
-- `CatalogStorefrontGraphQl`: `DocumentHydration` with the prefiller list, the
-  product and price prefillers, the listing data provider plugins, the
-  resolver plugins for categories, media gallery, URL rewrites, custom
-  attributes and linked products, the layered navigation plugins, the cache id
-  memo, the schema and validation plugins.
+  name memo, salable, the SQL statement recorder.
+- `CatalogStorefrontGraphQl`: `Model/Mode` (the request's path), `DocumentHydration`
+  with the prefiller list, the product and price prefillers, the listing data
+  provider plugins, the resolver plugins for categories, media gallery, URL
+  rewrites, custom attributes and linked products, the layered navigation
+  plugins, the prefilled field routing and the strict report on the query
+  processor, the cache factor of the path, the parity console command.
+- `CatalogStorefrontWorker`: what a FrankenPHP worker keeps between requests,
+  each memo under a generation (`Model/Generation`: a token in the cache with
+  the config tag; `Model/Memo`): the kept schemas per query shape, the validated
+  documents, the deployment config check, the cache id tax factor, the tax rate
+  request, the tax rates, the customer group and the currency rate lookups.
+  A cache flush or config cache clean lifts every memo; a save through the tax
+  rule, rate and class repositories, the customer, address and group
+  repositories, or the currency rate resource bumps the tax or currency
+  generation (`Plugin/Bump`). Not needed under php-fpm.
+- `CatalogStorefrontExplorer`: the Catalog switcher (Store setting, Documents,
+  Database) of the MageOS_GraphQLAdminHtml explorer, through its
+  `headerSwitchers` block argument.
 - `CatalogStorefrontInventory` / `...InventoryGraphQl`: the stock feed writer
   (a stock's rows land on the store views of the websites it sells through)
   and stock item feed fields / the stock prefiller (the MSI source item
@@ -90,7 +107,7 @@ A module registers its parts in its own `etc/di.xml`: `writers` (by feed
 name) on `Delivery`, `fields` on the products writer, `ranges` (by product
 type id) on `PriceRanges`, and on the GraphQL side `prefillers`,
 `priceFields`, `fieldDocumentKeys` and `baseFields` on `DocumentHydration`,
-`prefilledFields` on `ReuseSchema`. Prefillers run in di.xml order, so a later
+`prefilledFields` on `RoutePrefilledFields`. Prefillers run in di.xml order, so a later
 one may rewrite what an earlier one filled. The composite price searches
 (`ProductDocumentStorageInterface::priceData`, by `parentIds`,
 `groupedParentIds` and `bundleParentIds`) and the fixed bundle type fold in
@@ -110,20 +127,28 @@ registers all modules through composer autoload.
   `indexer:reindex`) MAY use SQL to assemble documents; the request path may not.
 - The read path MUST fall back to the core resolver whenever the document lacks
   what a field needs, never to a database read of its own.
-- Parity is the gate: `dev/parity/run.php <endpoint>` MUST stay green before a
-  change ships. Run it against the worker's own host name
-  (`https://worker.localhost.reachdigital.io/graphql`; the backend host name
-  goes to the host PHP-FPM) with `GC_WORKER_CONTAINER` set and the attribution
-  module enabled: then a document-path query that runs a SQL lookup fails with
-  its statements, which is the first rule enforced. Every query runs twice
-  unjudged first, so the gate sees the steady state and not the cache fill
-  after the flush; each judged request is tagged with a header and its log
-  line found by tag. Every query passes with no lookup; the search
-  listing's two writes (core records the search term) appear only with the
-  Record Search Terms setting on; it is off by default. Add a query for every field a new plugin serves. A poison test
-  (edit a document in OpenSearch, see the change in the response) proves a
-  field is live; the harness alone cannot. Product `sku` filters accept only
-  `eq` and `in`; the harness fails a query that errors on either path.
+- Parity is the gate: `bin/magento catalog-storefront:parity <endpoint>` MUST
+  stay green before a change ships. It needs Allow Request Override on (each
+  request picks its path with the `X-Catalog-Storefront` header) and Strict
+  Mode on (the response extensions carry the document path's SQL statements
+  and fallbacks): a document-path query that runs a SQL lookup fails with its
+  statements, which is the first rule enforced. Run it against the worker's
+  own host name (`https://worker.localhost.reachdigital.io/graphql`; the
+  backend host name goes to the host PHP-FPM). Every query runs twice unjudged
+  first, so the gate sees the steady state and not the memo fill. Every query
+  passes with no lookup; the search listing's two writes (core records the
+  search term) appear only with the Record Search Terms setting on; it is off
+  by default. A fallback is printed, not failed: it is allowed when the
+  document cannot answer, and the reason says whether that is so. Add a query
+  for every field a new plugin serves. A poison test (edit a document in
+  OpenSearch, see the change in the response) proves a field is live; the gate
+  alone cannot. Product `sku` filters accept only `eq` and `in`; the gate fails
+  a query that errors on either path. A query file sends its own request
+  headers through `# @header Name: value` lines.
+- Every fallback to core in a document plugin goes through `Model/Strict`:
+  `fallback(self::class, reason)` where the document cannot answer,
+  `exception(self::class, $e)` where the plugin failed (it logs a warning).
+  Strict mode is what makes a silent fallback visible outside the gate.
 
 ## Boundary note
 
@@ -137,10 +162,12 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
 
 - Write: `Model/Document/Delivery` hands each feed batch to its writer
   (`Model/Document/Writer/*`, di.xml `writers`); together they build one document per store view
-  (products = base, prices = `prices.g<group code>` plus `priceIndex.<group
-  key>` with regular and final price per customer group and the fallback row
-  resolved, inventory = `stock`, variants = `variantIds` on the configurable
-  parent). Reviews are documents of their own (entity `review`, one per
+  (products = base, prices = the feed rows under `prices` with their customer
+  `group` id (the feed names a group by the hash of its id; the writer maps it
+  back, rows of an unknown group are dropped) plus `priceIndex`, a nested list
+  with one entry per customer group holding the regular and final price with
+  the fallback row resolved, in base currency before tax, inventory = `stock`,
+  variants = `variantIds` on the configurable parent). Reviews are documents of their own (entity `review`, one per
   review and store view where it is visible, with the vote percents over the
   rating's scale); the product document carries nothing about them. `Model/ProductPrice` holds the price semantics both sides
   share. `Model/Document/CompositeLinks` keeps the grouped and bundle links by id
@@ -182,9 +209,15 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   when a non-base field is selected, the labelled `attributes` slice never),
   and, when a price field is selected, the composite price data:
   the configurable and the grouped price aggregation (terms on `parentIds`
-  and on `groupedParentIds`, min and max of `priceIndex.<group key>` over
-  salable and over all enabled children), the bundle selection documents by
-  `bundleParentIds`, and the bundles' option slices. A grouped range is the
+  and on `groupedParentIds`, then nested into `priceIndex` filtered on the
+  group, min and max of regular and final over salable and over all enabled
+  children), the bundle selection documents by `bundleParentIds`, and the
+  bundles' option slices. Every range is base currency before tax;
+  `Model/Read/DisplayPrice` converts it the way the price classes convert (the
+  regular price unrounded, a discounted final price rounded) and taxes it the
+  way the tax adjustment taxes (core's tax service, whenever catalog prices
+  include tax or the display does), so the same request path answers every
+  currency and tax display setup except fixed product taxes. A grouped range is the
   lowest regular and lowest final child price, as core takes them; a bundle
   range is `Model/Read/BundlePriceRange`, a port of core's bundle amount
   calculator over the option slice and the selection documents.
@@ -198,7 +231,7 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   not-available message hides it), min_sale_qty and max_sale_qty (the stock
   slice carries the item's own minimum and sale quantities, null where it
   takes the configured value, `Model/DataExporter/Provider/StockItem`) and price_range
-  (simple, virtual, downloadable, configurable). `ReuseSchema`
+  (simple, virtual, downloadable, configurable). `RoutePrefilledFields`
   routes those fields (di.xml `prefilledFields`, per type or interface name)
   to the pre-filled value and to the core resolver when the parent carries
   none, so core-served products and what a document cannot answer keep the
@@ -229,11 +262,13 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   `models`, which fetches the composite price data when the fields ask for a
   price range. `Plugin/SalableFromDocument` answers the configurable and bundle
   salability check from the inventory slice.
-- The product index mapping is `dynamic: false`; only `sku`, `parentIds`,
-  `status`, `stock.isSalable` and the `priceIndex` floats are mapped, because
-  requests filter or aggregate on them. Every field is stored in `_source`; rich
-  configurable documents otherwise exceed the 1000-field mapping limit and
-  their writes fail silently. Wildcard `_source` filters are very slow: never.
+- Every index mapping is `dynamic: false`; the product index maps only `sku`,
+  `type`, the parent id lists, `status`, `stock.isSalable` and the nested
+  `priceIndex` (group, regular, final), declared in the base di.xml under
+  `EntityMappings`, because requests filter or aggregate on them. Every field
+  is stored in `_source`; rich configurable documents otherwise exceed the
+  1000-field mapping limit and their writes fail. Wildcard `_source` filters
+  are very slow: never.
 - A listing page costs two OpenSearch round trips on the document path: the
   core product search, then the multi-search above. Writes are visible to the
   aggregation after the index refresh (one second by default); the fetch by id
@@ -243,25 +278,25 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   `Model/Read/AttributeDocuments` and `RatingDocuments` (the store view's
   attribute and rating documents; the facet labels come from them through
   `Plugin/Layer/AttributeOptionsFromDocuments` (GraphQl), the rating scale for the
-  review percents) and `Plugin/Search/FieldNameMemo` (search index field name
+  review percents), `Plugin/Search/FieldNameMemo` (search index field name
   per attribute code and context, the core mapper asks several times per
-  attribute) are request-scoped. Derivations that used to be memos are made by
-  the writer instead: `Model/Document/Field/ImageUrls` puts the image
-  media paths on the product document;
-  the category price step travels on the category document. The state that
-  does live for a process lifetime derives from the query text or the
-  deployment, not from catalog data: the kept schemas (`ReuseSchema`), the
-  validated documents (`ValidateOncePerProcess`), the cache id tax factor
-  (`CustomerTaxRateMemo`) and the deployment config check (`ConfigChangeMemo`).
+  attribute), `Model/Mode` and `Model/Strict` are request-scoped. Derivations
+  that used to be memos are made by the writer instead:
+  `Model/Document/Field/ImageUrls` puts the image media paths on the product
+  document; the category price step travels on the category document. The
+  state that does live for a process lifetime sits in the Worker module and
+  derives from the query text, the deployment, the tax setup or the currency
+  rates, not from catalog data; each memo lives under a generation, and a
+  cache flush or config cache clean lifts it (see Layout).
   `etc/config.xml` turns on `dev/caching/cache_user_defined_attributes` so the
   EAV config serves user-defined attributes from cache instead of SQL.
-- `Plugin/Query/ValidateOncePerProcess` validates a query document once per
-  process and executes repeats with an empty rule set. `Plugin/Query/ReuseSchema`
-  keeps one built schema per query shape: Magento prunes every type to the
-  names the query uses, so a schema belongs to that name set, and its type map
-  is materialized at build time because the type registry resets between
-  requests. Both hold state for the worker's lifetime; a schema or config
-  change reaches a worker at its next restart.
+- The Worker module's `ValidateOncePerProcess` validates a query document once
+  per config generation and executes repeats with an empty rule set; its
+  `ReuseSchema` keeps one built schema per query shape: Magento prunes every
+  type to the names the query uses, so a schema belongs to that name set, and
+  its type map is materialized at build time because the type registry resets
+  between requests. A schema or config change reaches a worker at the next
+  cache flush or config cache clean, which the admin config save does.
 - `configurable_options` is built at index time (`Model/Document/Field/ConfigurableOptions` of the configurable GraphQl module,
   document key `configurableOptions`) and returned as is; its values carry the
   pre-filled `uid` and `swatch_data`.
@@ -274,18 +309,22 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
 - The FrankenPHP worker container has its own env file and its own Redis cache
   database. A host-side `cache:flush` or `config:set` never reaches it: flush
   inside the container (`docker exec project-backend-frankenphp-1 php
-  bin/magento cache:flush`) and restart the worker after a `serve_graphql` flip.
-  A benchmark that flips the flag must do this, or both runs measure one path.
+  bin/magento cache:flush`); that flush also lifts every worker memo, so no
+  restart is needed after a config change. A benchmark or the parity gate
+  picks the path per request with the `X-Catalog-Storefront` header (Allow
+  Request Override on in the container's cache too), so no flag flips at all.
 - With immediate export, a full `indexer:reindex` of a feed skips rows whose
   feed hash is unchanged, so it does not repair a document store. To rebuild
   the documents: drop the index, truncate `cde_products_feed`,
   `cde_product_prices_feed`, `cde_product_variants_feed`,
   `inventory_data_exporter_stock_status_feed` and
   `catalog_data_exporter_product_reviews`, then reindex the products, stock,
-  prices, variants and reviews feeds. A mapping change needs this too. The
-  metadata documents rebuild the same way: drop the category, attribute or
-  rating index, truncate `cde_categories_feed`, `cde_product_attributes_feed`
-  or `catalog_data_exporter_rating_metadata`, reindex that feed.
+  prices, variants and reviews feeds. A mapping change needs this too, and a
+  new customer group needs the prices feed re-exported. The metadata documents
+  rebuild the same way: drop the category, attribute or rating index, truncate
+  `cde_categories_feed`, `cde_product_attributes_feed` or
+  `catalog_data_exporter_rating_metadata`, reindex that feed. The indices are
+  `<prefix>_<entity>_<store view>`; `product` is an entity like the others.
 - The parity set needs the fixed bundle `GC-BUNDLE-FIXED`
   (`dev/parity/fixtures/bundle-fixed.json`, POST it to `/rest/V1/products`
   with an admin token, then reindex stock, price, search and the feeds): the
@@ -298,7 +337,8 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   write on the document path (core records a search term's popularity) is
   printed as `WRITE`, not failed: the rule forbids lookups.
 - After di.xml changes: `setup:di:compile`, `cache:flush` on the host and in
-  the worker container, then restart the worker. After a module link in
+  the worker container, then restart the worker (new classes; a flush alone
+  lifts the memos but not the loaded code). After a module link in
   `app/code` changes target, reload the host php-fpm masters too
   (`kill -USR2 $(pgrep -f 'php-fpm: master')`): with `opcache.revalidate_path`
   off, opcache keeps the resolved symlink target and the backend host name
@@ -351,9 +391,12 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
 
 ## Known gaps and deviations
 
-- Price rows are served only when the display currency is the base currency,
-  catalog prices exclude tax and are displayed excluding tax, and fixed product
-  taxes are off. Other setups fall back to core.
+- Prices are served in every currency and tax display setup except fixed
+  product taxes, which fall back to core. A configurable or grouped range is
+  taxed with the parent's tax class; core taxes each child with its own. A
+  composite range in a non-base currency converts the aggregated base prices;
+  core converts and rounds each child, so a cent may differ where children
+  mix discounted and regular prices.
 - Grouped children with required customizable options are not excluded from
   the grouped range as core's associated products collection does. A fixed
   bundle with customizable options falls back to core, which adds their price
@@ -363,8 +406,8 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
 - `dev/parity/queries/19-*.graphql` selects every product field of the
   schema (`dev/parity/gen-all-fields.py <skus...>` generates it from introspection); the
   routable fields, `product_links` (its own query) and the bundle item's
-  price range are left out. `GC_PARITY_DUMP=<dir>` keeps both responses of
-  every query for a closer look than the diff excerpt.
+  price range are left out. `--dump=<dir>` keeps both responses of every
+  query for a closer look than the diff excerpt.
 - `quantity` is the stock slice's quantity (the inventory stock, all assigned
   sources); core reads the legacy stock status, the default source only.
   `min_sale_qty` and `max_sale_qty` resolve the configured value without a

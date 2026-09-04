@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontGraphQl\Plugin\Resolver;
 
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\HydrationInterface;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 use Magento\CatalogGraphQl\Model\Resolver\Product\MediaGallery;
 use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
@@ -15,6 +16,11 @@ use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
  */
 class MediaGalleryFromDocument
 {
+    public function __construct(
+        private readonly Strict $strict,
+    ) {
+    }
+
     public function aroundResolve(
         MediaGallery $subject,
         \Closure $proceed,
@@ -26,7 +32,12 @@ class MediaGalleryFromDocument
     ) {
         $product = $value['model'] ?? null;
         $document = $product?->getData(HydrationInterface::DOCUMENT_KEY);
-        if (!is_array($document) || !array_key_exists('media_gallery', $document)) {
+        if (!is_array($document)) {
+            return $proceed($field, $context, $info, $value, $args);
+        }
+        if (!array_key_exists('media_gallery', $document)) {
+            $this->strict->fallback(self::class, 'document without media_gallery');
+
             return $proceed($field, $context, $info, $value, $args);
         }
 

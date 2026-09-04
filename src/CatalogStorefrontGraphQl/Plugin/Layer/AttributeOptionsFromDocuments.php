@@ -6,6 +6,7 @@ namespace GraphCommerce\CatalogStorefrontGraphQl\Plugin\Layer;
 use GraphCommerce\CatalogStorefront\Model\Read\AttributeDocuments;
 use Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\AttributeOptionProvider;
 use Magento\Store\Model\StoreManagerInterface;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 
 /**
  * Serves the facet attribute and option labels from the attribute documents,
@@ -22,6 +23,7 @@ class AttributeOptionsFromDocuments
     public function __construct(
         private readonly AttributeDocuments $attributeDocuments,
         private readonly StoreManagerInterface $storeManager,
+        private readonly Strict $strict,
     ) {
     }
 
@@ -37,6 +39,7 @@ class AttributeOptionsFromDocuments
         }
         $attributes = $this->attributeDocuments->all($this->storeManager->getStore($storeId)->getCode());
         if (!$attributes) {
+            $this->strict->fallback(self::class, 'no attribute documents for the store view');
             return $proceed($optionIds, $storeId, $attributeCodes);
         }
         $requested = array_fill_keys(array_map('strval', $optionIds), true);

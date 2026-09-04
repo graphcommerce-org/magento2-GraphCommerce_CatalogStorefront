@@ -8,6 +8,7 @@ use Magento\DownloadableGraphQl\Resolver\Product\Samples;
 use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
 use Magento\Framework\UrlInterface;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 
 /**
  * Serves downloadable_product_samples from the samples slice of the document.
@@ -19,6 +20,7 @@ class DownloadableSamplesFromDocument
 {
     public function __construct(
         private readonly UrlInterface $urlBuilder,
+        private readonly Strict $strict,
     ) {
     }
 
@@ -39,7 +41,8 @@ class DownloadableSamplesFromDocument
         $samples = [];
         foreach ((array)($document['samples'] ?? []) as $sample) {
             if (!preg_match('~/sample_id/(\d+)~', (string)($sample['resource']['url'] ?? ''), $match)) {
-                return $proceed($field, $context, $info, $value, $args);
+                $this->strict->fallback(self::class, 'sample url without sample_id');
+            return $proceed($field, $context, $info, $value, $args);
             }
             $samples[] = [
                 'id' => (int)$match[1],

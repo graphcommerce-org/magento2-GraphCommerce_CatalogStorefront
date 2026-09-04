@@ -13,7 +13,7 @@ use Magento\Framework\GraphQl\Query\Resolver\ContextInterface;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
 use Magento\Review\Model\Review\Config as ReviewsConfig;
 use Magento\ReviewGraphQl\Model\Resolver\Product\Reviews;
-use Psr\Log\LoggerInterface;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 
 /**
  * Serves a product's reviews from the review documents: the reviews visible
@@ -29,7 +29,7 @@ class ReviewsFromDocument
         private readonly ReviewsConfig $reviewsConfig,
         private readonly MetadataDocumentStorageInterface $reviews,
         private readonly RatingDocuments $ratingDocuments,
-        private readonly LoggerInterface $logger,
+        private readonly Strict $strict,
     ) {
     }
 
@@ -61,6 +61,7 @@ class ReviewsFromDocument
             );
             $maxPages = (int)ceil($total / $pageSize);
             if ($currentPage > $maxPages && $total > 0) {
+                $this->strict->fallback(self::class, 'page past the last page');
                 return $proceed($field, $context, $info, $value, $args);
             }
 
@@ -90,7 +91,7 @@ class ReviewsFromDocument
                 ];
             }
         } catch (\Throwable $e) {
-            $this->logger->warning('catalog-storefront reviews fallback: ' . $e->getMessage());
+            $this->strict->exception(self::class, $e);
 
             return $proceed($field, $context, $info, $value, $args);
         }

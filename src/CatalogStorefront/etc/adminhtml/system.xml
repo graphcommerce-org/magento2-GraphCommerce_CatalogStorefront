@@ -15,6 +15,16 @@
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                     <comment>The storefront API reads products and categories from the copy. A product that is not in the copy yet is read from the database.</comment>
                 </field>
+                <field id="request_override" translate="label comment" type="select" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Allow Request Override</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>A request picks its own path with the X-Catalog-Storefront header: "documents" or "core". For test environments, the API explorer and the parity gate.</comment>
+                </field>
+                <field id="strict" translate="label comment" type="select" sortOrder="50" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Strict Mode</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>A request served from documents reports every fallback to the database and every SQL statement in the response extensions. For test environments only: the report exposes SQL statements.</comment>
+                </field>
                 <field id="record_search_terms" translate="label comment" type="select" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Record Search Terms</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>

@@ -12,7 +12,7 @@ use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Query\Resolver\ContextInterface;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
 use Magento\Framework\ObjectManager\ResetAfterRequestInterface;
-use Psr\Log\LoggerInterface;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 
 /**
  * Serves custom_attributesV2 from the document's raw attribute values and the
@@ -43,7 +43,7 @@ class CustomAttributesFromDocument implements ResetAfterRequestInterface
     public function __construct(
         private readonly AttributeDocuments $attributeDocuments,
         private readonly FilterProductCustomAttribute $filterCustomAttribute,
-        private readonly LoggerInterface $logger,
+        private readonly Strict $strict,
     ) {
     }
 
@@ -57,12 +57,18 @@ class CustomAttributesFromDocument implements ResetAfterRequestInterface
         ?array $args = null
     ) {
         $document = ($value['model'] ?? null)?->getData(HydrationInterface::DOCUMENT_KEY);
-        if (!is_array($document) || !isset($document['customAttributes'])) {
+        if (!is_array($document)) {
+            return $proceed($field, $context, $info, $value, $args);
+        }
+        if (!isset($document['customAttributes'])) {
+            $this->strict->fallback(self::class, 'document without customAttributes');
+
             return $proceed($field, $context, $info, $value, $args);
         }
         $filters = [];
         foreach ((array)($args['filters'] ?? []) as $filterField => $filterValue) {
             if (!isset(self::FILTERS[$filterField])) {
+                $this->strict->fallback(self::class, 'unsupported custom attribute filter');
                 return $proceed($field, $context, $info, $value, $args);
             }
             $filters[self::FILTERS[$filterField]] = (int)$filterValue;
@@ -72,6 +78,7 @@ class CustomAttributesFromDocument implements ResetAfterRequestInterface
             $store = $context->getExtensionAttributes()->getStore();
             $attributes = $this->lists[$store->getCode() . json_encode($filters)] ??= $this->attributes($store->getCode(), $filters);
             if (!$attributes) {
+                $this->strict->fallback(self::class, 'no attribute documents for the store view');
                 return $proceed($field, $context, $info, $value, $args);
             }
 
@@ -102,7 +109,7 @@ class CustomAttributesFromDocument implements ResetAfterRequestInterface
                 $items[] = $item;
             }
         } catch (\Throwable $e) {
-            $this->logger->warning('catalog-storefront custom attributes fallback: ' . $e->getMessage());
+            $this->strict->exception(self::class, $e);
 
             return $proceed($field, $context, $info, $value, $args);
         }

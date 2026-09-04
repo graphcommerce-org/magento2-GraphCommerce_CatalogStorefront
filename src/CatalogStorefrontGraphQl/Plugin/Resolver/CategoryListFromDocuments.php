@@ -11,7 +11,7 @@ use Magento\Framework\GraphQl\Query\Resolver\ContextInterface;
 use Magento\Framework\GraphQl\Query\ResolverInterface;
 use Magento\Framework\GraphQl\Query\Uid;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
-use Psr\Log\LoggerInterface;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 
 /**
  * Serves the categories and categoryList queries from the category documents:
@@ -38,7 +38,7 @@ class CategoryListFromDocuments
         private readonly MetadataDocumentStorageInterface $storage,
         private readonly CategoryDocuments $categoryDocuments,
         private readonly Uid $uidEncoder,
-        private readonly LoggerInterface $logger,
+        private readonly Strict $strict,
     ) {
     }
 
@@ -54,7 +54,12 @@ class CategoryListFromDocuments
         $pageSize = (int)($args['pageSize'] ?? self::DEFAULT_PAGE_SIZE);
         $currentPage = (int)($args['currentPage'] ?? 1);
         $filter = $this->filter($args, $context);
-        if (!$this->hydration->enabled() || $pageSize < 1 || $currentPage < 1 || $filter === null) {
+        if (!$this->hydration->enabled() || $pageSize < 1 || $currentPage < 1) {
+            return $proceed($field, $context, $info, $value, $args);
+        }
+        if ($filter === null) {
+            $this->strict->fallback(self::class, 'unsupported categories filter');
+
             return $proceed($field, $context, $info, $value, $args);
         }
 
@@ -70,6 +75,7 @@ class CategoryListFromDocuments
             );
             $totalPages = (int)ceil($total / $pageSize);
             if ($currentPage > $totalPages && $total > 0) {
+                $this->strict->fallback(self::class, 'page past the last page');
                 return $proceed($field, $context, $info, $value, $args);
             }
             $documents = array_combine(array_map('intval', array_keys($documents)), $documents);
@@ -78,7 +84,7 @@ class CategoryListFromDocuments
             $this->categoryDocuments->breadcrumbs($store, $categories, $documents);
             $this->categoryDocuments->children($store, $categories, $documents, $this->depth($selection), $this->childFields($selection));
         } catch (\Throwable $e) {
-            $this->logger->warning('catalog-storefront category list fallback: ' . $e->getMessage());
+            $this->strict->exception(self::class, $e);
 
             return $proceed($field, $context, $info, $value, $args);
         }

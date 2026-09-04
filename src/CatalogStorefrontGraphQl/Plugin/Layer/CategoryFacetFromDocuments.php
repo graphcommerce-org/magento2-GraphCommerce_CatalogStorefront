@@ -16,7 +16,7 @@ use Magento\Framework\Search\Response\Aggregation;
 use Magento\Framework\Search\Response\AggregationFactory;
 use Magento\Framework\Search\Response\BucketFactory;
 use Magento\Store\Model\StoreManagerInterface;
-use Psr\Log\LoggerInterface;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 
 /**
  * Serves the category facet from the category documents: the store's tree
@@ -41,7 +41,7 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
         private readonly IncludeDirectChildrenOnly $includeDirectChildrenOnly,
         private readonly AggregationFactory $aggregationFactory,
         private readonly BucketFactory $bucketFactory,
-        private readonly LoggerInterface $logger,
+        private readonly Strict $strict,
     ) {
     }
 
@@ -71,6 +71,7 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
             $requested = array_map('intval', is_array($requested) ? $requested : [$requested]);
             $parents = $this->storage->get('category', $storeCode, $requested, ['children']);
             if (count($parents) !== count($requested)) {
+                $this->strict->fallback(self::class, 'category documents missing for the filtered categories');
                 return $proceed($aggregation, $storeId);
             }
             $childIds = array_map('intval', array_merge([], ...array_map(
@@ -82,7 +83,7 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
                 static fn(array $child) => !empty($child['isActive'])
             );
         } catch (\Throwable $e) {
-            $this->logger->warning('catalog-storefront category filter fallback: ' . $e->getMessage());
+            $this->strict->exception(self::class, $e);
 
             return $proceed($aggregation, $storeId);
         }
@@ -108,7 +109,7 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
             $ids = array_map(static fn(AggregationValueInterface $value) => (int)$value->getValue(), $bucket->getValues());
             $documents = $this->storage->get('category', $store->getCode(), $ids, ['name', 'path']);
         } catch (\Throwable $e) {
-            $this->logger->warning('catalog-storefront category facet fallback: ' . $e->getMessage());
+            $this->strict->exception(self::class, $e);
 
             return $proceed($aggregation, $storeId);
         }

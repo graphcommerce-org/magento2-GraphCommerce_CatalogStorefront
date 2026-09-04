@@ -5,6 +5,8 @@
             <module name="GraphCommerce_CatalogStorefront"/>
             <module name="GraphCommerce_CatalogStorefrontGraphQlApi"/>
             <module name="Magento_CatalogGraphQl"/>
+            <module name="Magento_GraphQlCache"/>
+            <module name="Magento_GraphQlResolverCache"/>
         </sequence>
     </module>
 </config>

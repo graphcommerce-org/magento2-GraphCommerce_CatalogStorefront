@@ -11,7 +11,7 @@ use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Query\Resolver\ContextInterface;
 use Magento\Framework\GraphQl\Query\Uid;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
-use Psr\Log\LoggerInterface;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 
 /**
  * Serves a bundle's items from the option slice of its document and the
@@ -27,7 +27,7 @@ class BundleItemsFromDocument
     public function __construct(
         private readonly HydrationInterface $hydration,
         private readonly Uid $uidEncoder,
-        private readonly LoggerInterface $logger,
+        private readonly Strict $strict,
     ) {
     }
 
@@ -108,7 +108,7 @@ class BundleItemsFromDocument
             }
             usort($items, static fn(array $a, array $b) => [$a['position'], $a['option_id']] <=> [$b['position'], $b['option_id']]);
         } catch (\Throwable $e) {
-            $this->logger->warning('catalog-storefront bundle items fallback: ' . $e->getMessage());
+            $this->strict->exception(self::class, $e);
 
             return $proceed($field, $context, $info, $value, $args);
         }

@@ -13,7 +13,7 @@ use Magento\Framework\GraphQl\Exception\GraphQlInputException;
 use Magento\Framework\GraphQl\Query\Resolver\ContextInterface;
 use Magento\Framework\GraphQl\Query\Uid;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
-use Psr\Log\LoggerInterface;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 
 /**
  * Serves configurable_product_options_selection from the documents of the
@@ -29,7 +29,7 @@ class OptionsSelectionFromDocuments
         private readonly HydrationInterface $hydration,
         private readonly SelectionUidFormatter $selectionUidFormatter,
         private readonly Uid $uidEncoder,
-        private readonly LoggerInterface $logger,
+        private readonly Strict $strict,
     ) {
     }
 
@@ -48,6 +48,7 @@ class OptionsSelectionFromDocuments
         }
         $options = (array)($document['configurableOptions'] ?? []);
         if (!$options || !isset($options[0]['id'])) {
+            $this->strict->fallback(self::class, 'configurableOptions without option ids');
             return $proceed($field, $context, $info, $value, $args);
         }
 
@@ -154,7 +155,7 @@ class OptionsSelectionFromDocuments
         } catch (GraphQlInputException $e) {
             throw $e;
         } catch (\Throwable $e) {
-            $this->logger->warning('catalog-storefront options selection fallback: ' . $e->getMessage());
+            $this->strict->exception(self::class, $e);
 
             return $proceed($field, $context, $info, $value, $args);
         }

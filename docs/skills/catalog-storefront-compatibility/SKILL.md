@@ -79,7 +79,7 @@ copy the pattern, not the code.
   It receives the page's models and documents and a `PrefillRequest` (store,
   group key, `selects()` for the fields the query asks for, `priceData()` for
   composites) and returns values per product id. List the fields under
-  `prefilledFields` on `CatalogStorefrontGraphQl\Plugin\Query\ReuseSchema`, per
+  `prefilledFields` on `CatalogStorefrontGraphQl\Plugin\Query\RoutePrefilledFields`, per
   GraphQL type or interface: the executor then returns the value without a
   resolver call, and falls back to the core resolver when nothing was filled.
   Add the fields to `baseFields` when the model answers them without the
@@ -91,11 +91,14 @@ copy the pattern, not the code.
 - **A field that needs other documents or arguments.** An `aroundResolve`
   plugin on the core resolver. Read the document from
   `$value['model']->getData(HydrationInterface::DOCUMENT_KEY)`; without one,
-  or when an argument is one the documents cannot answer, call `$proceed`.
-  Fetch related documents through `HydrationInterface::documents()` and build
-  prefilled models through `models()`; query an entity through
+  call `$proceed`; when the document exists but cannot answer (a key missing,
+  an argument the documents cannot serve), report why through
+  `GraphCommerce\CatalogStorefront\Model\Strict::fallback(self::class, reason)`
+  first. Fetch related documents through `HydrationInterface::documents()` and
+  build prefilled models through `models()`; query an entity through
   `MetadataDocumentStorageInterface::find()` and `stats()`. Wrap the work in
-  `try`/`catch (\Throwable)` that logs and calls `$proceed`. Merge the
+  `try`/`catch (\Throwable)` that calls `Strict::exception(self::class, $e)`
+  (it logs) and then `$proceed`. Merge the
   selections of every `$info->fieldNodes` entry: a page selects a field through
   several fragments and each is a node. Examples:
   `CatalogStorefrontGraphQl/Plugin/Resolver/CategoryListFromDocuments`,
@@ -125,29 +128,32 @@ core modules they plug into, so a shop without them leaves yours disabled.
    reindex the feed; after a mapping change, drop the entity's index first.
 3. Compile after di.xml changes, flush the host and the worker caches, restart
    the worker, reload the host php-fpm masters after a module link changes.
-4. Run the gate against the worker's own host name with the attribution module
-   enabled in the worker:
+4. Turn on Allow Request Override and Strict Mode (Catalog > Catalog > Catalog
+   Storefront Document Store), then run the gate:
 
    ```sh
-   GC_WORKER_CONTAINER=<worker container> \
-     php packages/magento2-GraphCommerce_CatalogStorefront/dev/parity/run.php https://<worker host>/graphql
+   bin/magento catalog-storefront:parity https://<host>/graphql
    ```
 
-   It runs every query on the core path and the document path, warms each
-   query twice, and reports per query: `PASS`, `DIFF` with the differing fields,
-   `SQL` with the statements the document path ran (a failure), `WRITE` for a
-   write (printed, allowed). `GC_PARITY_DUMP=<dir>` keeps both responses.
+   It runs every query on the core path and the document path (the
+   `X-Catalog-Storefront` header picks the path per request), warms each query
+   twice, and reports per query: `PASS`, `DIFF` with the differing fields, `SQL`
+   with the statements the document path ran (a failure), `FALLBACK` with the
+   reason a plugin handed a field to core (printed), `WRITE` for a write
+   (printed, allowed). `--dump=<dir>` keeps both responses. A query file sends
+   its own headers through `# @header Content-Currency: EUR` lines.
 5. A `DIFF` is yours to explain: match core byte for byte, or document the
    deviation in CLAUDE.md under known deviations with the reason. A `SQL` line
    means a lookup escaped: find the resolver in the statement's stack through
    `dev/attribution/run.sh`, which prints the resolver classes and their SQL
-   per request.
+   per request. A `FALLBACK` line on a field you serve means the document
+   lacks what the field needs: put it on the document.
 6. Poison test one field: edit its value in the document, request it, see the
    edited value. The gate proves equality, not that the document is the source.
 
 ## Checklist
 
-- No SQL on the request path, fallback to `$proceed` only.
+- No SQL on the request path, fallback to `$proceed` only, reported through `Strict`.
 - Every `using` field returned by every provider row.
 - Arrays on the product document bounded per product; unbounded data is an entity.
 - Fields registered: `prefilledFields`, and `baseFields` or `fieldDocumentKeys`.

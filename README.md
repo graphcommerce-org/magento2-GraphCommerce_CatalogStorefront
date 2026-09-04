@@ -6,11 +6,35 @@ The feeds (products, prices, inventory, variants, reviews, categories, attribute
 are computed by the maintained exporter modules as ordinary Magento indexers. This
 package implements the delivery seam (`ExportFeedInterface`) to assemble the feed
 slices into one product document per store view in OpenSearch, and serves catalog
-GraphQL reads from those documents. A request runs no SQL of its own; any miss falls
-back to the core resolver.
+GraphQL reads from those documents. A request runs no SQL of its own for catalog
+data; any miss falls back to the core resolver.
 
-Configured under Stores > Configuration > Catalog > Catalog > Catalog Storefront Document
-Store: storefront indexing, serving GraphQL from documents, and search term recording.
+## Requirements
+
+- Mage-OS or Magento Open Source 2.4.7 or later, with OpenSearch as the configured
+  search engine. The document store uses the same connection (Stores > Configuration
+  > Catalog > Catalog Search) through core's OpenSearch client. Elasticsearch is not
+  supported.
+- `magento/commerce-data-export` 103.4 or later. Adobe publishes it on
+  repo.magento.com. Mage-OS keeps a fork at
+  [mage-os/mageos-commerce-data-export](https://github.com/mage-os/mageos-commerce-data-export)
+  (and a mirror, `mage-os/mirror-commerce-data-export`), both updated on 3 September
+  2026; its modules are not on repo.mage-os.org yet, so an install without Adobe keys
+  clones the fork and adds its module directories as composer `path` repositories,
+  as the CI workflow does.
+
+## Settings
+
+Stores > Configuration > Catalog > Catalog > Catalog Storefront Document Store:
+
+| Setting | Effect |
+| --- | --- |
+| Enable Storefront Indexing | The feeds are written into the document store as they export. |
+| Serve GraphQL From Documents | Per store view: catalog GraphQL reads come from documents. |
+| Allow Request Override | A request picks its own path with the `X-Catalog-Storefront` header: `documents` or `core`. For test environments, the admin API explorer and the parity gate. The path is a factor of the response cache id and of the resolver result cache keys. |
+| Strict Mode | A request reports its path, every fallback to core with its reason and every SQL statement under `extensions.catalogStorefront` of the GraphQL response. Test environments only: the report exposes statements. |
+| Record Search Terms | Off by default: the search terms report and the suggestions stop updating, the request path stops writing. |
+| Index Prefix | The indices are named prefix, entity and store view code, for example `catalog_storefront_product_default`. |
 
 ## Modules
 
@@ -23,9 +47,11 @@ to the `*GraphQl` ones.
 | --- | --- |
 | `GraphCommerce_CatalogStorefrontApi` | The contracts: document stores, feed writers, document fields, product documents, price ranges |
 | `GraphCommerce_CatalogStorefrontGraphQlApi` | The GraphQL contracts: prefillers, hydration |
-| `GraphCommerce_CatalogStorefrontOpenSearch` | The document stores on OpenSearch |
-| `GraphCommerce_CatalogStorefront` | Feed delivery, documents to models, price ranges, metadata readers, plugins on non-GraphQL core |
-| `GraphCommerce_CatalogStorefrontGraphQl` | Listings and layered navigation, categories, media, URL rewrites, custom attributes, linked products, prices |
+| `GraphCommerce_CatalogStorefrontOpenSearch` | The document stores on OpenSearch, through core's client |
+| `GraphCommerce_CatalogStorefront` | Feed delivery, documents to models, price ranges and display prices, metadata readers, strict mode, plugins on non-GraphQL core |
+| `GraphCommerce_CatalogStorefrontGraphQl` | Listings and layered navigation, categories, media, URL rewrites, custom attributes, linked products, prices, the request path, the parity command |
+| `GraphCommerce_CatalogStorefrontWorker` | What a persistent PHP worker keeps between requests: kept schemas, validated documents, the tax, customer group and currency rate memos, each lifted by a cache generation. Only for FrankenPHP worker mode. |
+| `GraphCommerce_CatalogStorefrontExplorer` | The path switcher in the MageOS_GraphQLAdminHtml API explorer |
 | `GraphCommerce_CatalogStorefrontInventory` / `...InventoryGraphQl` | The stock slice / stock status, only_x_left_in_stock, quantity, min and max sale qty |
 | `GraphCommerce_CatalogStorefrontConfigurableProduct` / `...ConfigurableProductGraphQl` | Variants and the configurable range / configurable options, variants, options selection |
 | `GraphCommerce_CatalogStorefrontBundleProduct` / `...BundleProductGraphQl` | Bundle feed fields and the bundle range / bundle items, price details |
@@ -35,7 +61,8 @@ to the `*GraphQl` ones.
 
 Each module depends only on the core modules it plugs into. Enable the ones the
 shop's product types and features need, plus the two Api modules, OpenSearch, the base
-and the GraphQl module.
+and the GraphQl module. The Worker module belongs on a FrankenPHP worker deployment
+only; under php-fpm it costs a cache read per request and keeps nothing.
 
 ## Folders
 
@@ -49,9 +76,21 @@ Inside a module the folders name the stage of the pipeline:
   hands it to the `Writer/` of that feed; `Field/` classes compute product document
   fields the feed lacks.
 - `Model/Read/`: the request side any frontend shares: product documents to models,
-  the price ranges, the metadata readers.
+  the price ranges, the display prices, the metadata readers.
 - In a GraphQl module: `Model/DocumentHydration` and `Model/Prefill/`, `Plugin/Resolver/`,
   `Plugin/DataProvider/`, `Plugin/Layer/`, `Plugin/Query/`.
+
+## Prices
+
+The price feed rows are stored per customer group id, next to a nested price index
+with one entry per customer group (regular and final price, base currency, before tax)
+that the composite price aggregations run over: the mapping holds three fields
+whatever the number of customer groups. The display currency and the taxes are applied
+at request time the way core's price classes and tax adjustment apply them, through
+core's own tax service; the Worker module keeps its rate lookups between requests.
+Fixed product taxes are not answered. A customer group created after a price row was
+exported gets its index entry when the row exports again: truncate the prices feed
+table and reindex it.
 
 ## Extending
 
@@ -61,10 +100,12 @@ A module registers its parts through di.xml:
 - `fields` on the products writer: a `ProductDocumentFieldInterface` per computed field.
 - `prefillers` on the GraphQl module's `Model\DocumentHydration`: a `PrefillerInterface` fills fields on
   the product value from the model and the document, so the executor returns them
-  without a resolver call. List the fields under `prefilledFields` on `ReuseSchema`.
+  without a resolver call. List the fields under `prefilledFields` on
+  `Plugin\Query\RoutePrefilledFields`.
 - `ranges` on `Model\Read\PriceRanges`: a `PriceRangeInterface` per product type id.
 - `fieldDocumentKeys` and `baseFields` on the hydration tell a listing fetch which
   document keys a field needs.
+- `mappings` on `EntityMappings`: the fields of an entity that filter, sort or aggregate.
 
 Another search engine implements the two storage interfaces of the Api module and
 sets the preferences in its own di.xml, as the OpenSearch module does.
@@ -72,6 +113,29 @@ sets the preferences in its own di.xml, as the OpenSearch module does.
 `docs/skills/catalog-storefront-compatibility/SKILL.md` is the guide for a module that
 adds catalog data: what to build at index time and at request time, and how to prove
 it with the parity gate. It is written to be loaded as a skill by an LLM.
+
+## Parity gate
+
+```sh
+bin/magento catalog-storefront:parity https://shop.example/graphql
+```
+
+runs every query in `dev/parity/queries/` (or `--queries=<dir>`) against the core path
+and the document path, picked per request with the `X-Catalog-Storefront` header, and
+diffs the responses. It needs Allow Request Override on; with Strict Mode on it also
+fails a document-path query that ran a SQL lookup and prints its fallbacks and writes.
+`--dump=<dir>` keeps both responses of every query. A query file sends its own request
+headers through `# @header Content-Currency: EUR` comment lines. See `CLAUDE.md` for the
+operating notes, the fixtures the query set needs and the known deviations.
+
+## Tests
+
+`phpunit.xml.dist` runs the unit tests of every module against the Magento
+installation that holds the package (`MAGENTO_ROOT`, else the project two levels up).
+`.github/workflows/ci.yml` runs them on a fresh Mage-OS install through the
+[graycore actions](https://github.com/graycoreio/github-actions-magento2), then installs
+the sample data and OpenSearch, exports the feeds and runs the parity gate in three price
+setups: excluding tax, catalog prices including tax, both prices displayed.
 
 ## Development install
 
@@ -87,10 +151,9 @@ bin/magento setup:upgrade --keep-generated
 bin/magento setup:di:compile
 ```
 
-Then add the `catalog-store-front` connection block to `app/etc/env.php` (see
-`src/CatalogStorefrontOpenSearch/Model/Client/Config.php` for the keys), run the
-commerce-data-export indexers, and turn on Serve GraphQL From Documents. A composer install from the
-package registers every module through its autoload instead of the links.
+Then run the commerce-data-export indexers and turn on Serve GraphQL From Documents. A
+composer install from the package registers every module through its autoload instead
+of the links.
 
 ## Ideas and to do
 
@@ -102,39 +165,39 @@ package registers every module through its autoload instead of the links.
    base modules. The price rendering goes through the pricing system, so it needs its
    own document-backed price providers.
 3. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
-4. **REST integration.** The product repository and the search API behind the same
+4. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
+   listing needs a gate of its own: the rendered listing and product page on both
+   paths, so an integrator proves an extension on every surface it touches.
+5. **REST integration.** The product repository and the search API behind the same
    document models, for headless setups that read the catalog over REST.
-5. **Split writer and reader deployments.** A minimal Mage-OS installation that only
+6. **Split writer and reader deployments.** A minimal Mage-OS installation that only
    holds the read side, distributed close to the shoppers. Reads need no catalog tables,
    but a Magento bootstrap still needs a database and a cache for configuration, stores
    and EAV metadata, so this is a read replica plus a local cache per region, with the
    writers and the feeds in one place.
-6. **The router at the edge.** The `route` query and the URL rewrite lookup still read
+7. **The router at the edge.** The `route` query and the URL rewrite lookup still read
    the database. A URL rewrite read model next to the documents, with redirects and
    custom URLs, and products and categories queryable by url path, brings the whole
    router to the read side.
-7. **Write conflicts under parallel feeds.** A retry on version conflict for the bulk
+8. **Write conflicts under parallel feeds.** A retry on version conflict for the bulk
    updates, and a re-read for the writers that merge into a stored document (prices,
    variants, composite links), so parallel feed threads cannot lose an update.
-8. **Category attributes on the category documents.** Custom category attributes such
-   as SEO fields fall back to the database; a category attributes slice like the
-   product one serves them.
-9. **More price display setups.** Prices are served only with the base currency, prices
-    excluding tax and no fixed product taxes. Currency conversion and tax-inclusive
-    display can be computed at read time from the same rows.
-10. **Strict mode for test environments.** A setting that reports a fallback to the
-    database instead of taking it silently, so a missing document or an unserved field
-    shows up outside the parity harness.
-11. **Search term analytics as its own concern.** Recording is off by default; when
+9. **A rebuild command.** `indexer:reindex` skips unchanged feed rows, so a repair
+   of the document store truncates the feed tables and drops the indices by hand. One
+   command that rebuilds an entity into a fresh index and switches over when it is
+   complete.
+10. **Category attributes on the category documents.** Custom category attributes such
+    as SEO fields fall back to the database; a category attributes slice like the
+    product one serves them.
+11. **Fixed product taxes.** The last price display setup that falls back to core.
+    The weee amounts per product travel on the document; the read side adds them the
+    way the weee adjustment does.
+12. **Composite ranges per child tax class.** A configurable or grouped range is taxed
+    with the parent's tax class; core taxes each child with its own. The child's tax
+    class on the price index makes the aggregation exact.
+13. **Search term analytics as its own concern.** Recording is off by default; when
     search analytics comes back it belongs off the request path, in a queue or the
     search engine's own logs.
-12. **Package publishing.** One `composer.json` per module directory and a subtree split, so the
-    modules install separately while the repository stays one.
-
-## Parity
-
-`dev/parity/run.php <endpoint>` runs every query in `dev/parity/queries/` against the
-database path and the document path, diffs the responses and, with the attribution
-module (`dev/attribution/Module`, linked as `GraphCommerce_CatalogStorefrontAttribution`)
-enabled in the worker, fails a document-path query that runs a SQL lookup. See
-`CLAUDE.md` for the operating notes and the known deviations.
+14. **Package publishing.** One `composer.json` per module directory and a subtree split,
+    so the modules install separately while the repository stays one, and the GraphQL
+    and MSI requirements move to the modules that need them.

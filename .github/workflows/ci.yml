@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # The pure classes: price semantics, ranges, mappings, routing, memos. Needs a Magento vendor
+  # directory for the autoloader and the mocked core classes, nothing installed.
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: graycoreio/github-actions-magento2/supported-version@v8
+        id: version
+        with:
+          project: mage-os
+          kind: latest
+          include_services: 'false'
+      - uses: graycoreio/github-actions-magento2/setup-magento@v8
+        with:
+          php-version: ${{ fromJson(steps.version.outputs.matrix).include[0].php }}
+          magento_version: ${{ fromJson(steps.version.outputs.matrix).include[0].magento }}
+          mode: extension
+      - name: Install the exporter and this package into the Magento project
+        working-directory: _ghamagento
+        run: |
+          git clone --depth 1 https://github.com/mage-os/mageos-commerce-data-export.git ../_cde
+          composer config repositories.cde path '../_cde/*'
+          composer config repositories.package path '..'
+          composer config minimum-stability dev
+          composer config prefer-stable true
+          composer require --no-update magento/module-data-exporter:'*' magento/module-catalog-data-exporter:'*' \
+            magento/module-product-price-data-exporter:'*' magento/module-inventory-data-exporter:'*' \
+            magento/module-configurable-product-data-exporter:'*' magento/module-bundle-product-data-exporter:'*' \
+            magento/module-product-review-data-exporter:'*' graphcommerce/magento-catalog-storefront:'*'
+          composer install --no-interaction --no-progress
+      - name: Unit tests
+        run: MAGENTO_ROOT=_ghamagento _ghamagento/vendor/bin/phpunit -c phpunit.xml.dist
+
+  # The parity gate: a MageOS install with sample data and OpenSearch, the feeds exported into the
+  # document store, every query of dev/parity/queries on both paths, in the three price setups.
+  parity:
+    runs-on: ubuntu-latest
+    needs: unit
+    strategy:
+      fail-fast: false
+      matrix:
+        prices:
+          - name: excluding-tax
+            set: ''
+          - name: including-tax
+            set: 'tax/display/type=2 tax/calculation/price_includes_tax=1 tax/defaults/country=NL'
+          - name: display-both
+            set: 'tax/display/type=3'
+    name: parity (${{ matrix.prices.name }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: graycoreio/github-actions-magento2/supported-version@v8
+        id: version
+        with:
+          project: mage-os
+          kind: latest
+          service_preferences: opensearch,redis
+      - uses: graycoreio/github-actions-magento2/setup-magento@v8
+        with:
+          php-version: ${{ fromJson(steps.version.outputs.matrix).include[0].php }}
+          magento_version: ${{ fromJson(steps.version.outputs.matrix).include[0].magento }}
+          mode: extension
+      - name: Install the exporter, the sample data and this package
+        working-directory: _ghamagento
+        run: |
+          git clone --depth 1 https://github.com/mage-os/mageos-commerce-data-export.git ../_cde
+          composer config repositories.cde path '../_cde/*'
+          composer config repositories.package path '..'
+          composer config minimum-stability dev
+          composer config prefer-stable true
+          composer require --no-update magento/module-data-exporter:'*' magento/module-catalog-data-exporter:'*' \
+            magento/module-product-price-data-exporter:'*' magento/module-inventory-data-exporter:'*' \
+            magento/module-configurable-product-data-exporter:'*' magento/module-bundle-product-data-exporter:'*' \
+            magento/module-product-review-data-exporter:'*' graphcommerce/magento-catalog-storefront:'*' \
+            mage-os/module-catalog-sample-data:'*' mage-os/module-configurable-sample-data:'*' \
+            mage-os/module-bundle-sample-data:'*' mage-os/module-grouped-product-sample-data:'*' \
+            mage-os/module-downloadable-sample-data:'*' mage-os/module-review-sample-data:'*' \
+            mage-os/module-catalog-rule-sample-data:'*' mage-os/module-swatches-sample-data:'*' \
+            mage-os/module-tax-sample-data:'*' mage-os/module-customer-sample-data:'*' \
+            mage-os/module-product-links-sample-data:'*' mage-os/module-msrp-sample-data:'*' \
+            mage-os/module-cms-sample-data:'*' mage-os/module-widget-sample-data:'*' \
+            mage-os/module-theme-sample-data:'*' mage-os/module-sales-rule-sample-data:'*' \
+            mage-os/module-offline-shipping-sample-data:'*' mage-os/sample-data-media:'*'
+          composer install --no-interaction --no-progress
+      - uses: graycoreio/github-actions-magento2/setup-install@v8
+        with:
+          working-directory: _ghamagento
+          search-engine: opensearch
+          services: ${{ toJson(fromJson(steps.version.outputs.matrix).include[0].services) }}
+      - name: Configure and export the feeds
+        working-directory: _ghamagento
+        run: |
+          bin/magento config:set catalog/storefront_documents/index_enabled 1
+          bin/magento config:set catalog/storefront_documents/request_override 1
+          bin/magento config:set catalog/storefront_documents/strict 1
+          bin/magento config:set dev/graphql/disable_session 1
+          for pair in ${{ matrix.prices.set }}; do bin/magento config:set "${pair%%=*}" "${pair#*=}"; done
+          bin/magento cache:flush
+          bin/magento indexer:reindex
+          php -S 127.0.0.1:8080 -t pub pub/index.php > php-server.log 2>&1 &
+          sleep 3
+      - name: Parity gate
+        working-directory: _ghamagento
+        run: bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql --warm=1

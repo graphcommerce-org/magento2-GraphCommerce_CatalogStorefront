@@ -5,6 +5,7 @@ namespace GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Plugin\Resol
 
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\HydrationInterface;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 use Magento\ConfigurableProductGraphQl\Model\Resolver\Options;
 use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
@@ -16,6 +17,11 @@ use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
  */
 class ConfigurableOptionsFromDocument
 {
+    public function __construct(
+        private readonly Strict $strict,
+    ) {
+    }
+
 
     public function aroundResolve(
         Options $subject,
@@ -27,10 +33,12 @@ class ConfigurableOptionsFromDocument
         ?array $args = null
     ) {
         $document = ($value['model'] ?? null)?->getData(HydrationInterface::DOCUMENT_KEY);
-        if (!is_array($document)
-            || ($value['type_id'] ?? null) !== Configurable::TYPE_CODE
-            || !isset($document['configurableOptions'])
-        ) {
+        if (!is_array($document) || ($value['type_id'] ?? null) !== Configurable::TYPE_CODE) {
+            return $proceed($field, $context, $info, $value, $args);
+        }
+        if (!isset($document['configurableOptions'])) {
+            $this->strict->fallback(self::class, 'configurable document without configurableOptions');
+
             return $proceed($field, $context, $info, $value, $args);
         }
 

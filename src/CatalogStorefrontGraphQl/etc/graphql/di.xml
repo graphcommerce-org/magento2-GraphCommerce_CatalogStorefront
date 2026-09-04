@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\GraphQlCache\Model\CacheId\CacheIdCalculator">
+        <arguments>
+            <argument name="idFactorProviders" xsi:type="array">
+                <item name="catalog_storefront" xsi:type="object">GraphCommerce\CatalogStorefrontGraphQl\Model\Cache\ModeFactor</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="Magento\GraphQlResolverCache\Model\Resolver\Result\CacheKey\Calculator\Provider">
+        <arguments>
+            <argument name="factorProviders" xsi:type="array">
+                <item name="Magento\CatalogGraphQl\Model\Resolver\Product\MediaGallery" xsi:type="array">
+                    <item name="catalog_storefront" xsi:type="string">GraphCommerce\CatalogStorefrontGraphQl\Model\Cache\ModeFactor</item>
+                </item>
+            </argument>
+        </arguments>
+    </type>
+</config>

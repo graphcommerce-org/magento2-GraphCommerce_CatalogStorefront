@@ -10,7 +10,7 @@ use Magento\ConfigurableProductGraphQl\Model\Resolver\ConfigurableVariant;
 use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Query\Resolver\ContextInterface;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
-use Psr\Log\LoggerInterface;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 
 /**
  * Serves a configurable product's variants from the documents of its
@@ -24,7 +24,7 @@ class VariantsFromDocuments
     public function __construct(
         private readonly HydrationInterface $hydration,
         private readonly StockConfigurationInterface $stockConfiguration,
-        private readonly LoggerInterface $logger,
+        private readonly Strict $strict,
     ) {
     }
 
@@ -76,7 +76,7 @@ class VariantsFromDocuments
                 ];
             }
         } catch (\Throwable $e) {
-            $this->logger->warning('catalog-storefront variants fallback: ' . $e->getMessage());
+            $this->strict->exception(self::class, $e);
 
             return $proceed($field, $context, $info, $value, $args);
         }

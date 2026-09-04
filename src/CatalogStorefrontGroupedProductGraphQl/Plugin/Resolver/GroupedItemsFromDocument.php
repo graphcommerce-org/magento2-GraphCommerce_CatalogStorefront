@@ -9,7 +9,7 @@ use Magento\Framework\GraphQl\Query\Resolver\ContextInterface;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
 use Magento\GroupedProduct\Model\Product\Type\Grouped;
 use Magento\GroupedProductGraphQl\Model\Resolver\GroupedItems;
-use Psr\Log\LoggerInterface;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 
 /**
  * Serves a grouped product's items from the option slice of its document and
@@ -21,7 +21,7 @@ class GroupedItemsFromDocument
 {
     public function __construct(
         private readonly HydrationInterface $hydration,
-        private readonly LoggerInterface $logger,
+        private readonly Strict $strict,
     ) {
     }
 
@@ -71,7 +71,7 @@ class GroupedItemsFromDocument
             }
             usort($items, static fn(array $a, array $b) => [$a['position'], $a['sku']] <=> [$b['position'], $b['sku']]);
         } catch (\Throwable $e) {
-            $this->logger->warning('catalog-storefront grouped items fallback: ' . $e->getMessage());
+            $this->strict->exception(self::class, $e);
 
             return $proceed($field, $context, $info, $value, $args);
         }

@@ -7,7 +7,7 @@ use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
 use Magento\Catalog\Model\Layer\Filter\Price\Range;
 use Magento\Catalog\Model\Layer\Resolver as LayerResolver;
 use Magento\Framework\Registry;
-use Psr\Log\LoggerInterface;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 
 /**
  * The price facet's step comes from the current category's document (the
@@ -20,7 +20,7 @@ class PriceRangeStepFromDocument
         private readonly MetadataDocumentStorageInterface $storage,
         private readonly LayerResolver $layerResolver,
         private readonly Registry $registry,
-        private readonly LoggerInterface $logger,
+        private readonly Strict $strict,
     ) {
     }
 
@@ -32,10 +32,11 @@ class PriceRangeStepFromDocument
         try {
             $document = $this->storage->get('category', $store->getCode(), [$categoryId], ['filterPriceRange'])[$categoryId] ?? null;
         } catch (\Throwable $e) {
-            $this->logger->warning('catalog-storefront price step fallback: ' . $e->getMessage());
+            $this->strict->exception(self::class, $e);
             $document = null;
         }
         if ($document === null || !array_key_exists('filterPriceRange', $document)) {
+            $this->strict->fallback(self::class, 'category document without filterPriceRange');
             return $proceed();
         }
 

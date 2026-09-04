@@ -44,6 +44,16 @@
     <type name="Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\RootCategoryProvider">
         <plugin name="graphcommerce_catalog_storefront_root_category" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Layer\RootCategoryFromStore"/>
     </type>
+    <type name="Magento\Framework\Console\CommandListInterface">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="catalog_storefront_parity" xsi:type="object">GraphCommerce\CatalogStorefrontGraphQl\Console\Command\Parity</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="Magento\Framework\GraphQl\Query\QueryProcessor">
+        <plugin name="graphcommerce_catalog_storefront_strict_report" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query\StrictReport"/>
+    </type>
     <type name="Magento\Framework\GraphQl\Schema\SchemaGeneratorInterface">
         <plugin name="graphcommerce_catalog_storefront_route_prefilled_fields" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query\RoutePrefilledFields" sortOrder="20"/>
     </type>

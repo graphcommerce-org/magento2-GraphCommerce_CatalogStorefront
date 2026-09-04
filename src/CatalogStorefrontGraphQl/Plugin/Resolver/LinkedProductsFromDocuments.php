@@ -11,7 +11,7 @@ use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Query\Resolver\BatchResponse;
 use Magento\Framework\GraphQl\Query\Resolver\ContextInterface;
 use Magento\RelatedProductGraphQl\Model\Resolver\Batch\AbstractLikedProducts;
-use Psr\Log\LoggerInterface;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 
 /**
  * Serves related_products, upsell_products and crosssell_products from the
@@ -35,7 +35,7 @@ class LinkedProductsFromDocuments
         private readonly HydrationInterface $hydration,
         private readonly ProductDocumentStorageInterface $storage,
         private readonly Visibility $visibility,
-        private readonly LoggerInterface $logger,
+        private readonly Strict $strict,
     ) {
     }
 
@@ -89,7 +89,7 @@ class LinkedProductsFromDocuments
                 }
             }
         } catch (\Throwable $e) {
-            $this->logger->warning('catalog-storefront linked products fallback: ' . $e->getMessage());
+            $this->strict->exception(self::class, $e);
 
             return $proceed($context, $field, $requests);
         }

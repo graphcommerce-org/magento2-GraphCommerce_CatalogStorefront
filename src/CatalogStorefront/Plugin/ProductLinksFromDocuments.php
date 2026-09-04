@@ -9,7 +9,7 @@ use Magento\Catalog\Api\Data\ProductLinkInterfaceFactory;
 use Magento\Catalog\Model\ProductLink\Data\ListCriteria;
 use Magento\Catalog\Model\ProductLink\Data\ListResult;
 use Magento\Catalog\Model\ProductLink\ProductLinkQuery;
-use Psr\Log\LoggerInterface;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 
 /**
  * Answers the product links service contract, which the product_links field
@@ -26,7 +26,7 @@ class ProductLinksFromDocuments
     public function __construct(
         private readonly ProductDocumentStorageInterface $storage,
         private readonly ProductLinkInterfaceFactory $productLinkFactory,
-        private readonly LoggerInterface $logger,
+        private readonly Strict $strict,
     ) {
     }
 
@@ -103,7 +103,7 @@ class ProductLinksFromDocuments
                 $results[] = new ListResult($list, null);
             }
         } catch (\Throwable $e) {
-            $this->logger->warning('catalog-storefront product links fallback: ' . $e->getMessage());
+            $this->strict->exception(self::class, $e);
 
             return $proceed($criteria);
         }

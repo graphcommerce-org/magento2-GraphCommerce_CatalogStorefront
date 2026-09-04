@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontGraphQl\Model;
 
-use GraphCommerce\CatalogStorefront\Model\Config;
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
 use GraphCommerce\CatalogStorefrontApi\Storage\ProductDocumentStorageInterface;
@@ -17,7 +16,7 @@ use Magento\Framework\Api\SearchResultsInterface;
 use Magento\GraphQl\Model\Query\ContextInterface;
 use Magento\Store\Api\Data\StoreInterface;
 use Magento\Store\Model\StoreManagerInterface;
-use Psr\Log\LoggerInterface;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 
 /**
  * The product models of a GraphQL query: built from documents and run
@@ -35,12 +34,12 @@ class DocumentHydration implements HydrationInterface
     public function __construct(
         private readonly ProductDocumentsInterface $products,
         private readonly ProductDocumentStorageInterface $storage,
-        private readonly Config $config,
+        private readonly Mode $mode,
         private readonly ProductSearchResultsInterfaceFactory $searchResultsFactory,
         private readonly StoreManagerInterface $storeManager,
         private readonly CustomerSession $customerSession,
         private readonly ProductPrice $productPrice,
-        private readonly LoggerInterface $logger,
+        private readonly Strict $strict,
         private readonly array $prefillers = [],
         private readonly array $fieldDocumentKeys = [],
         private readonly array $baseFields = [],
@@ -50,7 +49,7 @@ class DocumentHydration implements HydrationInterface
 
     public function enabled(): bool
     {
-        return $this->config->serveGraphQl();
+        return $this->mode->documents();
     }
 
     public function groupKey(?ContextInterface $context): string
@@ -96,12 +95,14 @@ class DocumentHydration implements HydrationInterface
             $items = [];
             foreach ($ids as $id) {
                 if (!isset($models[$id])) {
+                    $this->strict->fallback(self::class, 'no document for product ' . $id);
+
                     return null;
                 }
                 $items[$id] = $models[$id];
             }
         } catch (\Throwable $e) {
-            $this->logger->warning('catalog-storefront read fallback: ' . $e->getMessage());
+            $this->strict->exception(self::class, $e);
 
             return null;
         }
