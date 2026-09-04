@@ -46,6 +46,7 @@ passes.
   attributes and linked products, the layered navigation plugins, the cache id
   memo, the schema and validation plugins.
 - `CatalogStorefrontInventory` / `...InventoryGraphQl`: the stock feed writer
+  (a stock's rows land on the store views of the websites it sells through)
   and stock item feed fields / the stock prefiller (the MSI source item
   management service says which types own a quantity).
 - `CatalogStorefrontConfigurableProduct` / `...ConfigurableProductGraphQl`: the
@@ -370,9 +371,6 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   `product_count` is the count at export time; `default_sort_by` is the
   feed's resolved value where core returns the unset attribute. A grouped
   item's `qty` follows the link attribute; core answers 1 on some queries.
-- The inventory feed is written to every store view regardless of stock id.
-  Multi-source setups with a stock per website need the stock id mapped to its
-  website's store views.
 - A product with many reviews carries one small entry per review in its
   document; the aggregate is computed on read.
 - The metadata reads (attributes, ratings) page through the index in steps of

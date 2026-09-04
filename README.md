@@ -105,28 +105,26 @@ package registers every module through its autoload instead of the links.
    but a Magento bootstrap still needs a database and a cache for configuration, stores
    and EAV metadata, so this is a read replica plus a local cache per region, with the
    writers and the feeds in one place.
-6. **Route resolution from documents.** The `route` query and the URL rewrite lookup
-   still read the database. The documents carry the URL rewrites of a product; the
-   category and CMS routes need a small route index next to them.
+6. **The router at the edge.** The `route` query and the URL rewrite lookup still read
+   the database. A URL rewrite read model next to the documents, with redirects and
+   custom URLs, and products and categories queryable by url path, brings the whole
+   router to the read side.
 7. **Write conflicts under parallel feeds.** A retry on version conflict for the bulk
    updates, and a re-read for the writers that merge into a stored document (prices,
    variants, composite links), so parallel feed threads cannot lose an update.
 8. **Category attributes on the category documents.** Custom category attributes such
    as SEO fields fall back to the database; a category attributes slice like the
    product one serves them.
-9. **Stock per website.** The stock slice is written to every store view regardless of
-   stock id. Multi-source setups with a stock per website need the stock id mapped to
-   its store views.
-10. **More price display setups.** Prices are served only with the base currency, prices
+9. **More price display setups.** Prices are served only with the base currency, prices
     excluding tax and no fixed product taxes. Currency conversion and tax-inclusive
     display can be computed at read time from the same rows.
-11. **Strict mode for test environments.** A setting that reports a fallback to the
+10. **Strict mode for test environments.** A setting that reports a fallback to the
     database instead of taking it silently, so a missing document or an unserved field
     shows up outside the parity harness.
-12. **Search term analytics as its own concern.** Recording is off by default; when
+11. **Search term analytics as its own concern.** Recording is off by default; when
     search analytics comes back it belongs off the request path, in a queue or the
     search engine's own logs.
-13. **Publishing.** One `composer.json` per module directory and a subtree split, so the
+12. **Package publishing.** One `composer.json` per module directory and a subtree split, so the
     modules install separately while the repository stays one.
 
 ## Parity
