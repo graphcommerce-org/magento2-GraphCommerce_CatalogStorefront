@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Model\Read;
 
+use GraphCommerce\CatalogStorefrontApi\Read\Amount;
 use Magento\Catalog\Helper\Data as CatalogHelper;
 use Magento\Catalog\Model\Product;
 use Magento\CatalogInventory\Api\StockConfigurationInterface;
@@ -18,7 +19,8 @@ use Magento\Weee\Helper\Data as WeeeHelper;
  * unrounded, a discounted price rounded), then taxed the way the tax
  * adjustment taxes (the price including tax whenever catalog prices include
  * tax or the display does; core's tax service answers for the request's
- * customer and destination). Fixed product taxes are not answered.
+ * customer and destination with the product's tax class). Fixed product
+ * taxes are not answered.
  */
 class DisplayPrice
 {
@@ -42,54 +44,63 @@ class DisplayPrice
     }
 
     /**
-     * The display amount of a regular price, or of a final price that equals it.
+     * The display amount of a base price: rounded after conversion when it is
+     * a discounted price, as the special, tier and rule prices are.
      */
-    public function regular(float $base, Product $product, StoreInterface $store): float
+    public function amount(float $base, bool $discounted, Product $product, StoreInterface $store): Amount
     {
-        return $this->withTax((float)$this->priceCurrency->convert($base, $store), $product, $store);
-    }
-
-    /**
-     * The display amount of a final price: rounded after conversion when it
-     * is lower than the regular price, as the special, tier and rule prices
-     * are, the regular amount otherwise.
-     */
-    public function final(float $base, float $regularBase, Product $product, StoreInterface $store): float
-    {
-        return $base < $regularBase
-            ? $this->withTax((float)$this->priceCurrency->convertAndRound($base, $store), $product, $store)
-            : $this->regular($regularBase, $product, $store);
-    }
-
-    /**
-     * The tax the display amount carries: the difference to the amount
-     * without tax, zero when no tax applies.
-     */
-    public function taxAmount(float $displayAmount, Product $product, StoreInterface $store): float
-    {
+        $converted = $discounted
+            ? (float)$this->priceCurrency->convertAndRound($base, $store)
+            : (float)$this->priceCurrency->convert($base, $store);
         if ($this->taxHelper->priceIncludesTax($store)) {
-            return $displayAmount - (float)$this->catalogHelper->getTaxPrice($product, $displayAmount, false, null, null, null, $store, null, false);
+            $value = $this->taxPrice($converted, true, $product, $store);
+
+            return new Amount($value, $value - $this->taxPrice($converted, false, $product, $store));
+        }
+        if ($this->taxIncluded($store)) {
+            $value = $this->taxPrice($converted, true, $product, $store);
+
+            return new Amount($value, $value - $converted);
         }
 
-        return $this->taxIncluded($store) ? $displayAmount - $this->withoutTax($displayAmount, $product, $store) : 0.0;
+        return new Amount($converted);
+    }
+
+    public function regular(float $base, Product $product, StoreInterface $store): Amount
+    {
+        return $this->amount($base, false, $product, $store);
+    }
+
+    /**
+     * A final price below the regular price is a discounted price; one equal
+     * to it is the regular amount.
+     */
+    public function final(float $base, float $regularBase, Product $product, StoreInterface $store): Amount
+    {
+        return $base < $regularBase
+            ? $this->amount($base, true, $product, $store)
+            : $this->amount($regularBase, false, $product, $store);
+    }
+
+    /**
+     * A copy of the product that the tax service taxes with another class:
+     * a composite's child, taxed as core taxes the child's own amounts.
+     */
+    public function forTaxClass(Product $product, ?int $taxClassId): Product
+    {
+        $copy = clone $product;
+        $copy->setTaxClassId($taxClassId);
+
+        return $copy;
     }
 
     public function taxIncluded(StoreInterface $store): bool
     {
-        return $this->taxHelper->displayPriceIncludingTax($store) || $this->taxHelper->displayBothPrices($store);
+        return $this->taxHelper->displayPriceIncludingTax() || $this->taxHelper->displayBothPrices($store);
     }
 
-    private function withTax(float $amount, Product $product, StoreInterface $store): float
+    private function taxPrice(float $amount, bool $includingTax, Product $product, StoreInterface $store): float
     {
-        if (!$this->taxHelper->priceIncludesTax($store) && !$this->taxIncluded($store)) {
-            return $amount;
-        }
-
-        return (float)$this->catalogHelper->getTaxPrice($product, $amount, true, null, null, null, $store, null, false);
-    }
-
-    private function withoutTax(float $displayAmount, Product $product, StoreInterface $store): float
-    {
-        return (float)$this->catalogHelper->getTaxPrice($product, $displayAmount, false, null, null, null, $store, true, false);
+        return (float)$this->catalogHelper->getTaxPrice($product, $amount, $includingTax, null, null, null, $store, null, false);
     }
 }

@@ -213,11 +213,14 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   group, min and max of regular and final over salable and over all enabled
   children), the bundle selection documents by `bundleParentIds`, and the
   bundles' option slices. Every range is base currency before tax;
-  `Model/Read/DisplayPrice` converts it the way the price classes convert (the
-  regular price unrounded, a discounted final price rounded) and taxes it the
-  way the tax adjustment taxes (core's tax service, whenever catalog prices
-  include tax or the display does), so the same request path answers every
-  currency and tax display setup except fixed product taxes. A grouped range is the
+  each `PriceRangeInterface` turns it into display `Amount`s (value and tax)
+  through `Model/Read/DisplayPrice`, which converts the way the price classes
+  convert (the regular price unrounded, a discounted final price rounded) and
+  taxes the way the tax adjustment taxes (core's tax service with the
+  product's tax class, whenever catalog prices include tax or the display
+  does), so the same request path answers every currency and tax display
+  setup except fixed product taxes. The tax gate needs a rate at the store's
+  default destination: the demo catalog's only rule is Michigan (region 33). A grouped range is the
   lowest regular and lowest final child price, as core takes them; a bundle
   range is `Model/Read/BundlePriceRange`, a port of core's bundle amount
   calculator over the option slice and the selection documents.
@@ -396,10 +399,14 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
 
 - Prices are served in every currency and tax display setup except fixed
   product taxes, which fall back to core. A configurable or grouped range is
-  taxed with the parent's tax class; core taxes each child with its own. A
-  composite range in a non-base currency converts the aggregated base prices;
-  core converts and rounds each child, so a cent may differ where children
-  mix discounted and regular prices.
+  taxed with the parent's tax class; core taxes the regular price of each
+  child with the child's own class (its final price with the parent's). A
+  dynamic bundle's selections are taxed with the child's class, as core does;
+  the product document carries `taxClassId` for it. A composite range in a
+  non-base currency converts the aggregated base prices; core converts and
+  rounds each child, so a cent may differ where children mix discounted and
+  regular prices. The tier price discounts are computed against the regular
+  price before tax, as core's tier collection loads no tax class.
 - Grouped children with required customizable options are not excluded from
   the grouped range as core's associated products collection does. A fixed
   bundle with customizable options falls back to core, which adds their price

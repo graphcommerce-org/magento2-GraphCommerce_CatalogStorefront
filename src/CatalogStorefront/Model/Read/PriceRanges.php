@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Model\Read;
 
+use GraphCommerce\CatalogStorefrontApi\Read\Amount;
 use GraphCommerce\CatalogStorefrontApi\Read\DocumentContext;
 use GraphCommerce\CatalogStorefrontApi\Read\PriceRangeInterface;
 use Magento\Catalog\Model\Product;
@@ -22,11 +23,11 @@ class PriceRanges
     }
 
     /**
-     * @return float[]|null [minimum regular, minimum final, maximum regular, maximum final]
+     * @return Amount[]|null [minimum regular, minimum final, maximum regular, maximum final]
      */
     public function range(Product $product, array $document, DocumentContext $context, bool $showOutOfStock): ?array
     {
         return ($this->ranges[$product->getTypeId()] ?? null)
-            ?->range((int)$product->getId(), $document, $context, $showOutOfStock);
+            ?->range($product, $document, $context, $showOutOfStock);
     }
 }

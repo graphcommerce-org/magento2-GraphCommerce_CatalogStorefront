@@ -69,9 +69,9 @@ jobs:
           - name: excluding-tax
             set: ''
           - name: including-tax
-            set: 'tax/display/type=2 tax/calculation/price_includes_tax=1 tax/defaults/region=12 tax/defaults/postcode=90210'
+            set: 'tax/display/type=2 tax/calculation/price_includes_tax=1 tax/defaults/region=33 tax/defaults/postcode=48201'
           - name: display-both
-            set: 'tax/display/type=3 tax/defaults/region=12 tax/defaults/postcode=90210'
+            set: 'tax/display/type=3 tax/defaults/region=33 tax/defaults/postcode=48201'
         magento: ${{ fromJSON(needs.matrix.outputs.matrix).include }}
     name: parity (${{ matrix.prices.name }})
     runs-on: ${{ matrix.magento.os }}

@@ -32,7 +32,7 @@
         <arguments>
             <argument name="writers" xsi:type="array">
                 <item name="products" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Writer\Products</item>
-                <item name="catalog_data_exporter_product_prices" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Writer\Prices</item>
+                <item name="prices" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Writer\Prices</item>
                 <item name="categories" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Writer\Categories</item>
                 <item name="productAttributes" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Writer\Attributes</item>
             </argument>
@@ -42,6 +42,7 @@
         <arguments>
             <argument name="fields" xsi:type="array">
                 <item name="imageUrls" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Field\ImageUrls</item>
+                <item name="taxClassId" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Field\TaxClassId</item>
             </argument>
         </arguments>
     </type>

@@ -44,10 +44,10 @@ class DisplayPriceTest extends TestCase
         $display = $this->displayPrice(false, false, 1.0);
         $product = $this->createMock(Product::class);
         $store = $this->createMock(StoreInterface::class);
-        self::assertSame(10.0, $display->regular(10.0, $product, $store));
-        self::assertSame(8.0, $display->final(8.0, 10.0, $product, $store));
-        self::assertSame(10.0, $display->final(10.0, 10.0, $product, $store));
-        self::assertSame(0.0, $display->taxAmount(10.0, $product, $store));
+        self::assertSame(10.0, $display->regular(10.0, $product, $store)->value);
+        self::assertSame(8.0, $display->final(8.0, 10.0, $product, $store)->value);
+        self::assertSame(10.0, $display->final(10.0, 10.0, $product, $store)->value);
+        self::assertSame(0.0, $display->regular(10.0, $product, $store)->tax);
         self::assertFalse($display->taxIncluded($store));
     }
 
@@ -56,10 +56,11 @@ class DisplayPriceTest extends TestCase
         $display = $this->displayPrice(false, true, 0.5);
         $product = $this->createMock(Product::class);
         $store = $this->createMock(StoreInterface::class);
-        self::assertEqualsWithDelta(10.0 * 0.5 * 1.21, $display->regular(10.0, $product, $store), 1e-9);
+        $regular = $display->regular(10.0, $product, $store);
+        self::assertEqualsWithDelta(10.0 * 0.5 * 1.21, $regular->value, 1e-9);
+        self::assertEqualsWithDelta(10.0 * 0.5 * 0.21, $regular->tax, 1e-9);
         // A discounted price is rounded after conversion, the regular price is not.
-        self::assertEqualsWithDelta(round(7.777 * 0.5, 2) * 1.21, $display->final(7.777, 10.0, $product, $store), 1e-9);
-        self::assertEqualsWithDelta(6.05 - 6.05 / 1.21, $display->taxAmount(6.05, $product, $store), 1e-9);
+        self::assertEqualsWithDelta(round(7.777 * 0.5, 2) * 1.21, $display->final(7.777, 10.0, $product, $store)->value, 1e-9);
         self::assertTrue($display->taxIncluded($store));
     }
 
@@ -68,7 +69,8 @@ class DisplayPriceTest extends TestCase
         $display = $this->displayPrice(true, false, 1.0);
         $product = $this->createMock(Product::class);
         $store = $this->createMock(StoreInterface::class);
-        self::assertEqualsWithDelta(12.1, $display->regular(10.0, $product, $store), 1e-9);
-        self::assertEqualsWithDelta(12.1 - 12.1 / 1.21, $display->taxAmount(12.1, $product, $store), 1e-9);
+        $regular = $display->regular(10.0, $product, $store);
+        self::assertEqualsWithDelta(12.1, $regular->value, 1e-9);
+        self::assertEqualsWithDelta(12.1 - 10.0 / 1.21, $regular->tax, 1e-9);
     }
 }

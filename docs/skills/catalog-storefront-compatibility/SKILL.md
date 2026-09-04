@@ -105,8 +105,11 @@ copy the pattern, not the code.
   `CatalogStorefrontReviewGraphQl/Plugin/Resolver/ReviewsFromDocument`.
 - **A price range for a product type.** Implement
   `GraphCommerce\CatalogStorefrontApi\Read\PriceRangeInterface` and register it
-  under `ranges` on `Model\Read\PriceRanges` by type id. Example:
-  `CatalogStorefrontGroupedProduct/Model/Read/GroupedRange`.
+  under `ranges` on `Model\Read\PriceRanges` by type id. Compute in base
+  currency before tax from the price rows and the price index, then turn every
+  end into a display `Amount` through `Model\Read\DisplayPrice` (`regular`,
+  `final`, or `amount` with a child's tax class through `forTaxClass`).
+  Example: `CatalogStorefrontGroupedProduct/Model/Read/GroupedRange`.
 
 ## Module shape
 

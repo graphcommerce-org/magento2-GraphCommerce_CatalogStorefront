@@ -4,8 +4,11 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontBundleProduct\Model\Read;
 
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
+use GraphCommerce\CatalogStorefront\Model\Read\DisplayPrice;
+use GraphCommerce\CatalogStorefrontApi\Read\Amount;
 use GraphCommerce\CatalogStorefrontApi\Read\DocumentContext;
 use GraphCommerce\CatalogStorefrontApi\Read\PriceRangeInterface;
+use Magento\Catalog\Model\Product;
 
 /**
  * Bundle price range as core's bundle amount calculator derives it, from the
@@ -25,6 +28,10 @@ use GraphCommerce\CatalogStorefrontApi\Read\PriceRangeInterface;
  * for a fixed bundle, the child must be salable too, except for the maximum
  * of a multi-select option, which core sums without a stock filter.
  *
+ * A dynamic bundle's selections are display amounts each taxed with the
+ * child's own tax class, as core taxes each selection's amount; a fixed
+ * bundle's total is taxed as a whole with the bundle's class.
+ *
  * A fixed bundle with customizable options adds their price range in core
  * and is left to the core resolver.
  */
@@ -32,11 +39,14 @@ class BundlePriceRange implements PriceRangeInterface
 {
     public function __construct(
         private readonly ProductPrice $productPrice,
+        private readonly DisplayPrice $displayPrice,
     ) {
     }
 
-    public function range(int $productId, array $document, DocumentContext $context, bool $showOutOfStock): ?array
+    public function range(Product $product, array $document, DocumentContext $context, bool $showOutOfStock): ?array
     {
+        $productId = (int)$product->getId();
+        $store = $context->store;
         $priceData = $context->priceData();
         $groupKey = $context->groupKey;
         // The bundle's option slice and its selection documents (by sku: stock, priceIndex) travel with the price data.
@@ -88,25 +98,35 @@ class BundlePriceRange implements PriceRangeInterface
                 } else {
                     continue;
                 }
-                $selectionValues[$index][] = [
-                    'regular' => round($unitRegular, 4),
-                    'final' => round($unitFinal, 4),
-                    'qty' => (float)($value['qty'] ?? 1),
-                    'salable' => (bool)($child['stock']['isSalable'] ?? false),
-                ];
+                $qty = (float)($value['qty'] ?? 1);
+                if ($fixed) {
+                    $amounts = [
+                        'regular' => new Amount(round($unitRegular, 4) * $qty),
+                        'final' => new Amount(round($unitFinal, 4) * $qty),
+                    ];
+                } else {
+                    $childProduct = $this->displayPrice->forTaxClass($product, isset($child['taxClassId']) ? (int)$child['taxClassId'] : null);
+                    $unitRegular = round($unitRegular, 2);
+                    $unitFinal = round($unitFinal, 2);
+                    // Core rounds each selection's taxed amount to cents before it sums them.
+                    $rounded = static fn(Amount $amount): Amount => new Amount(round($amount->value, 2), round($amount->tax, 2));
+                    $amounts = [
+                        'regular' => $rounded($this->displayPrice->amount($unitRegular, false, $childProduct, $store)->times($qty)),
+                        'final' => $rounded($this->displayPrice->amount($unitFinal, $unitFinal < $unitRegular, $childProduct, $store)->times($qty)),
+                    ];
+                }
+                $selectionValues[$index][] = $amounts + ['salable' => (bool)($child['stock']['isSalable'] ?? false)];
             }
         }
 
-        $amount = static fn(array $selection, string $price): float =>
-            ($fixed ? $selection[$price] : round($selection[$price], 2)) * $selection['qty'];
-        $pick = static function (int $index, string $price, bool $lowest, bool $stockFilter) use ($selectionValues, $amount): ?float {
+        $pick = static function (int $index, string $price, bool $lowest, bool $stockFilter) use ($selectionValues): ?Amount {
             $best = null;
             foreach ($selectionValues[$index] ?? [] as $selection) {
                 if ($stockFilter && !$selection['salable']) {
                     continue;
                 }
-                $current = $amount($selection, $price);
-                if ($best === null || ($lowest ? $current < $best : $current > $best)) {
+                $current = $selection[$price];
+                if ($best === null || ($lowest ? $current->value < $best->value : $current->value > $best->value)) {
                     $best = $current;
                 }
             }
@@ -116,33 +136,45 @@ class BundlePriceRange implements PriceRangeInterface
 
         $range = [];
         foreach (['regular', 'final'] as $price) {
-            $base = $price === 'regular' ? ($fixed ? $regular : 0.0) : $finalBase;
+            $base = new Amount($price === 'regular' ? ($fixed ? $regular : 0.0) : $finalBase);
             $minimum = $base;
             if (!$fixed && !$required) {
                 $lowest = null;
                 foreach (array_keys($options) as $index) {
                     $candidate = $pick($index, $price, true, $stockFilter);
-                    if ($candidate !== null && ($lowest === null || $candidate < $lowest)) {
+                    if ($candidate !== null && ($lowest === null || $candidate->value < $lowest->value)) {
                         $lowest = $candidate;
                     }
                 }
-                $minimum += $lowest ?? 0.0;
+                $minimum = Amount::sum($minimum, $lowest ?? new Amount(0.0));
             } else {
                 foreach ($required as $index) {
-                    $minimum += $pick($index, $price, true, $stockFilter) ?? 0.0;
+                    $minimum = Amount::sum($minimum, $pick($index, $price, true, $stockFilter) ?? new Amount(0.0));
                 }
             }
             $maximum = $base;
             foreach ($options as $index => $option) {
                 if (in_array($option['renderType'] ?? '', ['checkbox', 'multi'], true)) {
                     foreach ($selectionValues[$index] ?? [] as $selection) {
-                        $maximum += $amount($selection, $price);
+                        $maximum = Amount::sum($maximum, $selection[$price]);
                     }
                 } else {
-                    $maximum += $pick($index, $price, false, $stockFilter) ?? 0.0;
+                    $maximum = Amount::sum($maximum, $pick($index, $price, false, $stockFilter) ?? new Amount(0.0));
                 }
             }
             $range[$price] = [$minimum, $maximum];
+        }
+        if ($fixed) {
+            // The fixed total is one amount, taxed with the bundle's class; a final below the regular is discounted.
+            $display = fn(Amount $total, Amount $regularTotal): Amount =>
+                $this->displayPrice->amount($total->value, $total->value < $regularTotal->value, $product, $store);
+
+            return [
+                $display($range['regular'][0], $range['regular'][0]),
+                $display($range['final'][0], $range['regular'][0]),
+                $display($range['regular'][1], $range['regular'][1]),
+                $display($range['final'][1], $range['regular'][1]),
+            ];
         }
 
         return [$range['regular'][0], $range['final'][0], $range['regular'][1], $range['final'][1]];

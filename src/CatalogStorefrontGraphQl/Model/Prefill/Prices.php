@@ -6,6 +6,7 @@ namespace GraphCommerce\CatalogStorefrontGraphQl\Model\Prefill;
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
 use GraphCommerce\CatalogStorefront\Model\Read\DisplayPrice;
 use GraphCommerce\CatalogStorefront\Model\Read\PriceRanges;
+use GraphCommerce\CatalogStorefrontApi\Read\Amount;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillRequest;
 use Magento\Catalog\Model\Product;
@@ -47,15 +48,9 @@ class Prices implements PrefillerInterface
                 continue;
             }
             [$minRegular, $minFinal, $maxRegular, $maxFinal] = $range;
-            $display = [
-                'minRegular' => $this->displayPrice->regular($minRegular, $product, $store),
-                'minFinal' => $this->displayPrice->final($minFinal, $minRegular, $product, $store),
-                'maxRegular' => $this->displayPrice->regular($maxRegular, $product, $store),
-                'maxFinal' => $this->displayPrice->final($maxFinal, $maxRegular, $product, $store),
-            ];
             $priceRange = [
-                'minimum_price' => $this->format($display['minRegular'], $display['minFinal'], $product, $currency),
-                'maximum_price' => $this->format($display['maxRegular'], $display['maxFinal'], $product, $currency),
+                'minimum_price' => $this->format($minRegular->value, $minFinal->value, $product, $currency),
+                'maximum_price' => $this->format($maxRegular->value, $maxFinal->value, $product, $currency),
             ];
             // Core adds the separately purchased link prices to the rounded maximum after the discount is computed.
             if (!empty($document['linksPurchasedSeparately'])) {
@@ -73,13 +68,14 @@ class Prices implements PrefillerInterface
             $filled = [
                 'price_range' => $priceRange,
                 'price' => [
-                    'minimalPrice' => $this->amount($display['minFinal'], $product, $store),
-                    'regularPrice' => $this->amount($display['minRegular'], $product, $store),
-                    'maximalPrice' => $this->amount($display['maxFinal'], $product, $store),
+                    'minimalPrice' => $this->amount($minFinal, $store),
+                    'regularPrice' => $this->amount($minRegular, $store),
+                    'maximalPrice' => $this->amount($maxFinal, $store),
                 ],
             ];
             if ($request->selects('price_tiers', 'tier_prices')) {
-                $filled += $this->tiers($document, $request->groupKey, $display['minRegular'], $store);
+                // Core's tier collection loads no tax class, so its discount base is the regular price before tax.
+                $filled += $this->tiers($document, $request->groupKey, $minRegular->value - $minRegular->tax, $store);
             }
             $output[$id] = $filled;
         }
@@ -101,16 +97,15 @@ class Prices implements PrefillerInterface
      * The deprecated price shape: the unrounded amount and its tax adjustment
      * when the amount carries one.
      */
-    private function amount(float $value, Product $product, StoreInterface $store): array
+    private function amount(Amount $amount, StoreInterface $store): array
     {
         $currency = $store->getCurrentCurrencyCode();
-        $tax = $this->displayPrice->taxAmount($value, $product, $store);
 
         return [
-            'amount' => ['value' => $value, 'currency' => $currency],
-            'adjustments' => $tax ? [[
+            'amount' => ['value' => $amount->value, 'currency' => $currency],
+            'adjustments' => $amount->tax ? [[
                 'code' => 'TAX',
-                'amount' => ['value' => $tax, 'currency' => $currency],
+                'amount' => ['value' => $amount->tax, 'currency' => $currency],
                 'description' => $this->displayPrice->taxIncluded($store) ? 'INCLUDED' : 'EXCLUDED',
             ]] : [],
         ];

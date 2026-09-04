@@ -106,7 +106,7 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
                     ['terms' => ['bundleParentIds' => $parentIds]],
                     ['term' => ['status' => 'Enabled']],
                 ]]],
-                '_source' => ['sku', 'bundleParentIds', 'stock.isSalable', 'priceIndex'],
+                '_source' => ['sku', 'bundleParentIds', 'stock.isSalable', 'priceIndex', 'taxClassId'],
             ],
             [
                 'size' => count($parentIds),

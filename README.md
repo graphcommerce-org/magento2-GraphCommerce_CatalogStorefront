@@ -90,7 +90,8 @@ with one entry per customer group (regular and final price, base currency, befor
 that the composite price aggregations run over: the mapping holds three fields
 whatever the number of customer groups. The display currency and the taxes are applied
 at request time the way core's price classes and tax adjustment apply them, through
-core's own tax service; the Worker module keeps its rate lookups between requests.
+core's own tax service with the product's tax class (a dynamic bundle's selections
+with their own); the Worker module keeps its rate lookups between requests.
 Fixed product taxes are not answered. A customer group created after a price row was
 exported gets its index entry when the row exports again: truncate the prices feed
 table and reindex it.
@@ -212,8 +213,9 @@ of the links.
     The weee amounts per product travel on the document; the read side adds them the
     way the weee adjustment does.
 12. **Composite ranges per child tax class.** A configurable or grouped range is taxed
-    with the parent's tax class; core taxes each child with its own. The child's tax
-    class on the price index makes the aggregation exact.
+    with the parent's tax class; core taxes each child's regular price with the child's
+    own class. A terms aggregation on the child's tax class next to the nested price
+    index makes the regular range exact. Bundles are exact already.
 13. **Search term analytics as its own concern.** Recording is off by default; when
     search analytics comes back it belongs off the request path, in a queue or the
     search engine's own logs.

@@ -69,6 +69,7 @@ class ProductModelBuilder
                 'qty' => $document['stock']['qty'] ?? 0,
             ],
             'is_salable' => (int)($document['stock']['isSalable'] ?? $document['inStock'] ?? false),
+            'tax_class_id' => $document['taxClassId'] ?? null,
         ];
 
         if (in_array($document['type'] ?? '', ['bundle', 'bundle_fixed'], true)) {
