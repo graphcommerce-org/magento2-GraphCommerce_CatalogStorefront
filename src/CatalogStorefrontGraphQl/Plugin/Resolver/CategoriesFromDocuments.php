@@ -21,7 +21,8 @@ use Psr\Log\LoggerInterface;
  * the store's root category is left out, as core does. Every product of a
  * page registers its ids first and the documents are fetched in one request
  * when the first deferred value resolves, by id ascending as core's
- * collection returns them.
+ * collection returns them. The breadcrumbs come from the ancestors' documents
+ * when the query selects them.
  */
 class CategoriesFromDocuments implements ResetAfterRequestInterface
 {
@@ -81,11 +82,16 @@ class CategoriesFromDocuments implements ResetAfterRequestInterface
                         $documents[$id] = $this->loaded[$storeViewCode][$id];
                     }
                 }
-                $categories = $this->categoryDocuments->hydrate(
-                    $store,
-                    $documents,
-                    $this->attributesJoiner->getQueryFields($info->fieldNodes[0], $info)
-                );
+                // A query may select the field through several fragments; every node carries part of the selection.
+                $requestedFields = [];
+                foreach ($info->fieldNodes as $fieldNode) {
+                    $requestedFields = array_merge($requestedFields, $this->attributesJoiner->getQueryFields($fieldNode, $info));
+                }
+                $requestedFields = array_values(array_unique($requestedFields));
+                $categories = $this->categoryDocuments->hydrate($store, $documents, $requestedFields);
+                if (in_array('breadcrumbs', $requestedFields, true)) {
+                    $this->categoryDocuments->breadcrumbs($store, $categories, $documents);
+                }
             } catch (\Throwable $e) {
                 $this->logger->warning('catalog-storefront categories fallback: ' . $e->getMessage());
 

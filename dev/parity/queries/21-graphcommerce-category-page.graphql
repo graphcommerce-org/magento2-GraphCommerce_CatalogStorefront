@@ -1,4 +1,4 @@
-{
+query CategoryPage {
   categories(filters: { url_path: { eq: "gear/bags" } }) {
     items {
       uid

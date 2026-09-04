@@ -118,7 +118,7 @@ registers all modules through composer autoload.
   its statements, which is the first rule enforced. Every query runs twice
   unjudged first, so the gate sees the steady state and not the cache fill
   after the flush; each judged request is tagged with a header and its log
-  line found by tag. All eighteen queries pass with no lookup; the search
+  line found by tag. Every query passes with no lookup; the search
   listing's two writes (core records the search term) appear only with the
   Record Search Terms setting on; it is off by default. Add a query for every field a new plugin serves. A poison test
   (edit a document in OpenSearch, see the change in the response) proves a

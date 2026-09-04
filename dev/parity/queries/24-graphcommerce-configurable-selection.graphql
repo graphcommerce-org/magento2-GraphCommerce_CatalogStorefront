@@ -1,0 +1,299 @@
+query {
+  products(filter: { url_key: { eq: "josie-yoga-jacket" } }) {
+    __typename
+    items {
+      __typename
+      uid
+      ... on ConfigurableProduct {
+        configurable_product_options_selection(configurableOptionValueUids: ["Y29uZmlndXJhYmxlLzE1Mi8xNjg="]) {
+          __typename
+          configurable_options {
+            __typename
+            attribute_code
+            label
+            uid
+            values {
+              label
+              uid
+            }
+          }
+          options_available_for_selection {
+            __typename
+            attribute_code
+            option_value_uids
+          }
+          media_gallery {
+            __typename
+            label
+            position
+            disabled
+            url
+            label
+            disabled
+            ... on ProductVideo {
+              url
+              video_content {
+                media_type
+                video_description
+                video_metadata
+                video_provider
+                video_title
+                video_url
+              }
+            }
+          }
+          variant {
+            __typename
+            uid
+            uid
+            __typename
+            uid
+            url_key
+            sku
+            name
+            new_to_date
+            new_from_date
+            small_image {
+              url
+              label
+              disabled
+            }
+            price_range {
+              minimum_price {
+                regular_price {
+                  currency
+                  value
+                }
+                discount {
+                  amount_off
+                  percent_off
+                }
+                final_price {
+                  currency
+                  value
+                }
+              }
+            }
+            uid
+            sku
+            only_x_left_in_stock
+            stock_status
+            categories {
+              uid
+              name
+              url_path
+              include_in_menu
+            }
+            __typename
+            uid
+            name
+            url_key
+            categories {
+              uid
+              name
+              url_path
+              include_in_menu
+              breadcrumbs {
+                category_name
+                category_uid
+                category_url_path
+                category_level
+              }
+            }
+            name
+            __typename
+            url_key
+            short_description {
+              html
+              __typename
+            }
+            description {
+              html
+              __typename
+            }
+            __typename
+            url_key
+            __typename
+            media_gallery {
+              __typename
+              label
+              position
+              disabled
+              url
+              label
+              disabled
+              ... on ProductVideo {
+                url
+                video_content {
+                  media_type
+                  video_description
+                  video_metadata
+                  video_provider
+                  video_title
+                  video_url
+                }
+              }
+            }
+            url_key
+            __typename
+            uid
+            url_key
+            sku
+            name
+            url_key
+            url_rewrites {
+              url
+            }
+            meta_title
+            meta_description
+            meta_keyword
+            price_range {
+              minimum_price {
+                final_price {
+                  currency
+                  value
+                }
+                regular_price {
+                  currency
+                  value
+                }
+              }
+            }
+            media_gallery {
+              url
+            }
+            categories {
+              uid
+              name
+            }
+            __typename
+            url_key
+            price_range {
+              minimum_price {
+                regular_price {
+                  currency
+                  value
+                }
+                discount {
+                  amount_off
+                  percent_off
+                }
+                final_price {
+                  currency
+                  value
+                }
+              }
+            }
+            price_tiers {
+              discount {
+                amount_off
+                percent_off
+              }
+              final_price {
+                currency
+                value
+              }
+              quantity
+            }
+            ... on CustomizableProductInterface {
+              options {
+                uid
+                __typename
+                sort_order
+                uid
+                required
+                sort_order
+                title
+                ... on CustomizableAreaOption {
+                  product_sku
+                  areaValue: value {
+                    max_characters
+                    price
+                    price_type
+                    sku
+                    uid
+                  }
+                }
+                ... on CustomizableCheckboxOption {
+                  checkboxValue: value {
+                    price
+                    price_type
+                    sku
+                    uid
+                    option_type_id
+                    title
+                  }
+                }
+                ... on CustomizableDateOption {
+                  product_sku
+                  dateValue: value {
+                    type
+                    price
+                    price_type
+                    sku
+                    uid
+                  }
+                }
+                ... on CustomizableDropDownOption {
+                  dropdownValue: value {
+                    option_type_id
+                    price
+                    price_type
+                    sku
+                    sort_order
+                    title
+                    uid
+                  }
+                }
+                ... on CustomizableMultipleOption {
+                  multipleValue: value {
+                    option_type_id
+                    price
+                    price_type
+                    sku
+                    sort_order
+                    title
+                    uid
+                  }
+                }
+                ... on CustomizableFieldOption {
+                  product_sku
+                  fieldValue: value {
+                    max_characters
+                    price
+                    price_type
+                    sku
+                    uid
+                  }
+                }
+                ... on CustomizableFileOption {
+                  product_sku
+                  fileValue: value {
+                    file_extension
+                    image_size_x
+                    image_size_y
+                    price
+                    price_type
+                    sku
+                    uid
+                  }
+                }
+                ... on CustomizableRadioOption {
+                  radioValue: value {
+                    option_type_id
+                    price
+                    price_type
+                    sku
+                    sort_order
+                    title
+                    uid
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

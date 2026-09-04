@@ -75,6 +75,8 @@ class CategoryDocuments
             foreach (self::FIELDS as $key => $documentKey) {
                 $data[$key] = $document[$documentKey] ?? null;
             }
+            // The feed writes an empty url path for the tree root where the attribute is unset.
+            $data['url_path'] = $data['url_path'] === '' ? null : $data['url_path'];
             $data['children_count'] = (string)count((array)($document['children'] ?? []));
             // Every requested field has a key, so the hydrator's plain data path answers all of them.
             foreach ($requestedFields as $requestedField) {
