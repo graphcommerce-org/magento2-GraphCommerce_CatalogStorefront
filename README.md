@@ -69,6 +69,10 @@ A module registers its parts through di.xml:
 Another search engine implements the two storage interfaces of the Api module and
 sets the preferences in its own di.xml, as the OpenSearch module does.
 
+`docs/skills/catalog-storefront-compatibility/SKILL.md` is the guide for a module that
+adds catalog data: what to build at index time and at request time, and how to prove
+it with the parity gate. It is written to be loaded as a skill by an LLM.
+
 ## Development install
 
 The package is not yet published, so a project links the module directories into
