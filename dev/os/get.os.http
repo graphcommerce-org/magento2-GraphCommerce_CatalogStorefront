@@ -143,3 +143,12 @@ POST catalog_storefront_review_default/_search
 // The refresh interval that bounds how soon a write is visible to aggregations
 GET catalog_storefront_default/_settings?filter_path=*.settings.index.refresh_interval,*.settings.index.number_of_shards
 {}
+
+// The products of a category, from core's search index: our product documents carry categoryData but do not map it
+POST magento2_product_1/_search
+{
+  "size": 20,
+  "_source": ["sku"],
+  "query": { "term": { "category_ids": 3 } },
+  "sort": [ { "position_category_3": "asc" } ]
+}
