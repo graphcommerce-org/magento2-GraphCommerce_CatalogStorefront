@@ -1,0 +1,22 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-configurable-product",
+    "description": "Variants and the configurable price range of the catalog read model",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-configurable-product": "*",
+        "magento/module-configurable-product-data-exporter": "*",
+        "magento/module-product-variant-data-exporter": "*",
+        "graphcommerce/module-catalog-storefront": "self.version"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontConfigurableProduct\\": ""
+        }
+    }
+}

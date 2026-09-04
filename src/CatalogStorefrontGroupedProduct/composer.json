@@ -1,0 +1,20 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-grouped-product",
+    "description": "The grouped price range of the catalog read model",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-grouped-product": "*",
+        "graphcommerce/module-catalog-storefront": "self.version"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontGroupedProduct\\": ""
+        }
+    }
+}

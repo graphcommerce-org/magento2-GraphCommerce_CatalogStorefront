@@ -38,10 +38,13 @@ Stores > Configuration > Catalog > Catalog > Catalog Storefront Document Store:
 
 ## Modules
 
-One composer package registers one module per directory under `src/`. The cut follows
-core: a base module holds what any frontend can use, its `GraphQl` twin holds the GraphQL
-resolver plugins and prefillers. A Hyvä or Luma integration adds `*Frontend` modules next
-to the `*GraphQl` ones.
+The root package registers one module per directory under `src/`, and each directory is a
+composer package of its own (`graphcommerce/module-catalog-storefront-<name>`) with the core
+modules it needs, so the GraphQL, MSI and product type requirements sit in the modules that
+use them and a subtree split publishes them one by one; the root package replaces them all.
+The cut follows core: a base module holds what any frontend can use, its `GraphQl` twin holds
+the GraphQL resolver plugins and prefillers. A Hyvä or Luma integration adds `*Frontend`
+modules next to the `*GraphQl` ones.
 
 | Module | Serves |
 | --- | --- |
@@ -128,14 +131,30 @@ fails a document-path query that ran a SQL lookup and prints its fallbacks and w
 headers through `# @header Content-Currency: EUR` comment lines. See `CLAUDE.md` for the
 operating notes, the fixtures the query set needs and the known deviations.
 
+## Rebuild
+
+```sh
+bin/magento catalog-storefront:rebuild [product|category|attribute|review|rating ...]
+```
+
+drops the indices of the given entities (all by default) in every store view, truncates
+the feed tables of the feeds that write them, so the exporter re-exports every row instead
+of skipping the unchanged ones, and runs those feed indexers. Needed after a mapping change,
+after a new customer group, and whenever the documents drifted from the database. The read
+path falls back to core while the documents are away. A module that writes a feed registers
+it under `feeds` on the command.
+
 ## Tests
 
 `phpunit.xml.dist` runs the unit tests of every module against the Magento
 installation that holds the package (`MAGENTO_ROOT`, else the project two levels up).
-`.github/workflows/ci.yml` runs them on a fresh Mage-OS install through the
+`.github/workflows/ci.yml` runs them on the latest Mage-OS release through the
 [graycore actions](https://github.com/graycoreio/github-actions-magento2), then installs
-the sample data and OpenSearch, exports the feeds and runs the parity gate in three price
-setups: excluding tax, catalog prices including tax, both prices displayed.
+the sample data with OpenSearch, MySQL and Redis as service containers, adds the query set's
+fixtures, exports the feeds and runs the parity gate in three price setups: excluding tax,
+catalog prices including tax, both prices displayed. PHPUnit runs from its phar in both
+jobs: Magento's composer.json excludes every `Test` directory from the classmap, which
+drops PHPUnit's own event classes.
 
 ## Development install
 
@@ -182,10 +201,10 @@ of the links.
 8. **Write conflicts under parallel feeds.** A retry on version conflict for the bulk
    updates, and a re-read for the writers that merge into a stored document (prices,
    variants, composite links), so parallel feed threads cannot lose an update.
-9. **A rebuild command.** `indexer:reindex` skips unchanged feed rows, so a repair
-   of the document store truncates the feed tables and drops the indices by hand. One
-   command that rebuilds an entity into a fresh index and switches over when it is
-   complete.
+9. **A blue/green rebuild.** The rebuild command drops an entity's documents first,
+   so the read path serves from core until the export completes. A rebuild into a
+   fresh index behind an alias, switched over when it is complete, keeps the
+   documents live.
 10. **Category attributes on the category documents.** Custom category attributes such
     as SEO fields fall back to the database; a category attributes slice like the
     product one serves them.
@@ -198,6 +217,6 @@ of the links.
 13. **Search term analytics as its own concern.** Recording is off by default; when
     search analytics comes back it belongs off the request path, in a queue or the
     search engine's own logs.
-14. **Package publishing.** One `composer.json` per module directory and a subtree split,
-    so the modules install separately while the repository stays one, and the GraphQL
-    and MSI requirements move to the modules that need them.
+14. **Package publishing.** A subtree split of the module directories to their own
+    repositories and a release on packagist, so the modules install separately while
+    the repository stays one.

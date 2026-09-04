@@ -1,0 +1,21 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-review",
+    "description": "Review and rating documents of the catalog read model from the review feeds",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-review": "*",
+        "magento/module-product-review-data-exporter": "*",
+        "graphcommerce/module-catalog-storefront": "self.version"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontReview\\": ""
+        }
+    }
+}

@@ -24,6 +24,11 @@ interface ProductDocumentStorageInterface
     public function delete(string $storeViewCode, array $ids): void;
 
     /**
+     * Removes the store view's documents as a whole; the next write starts a fresh store.
+     */
+    public function drop(string $storeViewCode): void;
+
+    /**
      * @param int[] $ids
      * @param string[] $fields the document keys to return; empty returns the whole document
      * @return array<int, array> the documents that exist, keyed by product id

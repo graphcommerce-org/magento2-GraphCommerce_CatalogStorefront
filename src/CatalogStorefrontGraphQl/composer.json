@@ -1,0 +1,28 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-graph-ql",
+    "description": "Serves catalog GraphQL reads from the documents of the catalog read model, with the request path switch, strict mode report and the parity gate",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-catalog-graph-ql": "*",
+        "magento/module-graph-ql": "*",
+        "magento/module-graph-ql-cache": "*",
+        "magento/module-graph-ql-resolver-cache": "*",
+        "magento/module-url-rewrite-graph-ql": "*",
+        "magento/module-related-product-graph-ql": "*",
+        "magento/module-eav-graph-ql": "*",
+        "magento/module-customer": "*",
+        "graphcommerce/module-catalog-storefront": "self.version",
+        "graphcommerce/module-catalog-storefront-graph-ql-api": "self.version"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontGraphQl\\": ""
+        }
+    }
+}

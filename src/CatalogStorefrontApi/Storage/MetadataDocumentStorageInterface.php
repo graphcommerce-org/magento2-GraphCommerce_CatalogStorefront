@@ -23,6 +23,11 @@ interface MetadataDocumentStorageInterface
     public function delete(string $entity, string $storeViewCode, array $ids): void;
 
     /**
+     * Removes the entity's documents of the store view as a whole; the next write starts a fresh store.
+     */
+    public function drop(string $entity, string $storeViewCode): void;
+
+    /**
      * @param array<int|string> $ids
      * @param string[] $fields the document keys to return; empty returns the whole document
      * @return array<int|string, array> the documents that exist, keyed by id

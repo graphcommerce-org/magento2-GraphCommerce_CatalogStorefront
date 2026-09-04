@@ -1,0 +1,22 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-inventory",
+    "description": "The stock slice of the catalog read model documents from the MSI stock status feed",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-inventory-data-exporter": "*",
+        "magento/module-inventory-sales-api": "*",
+        "magento/module-inventory-sales": "*",
+        "graphcommerce/module-catalog-storefront": "self.version"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontInventory\\": ""
+        }
+    }
+}

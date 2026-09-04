@@ -36,6 +36,13 @@ class Index
         return $index;
     }
 
+    public function drop(string $entity, string $storeViewCode): void
+    {
+        $index = $this->client->indexName($entity, $storeViewCode);
+        $this->client->deleteIndex($index);
+        unset($this->ensured[$index]);
+    }
+
     /**
      * @param array<string, string|array> $fields dotted field name to a type
      *   name, or to a nested spec (`type` nested with its `fields`)

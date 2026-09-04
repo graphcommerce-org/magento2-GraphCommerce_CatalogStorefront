@@ -33,6 +33,11 @@ class MetadataDocumentStorage implements MetadataDocumentStorageInterface
         }
     }
 
+    public function drop(string $entity, string $storeViewCode): void
+    {
+        $this->index->drop($entity, $storeViewCode);
+    }
+
     public function get(string $entity, string $storeViewCode, array $ids, array $fields = []): array
     {
         return $ids ? $this->client->get($this->client->indexName($entity, $storeViewCode), $ids, $fields) : [];

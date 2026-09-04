@@ -3,7 +3,16 @@
     <type name="GraphCommerce\CatalogStorefront\Model\Document\Delivery">
         <arguments>
             <argument name="writers" xsi:type="array">
-                <item name="inventoryStockStatus" xsi:type="object">GraphCommerce\CatalogStorefrontInventory\Model\Document\Writer\Stock</item>
+                <item name="inventory_data_exporter_stock_status" xsi:type="object">GraphCommerce\CatalogStorefrontInventory\Model\Document\Writer\Stock</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Console\Command\Rebuild">
+        <arguments>
+            <argument name="feeds" xsi:type="array">
+                <item name="product" xsi:type="array">
+                    <item name="inventory_data_exporter_stock_status" xsi:type="object">Magento\InventoryDataExporter\Model\Indexer\StockStatusFeedIndexMetadata</item>
+                </item>
             </argument>
         </arguments>
     </type>

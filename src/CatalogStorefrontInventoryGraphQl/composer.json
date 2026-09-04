@@ -1,0 +1,22 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-inventory-graph-ql",
+    "description": "Stock status, only_x_left_in_stock, quantity and sale quantities from the catalog read model documents",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-catalog-inventory-graph-ql": "*",
+        "magento/module-inventory-graph-ql": "*",
+        "graphcommerce/module-catalog-storefront-inventory": "self.version",
+        "graphcommerce/module-catalog-storefront-graph-ql": "self.version"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontInventoryGraphQl\\": ""
+        }
+    }
+}

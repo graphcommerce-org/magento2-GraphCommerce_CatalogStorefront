@@ -3,46 +3,65 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
-  # The pure classes: price semantics, ranges, mappings, routing, memos. Needs a Magento vendor
-  # directory for the autoloader and the mocked core classes, nothing installed.
-  unit:
+  # The latest Mage-OS release with its service containers, from the graycore actions.
+  matrix:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.supported-version.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
       - uses: graycoreio/github-actions-magento2/supported-version@v8
-        id: version
+        id: supported-version
         with:
           project: mage-os
           kind: latest
-          include_services: 'false'
+          service_preferences: opensearch,redis
+
+  # The pure classes: price semantics, ranges, mappings, routing, memos. Needs a Magento vendor
+  # directory for the autoloader and the mocked core classes, nothing installed. PHPUnit runs
+  # from its phar: the Magento composer.json excludes every Test directory from the classmap,
+  # which drops PHPUnit's own event classes.
+  unit:
+    needs: matrix
+    strategy:
+      matrix: ${{ fromJSON(needs.matrix.outputs.matrix) }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
       - uses: graycoreio/github-actions-magento2/setup-magento@v8
+        id: magento
         with:
-          php-version: ${{ fromJson(steps.version.outputs.matrix).include[0].php }}
-          magento_version: ${{ fromJson(steps.version.outputs.matrix).include[0].magento }}
+          php-version: ${{ matrix.php }}
+          tools: composer:v${{ matrix.composer }}
           mode: extension
+          magento_version: ${{ matrix.magento }}
+          magento_repository: https://mirror.mage-os.org/
       - name: Install the exporter and this package into the Magento project
-        working-directory: _ghamagento
+        working-directory: ${{ steps.magento.outputs.path }}
+        env:
+          COMPOSER_MIRROR_PATH_REPOS: 1
         run: |
-          git clone --depth 1 https://github.com/mage-os/mageos-commerce-data-export.git ../_cde
-          composer config repositories.cde path '../_cde/*'
-          composer config repositories.package path '..'
+          git clone --depth 1 https://github.com/mage-os/mageos-commerce-data-export.git ${{ github.workspace }}/_cde
+          composer config repositories.cde path '${{ github.workspace }}/_cde/*'
+          composer config repositories.package path '${{ github.workspace }}'
           composer config minimum-stability dev
           composer config prefer-stable true
           composer require --no-update magento/module-data-exporter:'*' magento/module-catalog-data-exporter:'*' \
             magento/module-product-price-data-exporter:'*' magento/module-inventory-data-exporter:'*' \
             magento/module-configurable-product-data-exporter:'*' magento/module-bundle-product-data-exporter:'*' \
-            magento/module-product-review-data-exporter:'*' graphcommerce/magento-catalog-storefront:'*'
+            magento/module-product-review-data-exporter:'*' graphcommerce/magento-catalog-storefront:'@dev'
           composer install --no-interaction --no-progress
       - name: Unit tests
-        run: MAGENTO_ROOT=_ghamagento _ghamagento/vendor/bin/phpunit -c phpunit.xml.dist
+        run: |
+          curl -sSL -o phpunit.phar https://phar.phpunit.de/phpunit-12.phar
+          MAGENTO_ROOT=${{ steps.magento.outputs.path }} php phpunit.phar -c phpunit.xml.dist
 
-  # The parity gate: a MageOS install with sample data and OpenSearch, the feeds exported into the
+  # The parity gate: a Mage-OS install with sample data and OpenSearch, the feeds exported into the
   # document store, every query of dev/parity/queries on both paths, in the three price setups.
   parity:
-    runs-on: ubuntu-latest
-    needs: unit
+    needs: [matrix, unit]
     strategy:
       fail-fast: false
       matrix:
@@ -50,35 +69,37 @@ jobs:
           - name: excluding-tax
             set: ''
           - name: including-tax
-            set: 'tax/display/type=2 tax/calculation/price_includes_tax=1 tax/defaults/country=NL'
+            set: 'tax/display/type=2 tax/calculation/price_includes_tax=1 tax/defaults/region=12 tax/defaults/postcode=90210'
           - name: display-both
-            set: 'tax/display/type=3'
+            set: 'tax/display/type=3 tax/defaults/region=12 tax/defaults/postcode=90210'
+        magento: ${{ fromJSON(needs.matrix.outputs.matrix).include }}
     name: parity (${{ matrix.prices.name }})
+    runs-on: ${{ matrix.magento.os }}
+    services: ${{ matrix.magento.services }}
     steps:
       - uses: actions/checkout@v4
-      - uses: graycoreio/github-actions-magento2/supported-version@v8
-        id: version
-        with:
-          project: mage-os
-          kind: latest
-          service_preferences: opensearch,redis
       - uses: graycoreio/github-actions-magento2/setup-magento@v8
+        id: magento
         with:
-          php-version: ${{ fromJson(steps.version.outputs.matrix).include[0].php }}
-          magento_version: ${{ fromJson(steps.version.outputs.matrix).include[0].magento }}
+          php-version: ${{ matrix.magento.php }}
+          tools: composer:v${{ matrix.magento.composer }}
           mode: extension
+          magento_version: ${{ matrix.magento.magento }}
+          magento_repository: https://mirror.mage-os.org/
       - name: Install the exporter, the sample data and this package
-        working-directory: _ghamagento
+        working-directory: ${{ steps.magento.outputs.path }}
+        env:
+          COMPOSER_MIRROR_PATH_REPOS: 1
         run: |
-          git clone --depth 1 https://github.com/mage-os/mageos-commerce-data-export.git ../_cde
-          composer config repositories.cde path '../_cde/*'
-          composer config repositories.package path '..'
+          git clone --depth 1 https://github.com/mage-os/mageos-commerce-data-export.git ${{ github.workspace }}/_cde
+          composer config repositories.cde path '${{ github.workspace }}/_cde/*'
+          composer config repositories.package path '${{ github.workspace }}'
           composer config minimum-stability dev
           composer config prefer-stable true
           composer require --no-update magento/module-data-exporter:'*' magento/module-catalog-data-exporter:'*' \
             magento/module-product-price-data-exporter:'*' magento/module-inventory-data-exporter:'*' \
             magento/module-configurable-product-data-exporter:'*' magento/module-bundle-product-data-exporter:'*' \
-            magento/module-product-review-data-exporter:'*' graphcommerce/magento-catalog-storefront:'*' \
+            magento/module-product-review-data-exporter:'*' graphcommerce/magento-catalog-storefront:'@dev' \
             mage-os/module-catalog-sample-data:'*' mage-os/module-configurable-sample-data:'*' \
             mage-os/module-bundle-sample-data:'*' mage-os/module-grouped-product-sample-data:'*' \
             mage-os/module-downloadable-sample-data:'*' mage-os/module-review-sample-data:'*' \
@@ -89,23 +110,35 @@ jobs:
             mage-os/module-theme-sample-data:'*' mage-os/module-sales-rule-sample-data:'*' \
             mage-os/module-offline-shipping-sample-data:'*' mage-os/sample-data-media:'*'
           composer install --no-interaction --no-progress
+      - name: Allow SQL triggers
+        run: mysql --host 127.0.0.1 --port ${{ job.services.mysql.ports['3306'] }} -u root -prootpassword -e "set global log_bin_trust_function_creators=1;"
       - uses: graycoreio/github-actions-magento2/setup-install@v8
         with:
-          working-directory: _ghamagento
-          search-engine: opensearch
-          services: ${{ toJson(fromJson(steps.version.outputs.matrix).include[0].services) }}
+          path: ${{ steps.magento.outputs.path }}
+          services: ${{ toJSON(matrix.magento.services) }}
+      - name: Fixtures of the query set
+        working-directory: ${{ steps.magento.outputs.path }}
+        run: |
+          # The fixed bundle the bundle queries need, and one unit of 24-WG01 for only_x_left_in_stock.
+          bin/magento admin:user:create --admin-user=parity --admin-password=Parity12345 --admin-email=parity@example.com --admin-firstname=Parity --admin-lastname=Gate
+          php -S 127.0.0.1:8080 -t pub pub/index.php > php-server.log 2>&1 &
+          sleep 3
+          TOKEN=$(curl -s -X POST http://127.0.0.1:8080/rest/V1/integration/admin/token -H 'Content-Type: application/json' -d '{"username":"parity","password":"Parity12345"}' | tr -d '"')
+          curl -s -o /dev/null -w 'fixture: %{http_code}\n' -X POST http://127.0.0.1:8080/rest/V1/products -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d @${{ github.workspace }}/dev/parity/fixtures/bundle-fixed.json
+          mysql --host 127.0.0.1 --port ${{ job.services.mysql.ports['3306'] }} -u root -prootpassword magento -e "
+            UPDATE cataloginventory_stock_item SET qty = 1 WHERE product_id = (SELECT entity_id FROM catalog_product_entity WHERE sku = '24-WG01');
+            UPDATE inventory_source_item SET quantity = 1 WHERE sku = '24-WG01';"
       - name: Configure and export the feeds
-        working-directory: _ghamagento
+        working-directory: ${{ steps.magento.outputs.path }}
         run: |
           bin/magento config:set catalog/storefront_documents/index_enabled 1
           bin/magento config:set catalog/storefront_documents/request_override 1
           bin/magento config:set catalog/storefront_documents/strict 1
-          bin/magento config:set dev/graphql/disable_session 1
+          bin/magento config:set currency/options/allow USD,EUR
+          mysql --host 127.0.0.1 --port ${{ job.services.mysql.ports['3306'] }} -u root -prootpassword magento -e "INSERT INTO directory_currency_rate (currency_from, currency_to, rate) VALUES ('USD', 'EUR', 0.85)"
           for pair in ${{ matrix.prices.set }}; do bin/magento config:set "${pair%%=*}" "${pair#*=}"; done
           bin/magento cache:flush
           bin/magento indexer:reindex
-          php -S 127.0.0.1:8080 -t pub pub/index.php > php-server.log 2>&1 &
-          sleep 3
       - name: Parity gate
-        working-directory: _ghamagento
-        run: bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql --warm=1
+        working-directory: ${{ steps.magento.outputs.path }}
+        run: bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql

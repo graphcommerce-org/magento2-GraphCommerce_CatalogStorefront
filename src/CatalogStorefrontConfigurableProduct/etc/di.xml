@@ -20,4 +20,13 @@
             </argument>
         </arguments>
     </type>
+    <type name="GraphCommerce\CatalogStorefront\Console\Command\Rebuild">
+        <arguments>
+            <argument name="feeds" xsi:type="array">
+                <item name="product" xsi:type="array">
+                    <item name="catalog_data_exporter_product_variants" xsi:type="object">Magento\ProductVariantDataExporter\Model\Indexer\ProductVariantFeedIndexMetadata</item>
+                </item>
+            </argument>
+        </arguments>
+    </type>
 </config>

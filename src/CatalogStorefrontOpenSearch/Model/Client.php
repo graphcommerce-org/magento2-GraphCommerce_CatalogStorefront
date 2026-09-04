@@ -37,6 +37,14 @@ class Client
         return $this->client()->indices()->exists(['index' => $index]);
     }
 
+    public function deleteIndex(string $index): void
+    {
+        try {
+            $this->client()->indices()->delete(['index' => $index]);
+        } catch (Missing404Exception) {
+        }
+    }
+
     public function createIndex(string $index, array $mapping): void
     {
         $this->client()->indices()->create(['index' => $index, 'body' => ['mappings' => $mapping]]);

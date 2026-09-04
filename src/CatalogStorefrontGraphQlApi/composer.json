@@ -1,0 +1,20 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-graph-ql-api",
+    "description": "The GraphQL contracts of the catalog read model: prefillers, hydration",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-graph-ql": "*",
+        "graphcommerce/module-catalog-storefront-api": "self.version"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontGraphQlApi\\": ""
+        }
+    }
+}

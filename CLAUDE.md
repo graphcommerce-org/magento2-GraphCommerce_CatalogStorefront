@@ -314,8 +314,11 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   picks the path per request with the `X-Catalog-Storefront` header (Allow
   Request Override on in the container's cache too), so no flag flips at all.
 - With immediate export, a full `indexer:reindex` of a feed skips rows whose
-  feed hash is unchanged, so it does not repair a document store. To rebuild
-  the documents: drop the index, truncate `cde_products_feed`,
+  feed hash is unchanged, so it does not repair a document store.
+  `bin/magento catalog-storefront:rebuild [entities]` does the whole repair:
+  it drops the entity's indices, truncates the feed tables registered for it
+  (di.xml `feeds` on the command) and runs their indexers; about ten seconds
+  for the demo catalog. By hand: drop the index, truncate `cde_products_feed`,
   `cde_product_prices_feed`, `cde_product_variants_feed`,
   `inventory_data_exporter_stock_status_feed` and
   `catalog_data_exporter_product_reviews`, then reindex the products, stock,

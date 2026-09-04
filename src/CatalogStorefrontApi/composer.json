@@ -1,0 +1,20 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-api",
+    "description": "The contracts of the catalog read model: document stores, feed writers, document fields, product documents, price ranges",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-catalog": "*",
+        "magento/module-store": "*"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontApi\\": ""
+        }
+    }
+}

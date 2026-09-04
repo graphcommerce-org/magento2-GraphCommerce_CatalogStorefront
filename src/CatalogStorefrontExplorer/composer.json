@@ -1,0 +1,19 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-explorer",
+    "description": "The request path switcher of the catalog read model in the MageOS_GraphQLAdminHtml API explorer",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "graphcommerce/module-catalog-storefront-graph-ql": "self.version"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontExplorer\\": ""
+        }
+    }
+}

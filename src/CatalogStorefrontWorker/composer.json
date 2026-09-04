@@ -1,0 +1,25 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-worker",
+    "description": "What a FrankenPHP worker keeps between requests for the catalog read model, each memo under a cache generation",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-graph-ql": "*",
+        "magento/module-customer-graph-ql": "*",
+        "magento/module-deploy": "*",
+        "magento/module-tax": "*",
+        "magento/module-customer": "*",
+        "magento/module-directory": "*",
+        "graphcommerce/module-catalog-storefront-graph-ql": "self.version"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontWorker\\": ""
+        }
+    }
+}

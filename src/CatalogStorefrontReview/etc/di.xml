@@ -69,4 +69,16 @@
             </argument>
         </arguments>
     </type>
+    <type name="GraphCommerce\CatalogStorefront\Console\Command\Rebuild">
+        <arguments>
+            <argument name="feeds" xsi:type="array">
+                <item name="review" xsi:type="array">
+                    <item name="catalog_data_exporter_product_reviews" xsi:type="object">Magento\ProductReviewDataExporter\Model\Indexer\ProductReviewsFeedIndexMetadata</item>
+                </item>
+                <item name="rating" xsi:type="array">
+                    <item name="catalog_data_exporter_rating_metadata" xsi:type="object">Magento\ProductReviewDataExporter\Model\Indexer\RatingFeedIndexMetadata</item>
+                </item>
+            </argument>
+        </arguments>
+    </type>
 </config>

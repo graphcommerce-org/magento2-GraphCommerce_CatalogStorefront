@@ -1,0 +1,21 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-bundle-product",
+    "description": "Bundle feed fields and the bundle price range of the catalog read model",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-bundle": "*",
+        "magento/module-bundle-product-data-exporter": "*",
+        "graphcommerce/module-catalog-storefront": "self.version"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontBundleProduct\\": ""
+        }
+    }
+}

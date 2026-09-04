@@ -35,6 +35,11 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
         }
     }
 
+    public function drop(string $storeViewCode): void
+    {
+        $this->index->drop(self::ENTITY, $storeViewCode);
+    }
+
     public function get(string $storeViewCode, array $ids, array $fields = []): array
     {
         $documents = [];
