@@ -15,6 +15,11 @@
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                     <comment>Requires synced feeds. Requests fall back to the database when a document is missing.</comment>
                 </field>
+                <field id="serve_plp" translate="label comment" type="select" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Serve Product Listing Pages From Documents</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Requires synced feeds. Requests fall back to the database when a document is missing.</comment>
+                </field>
             </group>
         </section>
     </system>

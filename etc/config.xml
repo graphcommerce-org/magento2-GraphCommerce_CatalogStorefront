@@ -4,6 +4,7 @@
         <graphcommerce>
             <catalog_storefront>
                 <serve_reads>0</serve_reads>
+                <serve_plp>0</serve_plp>
             </catalog_storefront>
         </graphcommerce>
         <!-- User-defined attributes come from the EAV cache; the search adapter otherwise loads each facet attribute with SQL. -->

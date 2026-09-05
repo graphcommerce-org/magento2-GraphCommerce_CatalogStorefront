@@ -10,6 +10,65 @@
     <preference for="GraphCommerce\CatalogStorefront\Model\Storage\Client\DataDefinitionInterface"
                 type="GraphCommerce\CatalogStorefront\Model\Storage\Client\ElasticsearchDataDefinitionAdapter"/>
 
+    <!--
+        Storage\Client\Config reads catalog/search/<engine>_server_hostname and siblings, which is
+        the convention Magento's own engines use. An engine that keeps its connection elsewhere
+        leaves those empty, and Config's `?: 'localhost'` fallback makes that a silent
+        misconfiguration rather than an error.
+    -->
+    <type name="GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\ConnectionPathPool">
+        <arguments>
+            <argument name="engines" xsi:type="array">
+                <!--
+                    Smile ElasticSuite keeps host and port together in `servers` as "host:port",
+                    comma separated for multiple nodes, so both name the same path and
+                    Config::parseHostname() splits them.
+                -->
+                <item name="elasticsuite" xsi:type="array">
+                    <item name="host" xsi:type="string">smile_elasticsuite_core_base_settings/es_client/servers</item>
+                    <item name="port" xsi:type="string">smile_elasticsuite_core_base_settings/es_client/servers</item>
+                    <item name="user" xsi:type="string">smile_elasticsuite_core_base_settings/es_client/http_auth_user</item>
+                    <item name="password" xsi:type="string">smile_elasticsuite_core_base_settings/es_client/http_auth_pwd</item>
+                    <item name="enableAuth" xsi:type="string">smile_elasticsuite_core_base_settings/es_client/enable_http_auth</item>
+                </item>
+            </argument>
+        </arguments>
+    </type>
+
+    <!--
+        The product listing surface. ListingHydration sits on the base product collection, which
+        many other collections extend, so it only acts on the one CollectionFlag has marked.
+        ItemCollectionProvider is the concrete class behind ElasticSuite's category virtualType.
+    -->
+    <!--
+        Prices a configurable from its variant documents instead of a UNION query plus a collection
+        load per card. Falls through to the core provider, which it wraps, whenever the parent was
+        not served from a document.
+    -->
+    <preference for="Magento\ConfigurableProduct\Pricing\Price\LowestPriceOptionsProviderInterface"
+                type="GraphCommerce\CatalogStorefront\Model\Read\DocumentLowestPriceOptionsProvider"/>
+    <!-- Proxies: both are constructed on every request, but only touch the session when a
+         configurable is actually served from documents. -->
+    <type name="GraphCommerce\CatalogStorefront\Model\Read\DocumentLowestPriceOptionsProvider">
+        <arguments>
+            <argument name="customerSession" xsi:type="object">Magento\Customer\Model\Session\Proxy</argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Plugin\Listing\UsedProductsFromDocuments">
+        <arguments>
+            <argument name="customerSession" xsi:type="object">Magento\Customer\Model\Session\Proxy</argument>
+        </arguments>
+    </type>
+
+    <type name="Magento\Catalog\Model\Layer\Search\ItemCollectionProvider">
+        <plugin name="graphcommerce_catalog_storefront_listing_flag"
+                type="GraphCommerce\CatalogStorefront\Plugin\Listing\CollectionFlag"/>
+    </type>
+    <type name="Magento\Catalog\Model\ResourceModel\Product\Collection">
+        <plugin name="graphcommerce_catalog_storefront_listing_hydration"
+                type="GraphCommerce\CatalogStorefront\Plugin\Listing\ListingHydration"/>
+    </type>
+
     <type name="Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\ProductSearch">
         <plugin name="graphcommerce_catalog_storefront_serve_search"
                 type="GraphCommerce\CatalogStorefront\Plugin\ServeSearchFromDocuments"/>
@@ -68,6 +127,14 @@
     <type name="Magento\ConfigurableProduct\Model\Product\Type\Configurable">
         <plugin name="graphcommerce_catalog_storefront_salable"
                 type="GraphCommerce\CatalogStorefront\Plugin\SalableFromDocument"/>
+        <!--
+            The two expensive calls a listing page makes per configurable card. Both answer from
+            the document and fall through to core when the product was not served from one.
+        -->
+        <plugin name="graphcommerce_catalog_storefront_used_products"
+                type="GraphCommerce\CatalogStorefront\Plugin\Listing\UsedProductsFromDocuments"/>
+        <plugin name="graphcommerce_catalog_storefront_configurable_attributes"
+                type="GraphCommerce\CatalogStorefront\Plugin\Listing\ConfigurableAttributesFromDocument"/>
     </type>
     <type name="Magento\Bundle\Model\Product\Type">
         <plugin name="graphcommerce_catalog_storefront_salable"

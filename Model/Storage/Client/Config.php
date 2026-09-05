@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Model\Storage\Client;
 
+use GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\ConnectionPathPool;
 use GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\EntityConfigInterface;
 use GraphCommerce\CatalogStorefront\Model\Storage\Client\Config\EntityConfigPool;
 use Magento\Framework\App\Config\ScopeConfigInterface;
@@ -80,6 +81,11 @@ class Config
     private $entityConfigPool;
 
     /**
+     * @var ConnectionPathPool
+     */
+    private $connectionPathPool;
+
+    /**
      * Initialize Elasticsearch Client
      *
      * @param Reader $configReader
@@ -91,8 +97,10 @@ class Config
     public function __construct(
         Reader $configReader,
         EntityConfigPool $entityConfigPool,
-        ScopeConfigInterface $scopeConfig
+        ScopeConfigInterface $scopeConfig,
+        ConnectionPathPool $connectionPathPool
     ) {
+        $this->connectionPathPool = $connectionPathPool;
         $configData = $configReader->load(ConfigFilePool::APP_ENV);
         $this->config = isset($configData['catalog-store-front'])
             ? array_replace_recursive($this->defaultConfig($scopeConfig), $configData['catalog-store-front'])
@@ -118,20 +126,55 @@ class Config
     private function defaultConfig(ScopeConfigInterface $scopeConfig): array
     {
         $engine = (string)$scopeConfig->getValue('catalog/search/engine') ?: 'opensearch';
-        $prefix = 'catalog/search/' . $engine . '_server_';
+        $configPaths = $this->connectionPathPool->getPaths($engine);
 
         $config = self::$DEFAULT_CONFIG;
         $config['connections']['default'] = [
             'protocol' => 'http',
-            'hostname' => (string)$scopeConfig->getValue($prefix . 'hostname') ?: 'localhost',
-            'port' => (string)$scopeConfig->getValue($prefix . 'port') ?: '9200',
-            'username' => (string)$scopeConfig->getValue('catalog/search/' . $engine . '_server_username'),
-            'password' => (string)$scopeConfig->getValue('catalog/search/' . $engine . '_server_password'),
-            'enableAuth' => (int)$scopeConfig->getValue('catalog/search/' . $engine . '_enable_auth'),
+            'hostname' => (string)$scopeConfig->getValue($configPaths[ConnectionPathPool::HOST]) ?: 'localhost',
+            'port' => (string)$scopeConfig->getValue($configPaths[ConnectionPathPool::PORT]) ?: '9200',
+            'username' => (string)$scopeConfig->getValue($configPaths[ConnectionPathPool::USER]),
+            'password' => (string)$scopeConfig->getValue($configPaths[ConnectionPathPool::PASSWORD]),
+            'enableAuth' => (int)$scopeConfig->getValue($configPaths[ConnectionPathPool::ENABLE_AUTH]),
             'timeout' => 3,
         ];
 
+        $this->parseHostname($config);
+
         return $config;
+    }
+
+    /**
+     * passes the config array by reference and parses the hostname for multiple hosts
+     * and if the hostname includes the port. eg. the smile elastic suite module's setup
+     *
+     * @param array $config
+     * @return void
+     */
+    private function parseHostname(array &$config)
+    {
+        if (
+            strpos($config['connections']['default']['hostname'], ",") === false &&
+            strpos($config['connections']['default']['hostname'], ":") === false
+        ) {
+            return;
+        }
+
+        if (strpos($config['connections']['default']['hostname'], ",") !== false) {
+            $hostNames = explode(",", $config['connections']['default']['hostname']);
+            $config['connections']['default']['hostname'] = $hostNames[0];
+        }
+
+        if (
+            $config['connections']['default']['hostname'] === $config['connections']['default']['port'] && 
+            strpos($config['connections']['default']['hostname'], ":") !== false
+        ) {
+            $hostPortArray = explode(":", $config['connections']['default']['hostname']);
+            $config['connections']['default']['hostname'] = $hostPortArray[0];
+            $config['connections']['default']['port'] = $hostPortArray[1];
+        }
+
+        return;
     }
 
     /**

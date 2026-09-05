@@ -70,6 +70,12 @@ class ProductModelBuilder
             'image' => $this->mediaFile($document['image']['url'] ?? null),
             'small_image' => $this->mediaFile($document['smallImage']['url'] ?? null),
             'thumbnail' => $this->mediaFile($document['thumbnail']['url'] ?? null),
+            // Null, not the name: ProductImage::resolve() and the image builder both fall back to
+            // the product name themselves, so a null here keeps a product with no stored label
+            // rendering as it does on the database path.
+            'image_label' => $document['image']['label'] ?? null,
+            'small_image_label' => $document['smallImage']['label'] ?? null,
+            'thumbnail_label' => $document['thumbnail']['label'] ?? null,
             'media_gallery' => $this->mediaGallery($document['media_gallery'] ?? []),
             'quantity_and_stock_status' => [
                 'is_in_stock' => (bool)($document['stock']['isSalable'] ?? $document['inStock'] ?? false),
