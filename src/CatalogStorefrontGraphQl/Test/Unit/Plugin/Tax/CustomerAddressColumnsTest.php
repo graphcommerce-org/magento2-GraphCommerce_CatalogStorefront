@@ -58,6 +58,31 @@ class CustomerAddressColumnsTest extends TestCase
         self::assertSame([3, 1, null], array_slice($seen, 2));
     }
 
+    public function testTheAddressIsReadOncePerRequest(): void
+    {
+        $row = ['country_id' => 'NL', 'region_id' => null, 'postcode' => '1011AB'];
+        $select = $this->createMock(Select::class);
+        $select->method('from')->willReturnSelf();
+        $select->method('join')->willReturnSelf();
+        $select->method('where')->willReturnSelf();
+        $connection = $this->createMock(AdapterInterface::class);
+        $connection->method('select')->willReturn($select);
+        $connection->expects(self::exactly(2))->method('fetchRow')->willReturn($row);
+        $resource = $this->createMock(ResourceConnection::class);
+        $resource->method('getConnection')->willReturn($connection);
+        $resource->method('getTableName')->willReturnArgument(0);
+        $scopeConfig = $this->createMock(ScopeConfigInterface::class);
+        $scopeConfig->method('getValue')->willReturn('shipping');
+        $plugin = new CustomerAddressColumns($resource, $scopeConfig, $this->createMock(Session::class), $this->createMock(GroupRepositoryInterface::class));
+        $proceed = static fn(...$args): DataObject => new DataObject();
+
+        foreach ([1, 2, 3] as $amount) {
+            $plugin->aroundGetRateRequest($this->createMock(Calculation::class), $proceed, null, null, 3, 1, 7);
+        }
+        $plugin->_resetState();
+        $plugin->aroundGetRateRequest($this->createMock(Calculation::class), $proceed, null, null, 3, 1, 7);
+    }
+
     public function testACustomerWithoutADefaultAddressGetsTheStoreDefault(): void
     {
         $seen = null;

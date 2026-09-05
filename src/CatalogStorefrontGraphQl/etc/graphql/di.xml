@@ -30,4 +30,7 @@
             <argument name="session" xsi:type="object">Magento\Customer\Model\Session\Proxy</argument>
         </arguments>
     </type>
+    <type name="Magento\Customer\Model\Session">
+        <plugin name="graphcommerce_catalog_storefront_customer_id_check_from_token" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Request\CustomerIdCheckFromToken"/>
+    </type>
 </config>

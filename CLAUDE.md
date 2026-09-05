@@ -67,9 +67,12 @@ passes.
   and newsletter status and reads the group column twice (a token without
   the claims goes to core); `CustomerAddressColumns` gives the tax rate
   request the customer's default address as one join read of its three tax
-  columns and the tax class from the session's group, where core loads the
-  customer twice. A signed-in catalog request reads the revoked table and
-  the address join, nothing else about the customer.
+  columns, held for the request because every taxed amount builds its own
+  rate request, and the tax class from the session's group, where core loads
+  the customer twice; `CustomerIdCheckFromToken` answers the session's id
+  check from the token where core loads the customer to prove the id. A
+  signed-in catalog request reads the revoked table, the address join and
+  the rates of the product tax classes, nothing else about the customer.
 - `CatalogStorefrontWorker`: what a FrankenPHP worker keeps between requests,
   each memo under a generation (`Model/Generation`: a token in the cache with
   the config tag; `Model/Memo`): the kept schemas per query shape, the validated
