@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontGraphQl\Plugin\Tax;
+namespace GraphCommerce\CatalogStorefrontPriceGraphQl\Plugin\Tax;
 
 use Magento\Customer\Api\GroupRepositoryInterface;
 use Magento\Customer\Model\Session;

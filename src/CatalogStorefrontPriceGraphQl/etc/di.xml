@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- The price fields of a product value: filled by the prices prefiller, read by the executor from the value. -->
+    <type name="GraphCommerce\CatalogStorefrontGraphQl\Model\DocumentHydration">
+        <arguments>
+            <argument name="prefillers" xsi:type="array">
+                <item name="prices" xsi:type="object">GraphCommerce\CatalogStorefrontPriceGraphQl\Model\Prefill\Prices</item>
+            </argument>
+            <argument name="priceFields" xsi:type="array">
+                <item name="price_range" xsi:type="string">price_range</item>
+                <item name="price" xsi:type="string">price</item>
+                <item name="price_tiers" xsi:type="string">price_tiers</item>
+                <item name="tier_prices" xsi:type="string">tier_prices</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query\RoutePrefilledFields">
+        <arguments>
+            <argument name="prefilledFields" xsi:type="array">
+                <item name="ProductInterface" xsi:type="array">
+                    <item name="price_range" xsi:type="string">price_range</item>
+                    <item name="price" xsi:type="string">price</item>
+                    <item name="price_tiers" xsi:type="string">price_tiers</item>
+                    <item name="tier_prices" xsi:type="string">tier_prices</item>
+                </item>
+            </argument>
+        </arguments>
+    </type>
+</config>

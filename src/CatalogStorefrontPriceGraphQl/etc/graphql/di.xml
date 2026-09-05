@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- The tax address of a signed-in customer is a join read of three columns, the tax class follows the session's group. -->
+    <type name="Magento\Tax\Model\Calculation">
+        <plugin name="graphcommerce_catalog_storefront_customer_address_columns" type="GraphCommerce\CatalogStorefrontPriceGraphQl\Plugin\Tax\CustomerAddressColumns"/>
+    </type>
+</config>

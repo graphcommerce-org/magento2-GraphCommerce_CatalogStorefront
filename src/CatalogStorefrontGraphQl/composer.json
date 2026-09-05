@@ -16,7 +16,6 @@
         "magento/module-customer": "*",
         "magento/module-integration": "*",
         "magento/module-jwt-user-token": "*",
-        "magento/module-tax": "*",
         "magento/module-store": "*",
         "graphcommerce/module-catalog-storefront": "self.version",
         "graphcommerce/module-catalog-storefront-graph-ql-api": "self.version"

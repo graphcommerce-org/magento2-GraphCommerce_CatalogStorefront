@@ -56,8 +56,9 @@ modules next to the `*GraphQl` ones.
 | `GraphCommerce_CatalogStorefrontApi` | The contracts: document stores, feed writers, document fields, product documents, price ranges |
 | `GraphCommerce_CatalogStorefrontGraphQlApi` | The GraphQL contracts: prefillers, hydration |
 | `GraphCommerce_CatalogStorefrontOpenSearch` | The document stores on OpenSearch, through core's client |
-| `GraphCommerce_CatalogStorefront` | Feed delivery, documents to models, price ranges and display prices, metadata readers, strict mode, plugins on non-GraphQL core |
-| `GraphCommerce_CatalogStorefrontGraphQl` | Listings and layered navigation, categories, media, URL rewrites, custom attributes, linked products, prices, the request path, the parity command |
+| `GraphCommerce_CatalogStorefront` | Feed delivery, documents to models, metadata readers, strict mode, plugins on non-GraphQL core |
+| `GraphCommerce_CatalogStorefrontGraphQl` | Listings and layered navigation, categories, media, URL rewrites, custom attributes, linked products, the request path, the parity command |
+| `GraphCommerce_CatalogStorefrontPrice` / `...PriceGraphQl` | Display prices and price ranges: currency and tax at read time through core's tax service / the prices prefiller, the customer's tax address |
 | `GraphCommerce_CatalogStorefrontWorker` | What a persistent PHP worker keeps between requests: kept schemas, validated documents, the guest tax, customer group and currency rate memos, each lifted by a cache generation. Nothing is keyed by customer. Only for FrankenPHP worker mode. |
 | `GraphCommerce_CatalogStorefrontExplorer` | The path switcher in the MageOS_GraphQLAdminHtml API explorer |
 | `GraphCommerce_CatalogStorefrontProfiler` | Times the document store client in a MageOS_Profiler trace, request bodies included |
@@ -69,7 +70,7 @@ modules next to the `*GraphQl` ones.
 | `GraphCommerce_CatalogStorefrontReview` / `...ReviewGraphQl` | Review and rating feeds / reviews, rating summary and breakdown |
 
 Each module depends only on the core modules it plugs into. Enable the ones the
-shop's product types and features need, plus the two Api modules, OpenSearch, the base
+shop's product types and features need, plus the two Api modules, OpenSearch, the two Price modules, the base
 and the GraphQl module. The Worker module belongs on a FrankenPHP worker deployment
 only; under php-fpm it costs a cache read per request and keeps nothing.
 

@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontGraphQl\Model\Prefill;
+namespace GraphCommerce\CatalogStorefrontPriceGraphQl\Model\Prefill;
 
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
-use GraphCommerce\CatalogStorefront\Model\Read\DisplayPrice;
-use GraphCommerce\CatalogStorefront\Model\Read\PriceRanges;
+use GraphCommerce\CatalogStorefrontPrice\Model\Read\DisplayPrice;
+use GraphCommerce\CatalogStorefrontPrice\Model\Read\PriceRanges;
 use GraphCommerce\CatalogStorefrontApi\Read\Amount;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillRequest;

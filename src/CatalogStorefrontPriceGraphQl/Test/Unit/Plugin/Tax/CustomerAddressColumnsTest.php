@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontGraphQl\Test\Unit\Plugin\Tax;
+namespace GraphCommerce\CatalogStorefrontPriceGraphQl\Test\Unit\Plugin\Tax;
 
-use GraphCommerce\CatalogStorefrontGraphQl\Plugin\Tax\CustomerAddressColumns;
+use GraphCommerce\CatalogStorefrontPriceGraphQl\Plugin\Tax\CustomerAddressColumns;
 use Magento\Customer\Api\Data\GroupInterface;
 use Magento\Customer\Api\GroupRepositoryInterface;
 use Magento\Customer\Model\Session;

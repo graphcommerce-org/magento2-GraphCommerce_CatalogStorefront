@@ -13,7 +13,7 @@
     <type name="Magento\ConfigurableProduct\Model\Product\Type\Configurable">
         <plugin name="graphcommerce_catalog_storefront_salable" type="GraphCommerce\CatalogStorefront\Plugin\SalableFromDocument"/>
     </type>
-    <type name="GraphCommerce\CatalogStorefront\Model\Read\PriceRanges">
+    <type name="GraphCommerce\CatalogStorefrontPrice\Model\Read\PriceRanges">
         <arguments>
             <argument name="ranges" xsi:type="array">
                 <item name="configurable" xsi:type="object">GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Read\ConfigurableRange</item>

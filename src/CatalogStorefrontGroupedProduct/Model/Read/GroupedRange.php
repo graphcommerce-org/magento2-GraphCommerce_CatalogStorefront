@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontGroupedProduct\Model\Read;
 
-use GraphCommerce\CatalogStorefront\Model\Read\DisplayPrice;
+use GraphCommerce\CatalogStorefrontPrice\Model\Read\DisplayPrice;
 use GraphCommerce\CatalogStorefrontApi\Read\DocumentContext;
 use GraphCommerce\CatalogStorefrontApi\Read\PriceRangeInterface;
 use Magento\Catalog\Model\Product;

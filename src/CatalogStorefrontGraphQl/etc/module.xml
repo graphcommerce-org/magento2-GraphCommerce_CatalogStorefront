@@ -9,7 +9,6 @@
             <module name="Magento_GraphQlResolverCache"/>
             <module name="Magento_Integration"/>
             <module name="Magento_JwtUserToken"/>
-            <module name="Magento_Tax"/>
         </sequence>
     </module>
 </config>

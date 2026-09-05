@@ -39,21 +39,20 @@ passes.
 - `CatalogStorefront`: the base. Feed delivery and the writers for the
   products, prices, categories and attributes feeds, the composite links, the
   image URL field, the exporter patch-ups the core feeds need, the model
-  builder, `ProductDocuments`, `PriceRanges` (di.xml `ranges`, by type id),
-  `DisplayPrice` (currency and tax at read time), `AttributeDocuments`, the
+  builder, `ProductDocuments`, `AttributeDocuments`, the
   configuration (`Model/Config`: storefront indexing, serve GraphQL, request
   override, strict mode, search term recording; the group sits under Catalog >
   Catalog in the admin), `Model/Strict` (the strict mode report) and the plugins
   on non-GraphQL core: product links, the layer price step, the single price
   range mode, the search field name memo, salable, the SQL statement recorder.
 - `CatalogStorefrontGraphQl`: `Model/Mode` (the request's path), `DocumentHydration`
-  with the prefiller list, the product and price prefillers, the listing data
+  with the prefiller list, the product prefiller, the listing data
   provider plugins, the resolver plugins for categories, media gallery, URL
   rewrites, custom attributes and linked products, the layered navigation
   plugins, the prefilled field routing and the strict report on the query
   processor, the cache factor of the path, the parity console command, and the
-  request plugins (`Plugin/Request`, `Plugin/Token`, `Plugin/Tax`,
-  request-scoped, no process memory): `UserTokenMemo` reads the bearer token
+  request plugins (`Plugin/Request`, `Plugin/Token`, request-scoped, no
+  process memory): `UserTokenMemo` reads the bearer token
   once where core reads it three times (the request validator twice, the
   user context once), and the JWT reader runs before the opaque token reader
   so a storefront token skips the token table lookup that misses;
@@ -65,14 +64,25 @@ passes.
   `CustomerGroupFromToken` seed the context, the session and the http context
   from the claims where core loads the whole customer with addresses, region
   and newsletter status and reads the group column twice (a token without
-  the claims goes to core); `CustomerAddressColumns` gives the tax rate
-  request the customer's default address as one join read of its three tax
-  columns, held for the request because every taxed amount builds its own
-  rate request, and the tax class from the session's group, where core loads
-  the customer twice; `CustomerIdCheckFromToken` answers the session's id
+  the claims goes to core); `RevokeOnGroupChange` revokes a customer's tokens
+  when a save moves the customer to another group, so the group claim never
+  outlives the group; `CustomerIdCheckFromToken` answers the session's id
   check from the token where core loads the customer to prove the id. A
   signed-in catalog request reads the revoked table, the address join and
   the rates of the product tax classes, nothing else about the customer.
+- `CatalogStorefrontPrice` / `...PriceGraphQl`: `DisplayPrice` (a base currency
+  price before tax, as the documents hold it, converted to the display
+  currency and taxed through core's tax service for the request's group and
+  destination: display incl, excl or both, catalog prices incl tax,
+  cross-border trade and the tax classes follow core config; fixed product
+  tax falls back), `PriceRanges` (di.xml `ranges`, by type id; the type
+  modules add theirs) / the prices prefiller with its fields and routes (a
+  type GraphQl module whose prefiller rewrites a price field sequences after
+  `PriceGraphQl`, so the prices prefiller runs first), and
+  `CustomerAddressColumns`: the tax rate request gets a signed-in customer's
+  default address as one join read of its three tax columns, held for the
+  request because every taxed amount builds its own rate request, and the tax
+  class from the session's group, where core loads the customer twice.
 - `CatalogStorefrontWorker`: what a FrankenPHP worker keeps between requests,
   each memo under a generation (`Model/Generation`: a token in the cache with
   the config tag; `Model/Memo`): the kept schemas per query shape, the validated

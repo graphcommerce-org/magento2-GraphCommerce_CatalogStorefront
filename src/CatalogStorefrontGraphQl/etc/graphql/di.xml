@@ -16,10 +16,6 @@
             </argument>
         </arguments>
     </type>
-    <!-- The tax address of a signed-in customer is a join read of three columns, the tax class follows the session's group. -->
-    <type name="Magento\Tax\Model\Calculation">
-        <plugin name="graphcommerce_catalog_storefront_customer_address_columns" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Tax\CustomerAddressColumns"/>
-    </type>
     <!-- The session cleanup after dispatch reads the customer from the token's claims, not from two customer loads. -->
     <type name="Magento\GraphQl\Controller\GraphQl">
         <plugin name="ClearCustomerSessionAfterRequest" disabled="true"/>

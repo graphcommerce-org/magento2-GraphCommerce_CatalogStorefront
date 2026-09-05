@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontBundleProduct\Model\Read;
 
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
-use GraphCommerce\CatalogStorefront\Model\Read\DisplayPrice;
+use GraphCommerce\CatalogStorefrontPrice\Model\Read\DisplayPrice;
 use GraphCommerce\CatalogStorefrontApi\Read\Amount;
 use GraphCommerce\CatalogStorefrontApi\Read\DocumentContext;
 use GraphCommerce\CatalogStorefrontApi\Read\PriceRangeInterface;

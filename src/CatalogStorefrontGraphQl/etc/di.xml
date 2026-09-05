@@ -16,6 +16,9 @@
         <plugin name="graphcommerce_catalog_storefront_user_token_validate_memo" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Request\UserTokenValidateMemo"/>
     </type>
     <!-- A customer JWT carries the group and the website; the request context reads them from the token. -->
+    <type name="Magento\Customer\Model\ResourceModel\Customer">
+        <plugin name="graphcommerce_catalog_storefront_revoke_on_group_change" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Token\RevokeOnGroupChange"/>
+    </type>
     <type name="Magento\JwtUserToken\Model\Issuer">
         <plugin name="graphcommerce_catalog_storefront_customer_claims_into_token" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Token\CustomerClaimsIntoToken"/>
     </type>
@@ -93,10 +96,6 @@
                     <item name="image" xsi:type="string">image</item>
                     <item name="small_image" xsi:type="string">small_image</item>
                     <item name="thumbnail" xsi:type="string">thumbnail</item>
-                    <item name="price_range" xsi:type="string">price_range</item>
-                    <item name="price" xsi:type="string">price</item>
-                    <item name="price_tiers" xsi:type="string">price_tiers</item>
-                    <item name="tier_prices" xsi:type="string">tier_prices</item>
                     <item name="websites" xsi:type="string">websites</item>
                     <item name="media_gallery_entries" xsi:type="string">media_gallery_entries</item>
                 </item>
@@ -114,13 +113,6 @@
         <arguments>
             <argument name="prefillers" xsi:type="array">
                 <item name="productFields" xsi:type="object">GraphCommerce\CatalogStorefrontGraphQl\Model\Prefill\ProductFields</item>
-                <item name="prices" xsi:type="object">GraphCommerce\CatalogStorefrontGraphQl\Model\Prefill\Prices</item>
-            </argument>
-            <argument name="priceFields" xsi:type="array">
-                <item name="price_range" xsi:type="string">price_range</item>
-                <item name="price" xsi:type="string">price</item>
-                <item name="price_tiers" xsi:type="string">price_tiers</item>
-                <item name="tier_prices" xsi:type="string">tier_prices</item>
             </argument>
             <argument name="fieldDocumentKeys" xsi:type="array">
                 <item name="description" xsi:type="array"><item name="0" xsi:type="string">description</item></item>

@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefront\Test\Unit\Model\Read;
+namespace GraphCommerce\CatalogStorefrontPrice\Test\Unit\Model\Read;
 
-use GraphCommerce\CatalogStorefront\Model\Read\DisplayPrice;
+use GraphCommerce\CatalogStorefrontPrice\Model\Read\DisplayPrice;
 use Magento\Catalog\Helper\Data as CatalogHelper;
 use Magento\Catalog\Model\Product;
 use Magento\CatalogInventory\Api\StockConfigurationInterface;

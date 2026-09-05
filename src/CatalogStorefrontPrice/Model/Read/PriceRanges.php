@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefront\Model\Read;
+namespace GraphCommerce\CatalogStorefrontPrice\Model\Read;
 
 use GraphCommerce\CatalogStorefrontApi\Read\Amount;
 use GraphCommerce\CatalogStorefrontApi\Read\DocumentContext;

@@ -8,7 +8,8 @@
         "magento/framework": "*",
         "magento/module-bundle": "*",
         "magento/module-bundle-product-data-exporter": "*",
-        "graphcommerce/module-catalog-storefront": "self.version"
+        "graphcommerce/module-catalog-storefront": "self.version",
+        "graphcommerce/module-catalog-storefront-price": "self.version"
     },
     "autoload": {
         "files": [

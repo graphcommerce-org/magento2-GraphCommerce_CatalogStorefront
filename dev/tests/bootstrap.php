@@ -21,3 +21,6 @@ $package = json_decode((string)file_get_contents(dirname(__DIR__, 2) . '/compose
 foreach ($package['autoload']['psr-4'] as $prefix => $path) {
     $loader->addPsr4($prefix, dirname(__DIR__, 2) . '/' . $path);
 }
+if (!interface_exists(\Magento\Integration\Api\Data\UserTokenParametersExtensionInterface::class)) {
+    require __DIR__ . '/generated/UserTokenParametersExtensionInterface.php';
+}
