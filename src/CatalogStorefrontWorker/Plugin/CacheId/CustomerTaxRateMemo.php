@@ -10,10 +10,11 @@ use Magento\CustomerGraphQl\CacheIdFactorProviders\CustomerTaxRateProvider;
 use Magento\GraphQl\Model\Query\ContextInterface;
 
 /**
- * Remembers the customer tax rate factor of the response cache id per store,
- * customer group and customer, under the tax generation. Core loads the
- * group, its tax class and the tax rates for every response, on POST
- * requests too.
+ * Remembers the guest tax rate factor of the response cache id per store and
+ * customer group, under the tax generation. Core loads the group, its tax
+ * class and the tax rates for every response, on POST requests too. A
+ * signed-in customer's factor follows the customer's own address and is
+ * computed per request: the memo holds store-level state only.
  */
 class CustomerTaxRateMemo
 {
@@ -27,8 +28,10 @@ class CustomerTaxRateMemo
     public function aroundGetFactorValue(CustomerTaxRateProvider $subject, \Closure $proceed, ContextInterface $context): string
     {
         $attributes = $context->getExtensionAttributes();
-        $key = $attributes->getStore()->getId() . ':' . ($attributes->getCustomerGroupId() ?? 0) . ':'
-            . ($attributes->getIsCustomer() ? (int)$context->getUserId() : 0);
+        if ($attributes->getIsCustomer()) {
+            return $proceed($context);
+        }
+        $key = $attributes->getStore()->getId() . ':' . ($attributes->getCustomerGroupId() ?? 0);
 
         return $this->factors->get($key, static fn(): string => $proceed($context));
     }

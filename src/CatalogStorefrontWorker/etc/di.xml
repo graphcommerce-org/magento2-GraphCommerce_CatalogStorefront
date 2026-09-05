@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
-    <!-- Process memos: what a persistent worker keeps between requests, each under a generation. -->
+    <!-- Process memos: store-level state a persistent worker keeps between requests, each under a generation. Nothing is keyed by customer. -->
     <type name="Magento\Framework\GraphQl\Schema\SchemaGeneratorInterface">
         <plugin name="graphcommerce_catalog_storefront_reuse_schema" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Query\ReuseSchema" sortOrder="10"/>
     </type>
@@ -14,10 +14,11 @@
         <plugin name="graphcommerce_catalog_storefront_config_change_memo" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Deploy\ConfigChangeMemo"/>
     </type>
     <type name="Magento\Tax\Model\Calculation">
-        <plugin name="graphcommerce_catalog_storefront_rate_request_memo" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Tax\RateRequestMemo"/>
         <plugin name="graphcommerce_catalog_storefront_rate_memo" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Tax\RateMemo"/>
     </type>
+    <!-- The memo wraps core's excluded-websites read of a group, so a memo hit skips it. -->
     <type name="Magento\Customer\Api\GroupRepositoryInterface">
+        <plugin name="getByIdCustomerGroupExcludedWebsite" sortOrder="10"/>
         <plugin name="graphcommerce_catalog_storefront_group_memo" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Customer\GroupMemo"/>
         <plugin name="graphcommerce_catalog_storefront_bump_tax" type="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpTax"/>
     </type>
@@ -44,12 +45,6 @@
         <plugin name="graphcommerce_catalog_storefront_bump_tax" type="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpTax"/>
     </type>
     <type name="Magento\Tax\Api\TaxClassRepositoryInterface">
-        <plugin name="graphcommerce_catalog_storefront_bump_tax" type="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpTax"/>
-    </type>
-    <type name="Magento\Customer\Api\CustomerRepositoryInterface">
-        <plugin name="graphcommerce_catalog_storefront_bump_tax" type="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpTax"/>
-    </type>
-    <type name="Magento\Customer\Api\AddressRepositoryInterface">
         <plugin name="graphcommerce_catalog_storefront_bump_tax" type="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpTax"/>
     </type>
 </config>

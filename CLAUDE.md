@@ -51,15 +51,35 @@ passes.
   provider plugins, the resolver plugins for categories, media gallery, URL
   rewrites, custom attributes and linked products, the layered navigation
   plugins, the prefilled field routing and the strict report on the query
-  processor, the cache factor of the path, the parity console command.
+  processor, the cache factor of the path, the parity console command, and the
+  request plugins (`Plugin/Request`, `Plugin/Token`, `Plugin/Tax`,
+  request-scoped, no process memory): `UserTokenMemo` reads the bearer token
+  once where core reads it three times (the request validator twice, the
+  user context once), and the JWT reader runs before the opaque token reader
+  so a storefront token skips the token table lookup that misses;
+  `UserTokenValidateMemo` validates the token once where each read validates
+  again (the revocation check is a table read because only revoked entries
+  are cached); `CustomerClaimsIntoToken` puts the group (`gid`) and the
+  website (`wid`) into a customer JWT when it is issued, `Model/Request/
+  CustomerClaims` reads them back, and `CustomerContextFromToken` and
+  `CustomerGroupFromToken` seed the context, the session and the http context
+  from the claims where core loads the whole customer with addresses, region
+  and newsletter status and reads the group column twice (a token without
+  the claims goes to core); `CustomerAddressColumns` gives the tax rate
+  request the customer's default address as one join read of its three tax
+  columns and the tax class from the session's group, where core loads the
+  customer twice. A signed-in catalog request reads the revoked table and
+  the address join, nothing else about the customer.
 - `CatalogStorefrontWorker`: what a FrankenPHP worker keeps between requests,
   each memo under a generation (`Model/Generation`: a token in the cache with
   the config tag; `Model/Memo`): the kept schemas per query shape, the validated
-  documents, the deployment config check, the cache id tax factor, the tax rate
-  request, the tax rates, the customer group and the currency rate lookups.
+  documents, the deployment config check, the guest cache id tax factor, the
+  guest tax rates, the customer group and the currency rate lookups. Nothing
+  is keyed by customer: a signed-in customer's request carries its own
+  address and stays with core's per-request caches.
   A cache flush or config cache clean lifts every memo; a save through the tax
-  rule, rate and class repositories, the customer, address and group
-  repositories, or the currency rate resource bumps the tax or currency
+  rule, rate and class repositories, the group repository, or the currency
+  rate resource bumps the tax or currency
   generation (`Plugin/Bump`). Not needed under php-fpm.
 - `CatalogStorefrontExplorer`: the Catalog switcher (Default, Documents,
   Database) of the MageOS_GraphQLAdminHtml explorer, through its
