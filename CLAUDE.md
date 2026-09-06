@@ -141,7 +141,11 @@ Inside a base module the folders name the stage of the pipeline:
 - `Model/Document/`: the document store side. `Delivery` implements the
   exporter's `ExportFeedInterface` and hands each batch to the `Writer/` of its
   feed; `Field/` classes compute product document fields; `CompositeLinks`
-  keeps the composite relations by id; a child outside the batch gets its
+  keeps the composite relations by id. A writer that merges into stored
+  documents reads them through `stored()` and `storedBySku()`, the index that
+  takes the writes, so a staged rebuild and a first build see what they wrote
+  (the read alias points at the old index, or at nothing, until promote);
+  `get()` and `findBySku()` are the request path's reads. A child outside the batch gets its
   parent id lists changed in the store (`updateLists`), the only
   read-modify-write a parallel feed thread could race, since the exporter
   partitions a feed's batches by source entity id and every other merge
@@ -188,8 +192,9 @@ registers all modules through composer autoload.
   header; the response extensions carry the document path's fallbacks. Run it
   against the worker's own host name
   (`https://worker.localhost.reachdigital.io/graphql`; the backend host name
-  goes to the host PHP-FPM). Every query runs twice unjudged first, so the
-  gate sees the steady state and not the memo fill. A fallback is printed, not failed: it is allowed when the
+  goes to the host PHP-FPM). Every query runs twice unjudged first, and a
+  failing query is requested again up to `--attempts` times (three), so the
+  gate sees the steady state and not the memo fill of a cold worker thread. A fallback is printed, not failed: it is allowed when the
   document cannot answer, and the reason says whether that is so. Add a query
   for every field a new plugin serves. A poison test (edit a document in
   OpenSearch, see the change in the response) proves a field is live; the gate
@@ -405,7 +410,12 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   `<prefix>_<entity>_<store view>`; `product` is an entity like the others.
 - The parity set needs the fixed bundle `GC-BUNDLE-FIXED`
   (`dev/parity/fixtures/bundle-fixed.json`, POST it to `/rest/V1/products`
-  with an admin token, then reindex stock, price, search and the feeds): the
+  with an admin token, then reindex stock, price, search and the feeds) and a
+  second website with the store view `second` that sells every product
+  (`php dev/parity/fixtures/second-store.php` from the Magento root, then
+  `cache:flush` before `indexer:reindex`: the exporter and the search indexer
+  read the store list from the config cache, and a reindex before the flush
+  builds one store view; the dev shop has it): the
   demo catalog has only a dynamic bundle with required radio options. The
   harness fails a query that returns no product on either path, because a
   hidden product passed vacuously for hours before that check existed. The
@@ -500,8 +510,7 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   are listed by attribute id, the order core's super attribute index yields.
 - A bundle item's `price_range` is the bundle's own range; core resolves a
   product loaded by the item's sku and answers something else for a dynamic
-  bundle. `websites` lists the document's own website only; a product in
-  several websites has a document per store view. The deprecated
+  bundle. The deprecated
   `tier_prices` read every tier as for all groups, which the price feed does
   not carry. `media_gallery_entries` ids and uids count from one per product;
   the feed carries no gallery value ids. A category's

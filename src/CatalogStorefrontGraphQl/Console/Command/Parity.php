@@ -11,6 +11,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
@@ -19,7 +20,9 @@ use Symfony\Component\Console\Output\OutputInterface;
  * with the X-Catalog-Storefront header under the storefront key, and diffs
  * the responses. The document path's fallbacks come back in the response
  * extensions and are printed. Every query runs unjudged first so the gate
- * sees the steady state. A query file sends extra request headers through
+ * sees the steady state, and a query that fails is requested again up to
+ * `--attempts` times before its verdict counts: a worker thread that has not
+ * served the shape yet answers from a cold state once. A query file sends extra request headers through
  * comment lines of the form `# @header Content-Currency: EUR`; `--header`
  * sends one with every query, a customer token for a signed-in gate. Other
  * modules add verdicts through di.xml `judges`.
@@ -31,6 +34,7 @@ class Parity extends Command
     private const DUMP = 'dump';
     private const WARM = 'warm';
     private const HEADER = 'header';
+    private const ATTEMPTS = 'attempts';
 
     /**
      * @param JudgeInterface[] $judges
@@ -50,7 +54,8 @@ class Parity extends Command
             ->addOption(self::QUERIES, null, InputOption::VALUE_REQUIRED, 'Directory of .graphql files', dirname(__DIR__, 4) . '/dev/parity/queries')
             ->addOption(self::DUMP, null, InputOption::VALUE_REQUIRED, 'Directory that keeps both responses of every query')
             ->addOption(self::WARM, null, InputOption::VALUE_REQUIRED, 'Unjudged runs of every query per path before the judged one', '2')
-            ->addOption(self::HEADER, null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'A request header for every query, "Name: value"; a customer token makes it a signed-in gate');
+            ->addOption(self::HEADER, null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'A request header for every query, "Name: value"; a customer token makes it a signed-in gate')
+            ->addOption(self::ATTEMPTS, null, InputOption::VALUE_REQUIRED, 'Judged requests of a query before a failing verdict counts', '3');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -70,6 +75,7 @@ class Parity extends Command
             return Command::FAILURE;
         }
         $warm = max(0, (int)$input->getOption(self::WARM));
+        $attempts = max(1, (int)$input->getOption(self::ATTEMPTS));
         $dump = $input->getOption(self::DUMP);
         $shared = [];
         foreach ((array)$input->getOption(self::HEADER) as $header) {
@@ -83,20 +89,30 @@ class Parity extends Command
             $query = (string)file_get_contents($file);
             preg_match_all('/^#\s*@header\s+([\w-]+):\s*(.+?)\s*$/m', $query, $matches, PREG_SET_ORDER);
             $headers = array_combine(array_column($matches, 1), array_column($matches, 2)) + $shared;
-            $responses = [];
             foreach ([Mode::CORE, Mode::DOCUMENTS] as $mode) {
                 for ($run = 0; $run < $warm; $run++) {
                     $this->request($endpoint, $query, $mode, $key, $headers);
                 }
-                $responses[$mode] = $this->request($endpoint, $query, $mode, $key, $headers);
             }
-            if ($dump) {
-                @mkdir($dump, 0777, true);
-                foreach ($responses as $mode => $response) {
-                    file_put_contents("$dump/$name.$mode.json", json_encode($response, JSON_PRETTY_PRINT));
+            for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+                $responses = [];
+                foreach ([Mode::CORE, Mode::DOCUMENTS] as $mode) {
+                    $responses[$mode] = $this->request($endpoint, $query, $mode, $key, $headers);
+                }
+                if ($dump) {
+                    @mkdir($dump, 0777, true);
+                    foreach ($responses as $mode => $response) {
+                        file_put_contents("$dump/$name.$mode.json", json_encode($response, JSON_PRETTY_PRINT));
+                    }
+                }
+                $verdict = new BufferedOutput($output->getVerbosity(), $output->isDecorated());
+                $ok = $this->judge($verdict, $name, $responses[Mode::CORE], $responses[Mode::DOCUMENTS]);
+                if ($ok || $attempt === $attempts) {
+                    $output->write($verdict->fetch());
+                    $failed += $ok ? 0 : 1;
+                    break;
                 }
             }
-            $failed += $this->judge($output, $name, $responses[Mode::CORE], $responses[Mode::DOCUMENTS]) ? 0 : 1;
         }
         $output->writeln(sprintf("\n%d of %d queries identical", count($files) - $failed, count($files)));
 

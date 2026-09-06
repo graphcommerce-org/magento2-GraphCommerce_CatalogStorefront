@@ -166,7 +166,10 @@ diffs the responses. It sends the storefront key, so the configuration must have
 saved once, and prints every fallback of the document path. `--dump=<dir>` keeps both
 responses of every query. A query file sends its own request
 headers through `# @header Content-Currency: EUR` comment lines; `--header "Authorization:
-Bearer <token>"` sends a customer token with every query, which makes it a signed-in gate. See `CLAUDE.md` for the
+Bearer <token>"` sends a customer token with every query, which makes it a signed-in gate,
+and `--header "Store: second"` runs it on another store view. A query that fails is requested
+again, up to `--attempts` times (three by default), before its verdict counts: a worker thread
+that has not served the shape yet answers from a cold state once. See `CLAUDE.md` for the
 operating notes, the fixtures the query set needs and the known deviations.
 
 ## Status
@@ -205,8 +208,9 @@ installation that holds the package (`MAGENTO_ROOT`, else the project two levels
 [graycore actions](https://github.com/graycoreio/github-actions-magento2), then installs
 the sample data with OpenSearch, MySQL and Redis as service containers, adds the query set's
 fixtures, exports the feeds and runs the parity gate in three price setups: excluding tax,
-catalog prices including tax, both prices displayed; each as a guest and as a signed-in
-customer with a Michigan address. PHPUnit runs from its phar in both
+catalog prices including tax, both prices displayed; each as a guest, as a signed-in
+customer with a Michigan address, and on the store view of a second website that sells
+every product. PHPUnit runs from its phar in both
 jobs: Magento's composer.json excludes every `Test` directory from the classmap, which
 drops PHPUnit's own event classes.
 
@@ -243,23 +247,21 @@ of the links.
    paths, so an integrator proves an extension on every surface it touches.
 5. **REST integration.** The product repository and the search API behind the same
    document models, for headless setups that read the catalog over REST.
-6. **A second store view in CI.** The CI install has one store view, so the per-website
-   fan-out of prices and stock is not covered.
-7. **Integration tests.** Magento integration tests for the writers and the model
+6. **Integration tests.** Magento integration tests for the writers and the model
     builder next to the unit tests, which is what a Mage-OS review asks for.
-8. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
+7. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
     hook on the search request and a permission hook on the documents, so an extension
     plugs in without a preference on a class of this package.
-9. **Category attributes on the category documents.** Custom category attributes such
+8. **Category attributes on the category documents.** Custom category attributes such
     as SEO fields fall back to the database; a category attributes slice like the
     product one serves them.
-10. **Fixed product taxes.** The last price display setup that falls back to core.
+9. **Fixed product taxes.** The last price display setup that falls back to core.
     The weee amounts per product travel on the document; the read side adds them the
     way the weee adjustment does.
-11. **Composite ranges per child tax class.** A configurable or grouped range is taxed
+10. **Composite ranges per child tax class.** A configurable or grouped range is taxed
     with the parent's tax class; core taxes each child's regular price with the child's
     own class. A terms aggregation on the child's tax class next to the nested price
     index makes the regular range exact. Bundles are exact already.
-12. **Package publishing.** A subtree split of the module directories to their own
+11. **Package publishing.** A subtree split of the module directories to their own
     repositories and a release on packagist, so the modules install separately while
     the repository stays one.

@@ -60,7 +60,7 @@ jobs:
 
   # The parity gate: a Mage-OS install with sample data and OpenSearch, the feeds exported into the
   # document store, every query of dev/parity/queries on both paths, in the three price setups,
-  # as a guest and as a signed-in customer.
+  # as a guest, as a signed-in customer and on a second website's store view.
   parity:
     needs: [matrix, unit]
     strategy:
@@ -131,6 +131,8 @@ jobs:
           mysql --host 127.0.0.1 --port ${{ job.services.mysql.ports['3306'] }} -u root -prootpassword magento -e "
             UPDATE cataloginventory_stock_item SET qty = 1 WHERE product_id = (SELECT entity_id FROM catalog_product_entity WHERE sku = '24-WG01');
             UPDATE inventory_source_item SET quantity = 1 WHERE sku = '24-WG01';"
+          # A second website with the store view "second" that sells every product.
+          php ${{ github.workspace }}/dev/parity/fixtures/second-store.php
       - name: Configure and export the feeds
         working-directory: ${{ steps.magento.outputs.path }}
         run: |
@@ -149,3 +151,6 @@ jobs:
         run: |
           CUSTOMER_TOKEN=$(curl -s -X POST http://127.0.0.1:8080/graphql -H 'Content-Type: application/json' -d '{"query":"mutation { generateCustomerToken(email: \"customer@example.com\", password: \"Parity12345!\") { token } }"}' | php -r 'echo json_decode(stream_get_contents(STDIN), true)["data"]["generateCustomerToken"]["token"] ?? exit(1);')
           bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql --header "Authorization: Bearer $CUSTOMER_TOKEN"
+      - name: Parity gate on the second store view
+        working-directory: ${{ steps.magento.outputs.path }}
+        run: bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql --header "Store: second"
