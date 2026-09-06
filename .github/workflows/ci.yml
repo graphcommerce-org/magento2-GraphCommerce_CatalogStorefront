@@ -133,6 +133,8 @@ jobs:
             UPDATE inventory_source_item SET quantity = 1 WHERE sku = '24-WG01';"
           # A second website with the store view "second" that sells every product.
           php ${{ github.workspace }}/dev/parity/fixtures/second-store.php
+          # A reduced product tax class on one variant of WJ02, so a composite mixes child tax classes.
+          php ${{ github.workspace }}/dev/parity/fixtures/reduced-tax-class.php
       - name: Configure and export the feeds
         working-directory: ${{ steps.magento.outputs.path }}
         run: |

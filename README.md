@@ -258,10 +258,6 @@ of the links.
 9. **Fixed product taxes.** The last price display setup that falls back to core.
     The weee amounts per product travel on the document; the read side adds them the
     way the weee adjustment does.
-10. **Composite ranges per child tax class.** A configurable or grouped range is taxed
-    with the parent's tax class; core taxes each child's regular price with the child's
-    own class. A terms aggregation on the child's tax class next to the nested price
-    index makes the regular range exact. Bundles are exact already.
-11. **Package publishing.** A subtree split of the module directories to their own
+10. **Package publishing.** A subtree split of the module directories to their own
     repositories and a release on packagist, so the modules install separately while
     the repository stays one.

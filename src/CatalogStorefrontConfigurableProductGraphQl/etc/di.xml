@@ -19,6 +19,9 @@
     </type>
     <type name="GraphCommerce\CatalogStorefrontGraphQl\Model\DocumentHydration">
         <arguments>
+            <argument name="prefillers" xsi:type="array">
+                <item name="configurableDeprecatedPrice" xsi:type="object">GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Model\Prefill\DeprecatedPrice</item>
+            </argument>
             <argument name="fieldDocumentKeys" xsi:type="array">
                 <item name="configurable_options" xsi:type="array"><item name="0" xsi:type="string">configurableOptions</item></item>
                 <item name="variants" xsi:type="array"><item name="0" xsi:type="string">configurableOptions</item></item>

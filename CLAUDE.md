@@ -412,7 +412,10 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   (`dev/parity/fixtures/bundle-fixed.json`, POST it to `/rest/V1/products`
   with an admin token, then reindex stock, price, search and the feeds) and a
   second website with the store view `second` that sells every product
-  (`php dev/parity/fixtures/second-store.php` from the Magento root, then
+  (`php dev/parity/fixtures/second-store.php` from the Magento root) and the
+  product tax class Reduced Goods at 2% in Michigan on the variant
+  WJ02-XS-Blue (`php dev/parity/fixtures/reduced-tax-class.php`), so the
+  including-tax gates see a composite with mixed child tax classes (then
   `cache:flush` before `indexer:reindex`: the exporter and the search indexer
   read the store list from the config cache, and a reindex before the flush
   builds one store view; the dev shop has it): the
@@ -478,11 +481,14 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
 ## Known gaps and deviations
 
 - Prices are served in every currency and tax display setup except fixed
-  product taxes, which fall back to core. A configurable or grouped range is
-  taxed with the parent's tax class; core taxes the regular price of each
-  child with the child's own class (its final price with the parent's). A
-  dynamic bundle's selections are taxed with the child's class, as core does;
-  the product document carries `taxClassId` for it. A composite range in a
+  product taxes, which fall back to core. A configurable or grouped range
+  taxes each bound with the tax class of the child that carries it, as core
+  does: the price aggregation groups the bounds per child `taxClassId`, and
+  the range picks the lowest and highest taxed amount (configurable) or the
+  lowest base price taxed with its class (grouped; core takes the last child
+  in position order among ties of different classes, the range the lowest
+  taxed one). A dynamic bundle's selections are taxed with the child's class
+  too; the product document carries `taxClassId` for all of it. A composite range in a
   non-base currency converts the aggregated base prices; core converts and
   rounds each child, so a cent may differ where children mix discounted and
   regular prices. The tier price discounts are computed against the regular

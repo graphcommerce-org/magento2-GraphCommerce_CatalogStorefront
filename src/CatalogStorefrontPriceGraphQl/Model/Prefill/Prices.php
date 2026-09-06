@@ -97,7 +97,7 @@ class Prices implements PrefillerInterface
      * The deprecated price shape: the unrounded amount and its tax adjustment
      * when the amount carries one.
      */
-    private function amount(Amount $amount, StoreInterface $store): array
+    public function amount(Amount $amount, StoreInterface $store): array
     {
         $currency = $store->getCurrentCurrencyCode();
 

@@ -100,6 +100,7 @@
                     <item name="bundleParentIds" xsi:type="string">keyword</item>
                     <item name="status" xsi:type="string">keyword</item>
                     <item name="stock.isSalable" xsi:type="string">boolean</item>
+                    <item name="taxClassId" xsi:type="string">keyword</item>
                     <item name="priceIndex" xsi:type="array">
                         <item name="type" xsi:type="string">nested</item>
                         <item name="fields" xsi:type="array">
