@@ -132,8 +132,7 @@ jobs:
         working-directory: ${{ steps.magento.outputs.path }}
         run: |
           bin/magento config:set catalog/storefront_documents/index_enabled 1
-          bin/magento config:set catalog/storefront_documents/request_override 1
-          bin/magento config:set catalog/storefront_documents/strict 1
+          bin/magento config:set catalog/storefront_documents/key parity-gate
           bin/magento config:set currency/options/allow USD,EUR
           mysql --host 127.0.0.1 --port ${{ job.services.mysql.ports['3306'] }} -u root -prootpassword magento -e "INSERT INTO directory_currency_rate (currency_from, currency_to, rate) VALUES ('USD', 'EUR', 0.85)"
           for pair in ${{ matrix.prices.set }}; do bin/magento config:set "${pair%%=*}" "${pair#*=}"; done

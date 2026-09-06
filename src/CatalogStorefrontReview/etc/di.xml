@@ -67,9 +67,16 @@
                 <item name="reviews" xsi:type="object">GraphCommerce\CatalogStorefrontReview\Model\Document\Writer\Reviews</item>
                 <item name="ratingMetadata" xsi:type="object">GraphCommerce\CatalogStorefrontReview\Model\Document\Writer\Ratings</item>
             </argument>
+            <argument name="identities" xsi:type="array">
+                <item name="reviews" xsi:type="array">
+                    <item name="cat_p" xsi:type="array">
+                        <item name="productId" xsi:type="string">productId</item>
+                    </item>
+                </item>
+            </argument>
         </arguments>
     </type>
-    <type name="GraphCommerce\CatalogStorefront\Console\Command\Rebuild">
+    <type name="GraphCommerce\CatalogStorefront\Model\Feeds">
         <arguments>
             <argument name="feeds" xsi:type="array">
                 <item name="review" xsi:type="array">

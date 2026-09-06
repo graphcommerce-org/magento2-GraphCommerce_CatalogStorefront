@@ -7,45 +7,27 @@ use Magento\Framework\ObjectManager\ResetAfterRequestInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * The strict mode report of one request: every fallback to core a document
- * plugin took, with its reason, and every SQL statement the request ran,
- * counted. Off, only an exception fallback leaves a trace, as a warning in
- * the log. On, the GraphQL response carries the report in its extensions;
- * for test environments only, since it exposes statements.
+ * The report of one request: every fallback to core a document plugin took,
+ * with its reason. Without the report, only an exception fallback leaves a
+ * trace, as a warning in the log. A request with the storefront key gets the
+ * fallbacks in the GraphQL response extensions.
  */
 class Strict implements ResetAfterRequestInterface
 {
     private ?bool $enabled = null;
-    private bool $resolving = false;
 
     /** @var string[] */
     private array $fallbacks = [];
 
-    /** @var array<string, int> */
-    private array $statements = [];
-
     public function __construct(
-        private readonly Config $config,
+        private readonly StorefrontKey $key,
         private readonly LoggerInterface $logger,
     ) {
     }
 
     public function enabled(): bool
     {
-        if ($this->enabled === null) {
-            // The config read runs SQL of its own on a cold cache; that SQL is not reported.
-            if ($this->resolving) {
-                return false;
-            }
-            $this->resolving = true;
-            try {
-                $this->enabled = $this->config->strict();
-            } finally {
-                $this->resolving = false;
-            }
-        }
-
-        return $this->enabled;
+        return $this->enabled ??= $this->key->granted();
     }
 
     /**
@@ -67,28 +49,17 @@ class Strict implements ResetAfterRequestInterface
         $this->fallback($source, 'exception: ' . $e->getMessage());
     }
 
-    public function statement(string $sql): void
-    {
-        if ($this->enabled()) {
-            $short = preg_replace('/\s+/', ' ', substr(trim($sql), 0, 200));
-            $this->statements[$short] = ($this->statements[$short] ?? 0) + 1;
-        }
-    }
-
     /**
-     * @return array{fallbacks: string[], sql: array<string, int>}
+     * @return array{fallbacks: string[]}
      */
     public function report(): array
     {
-        arsort($this->statements);
-
-        return ['fallbacks' => $this->fallbacks, 'sql' => $this->statements];
+        return ['fallbacks' => $this->fallbacks];
     }
 
     public function _resetState(): void
     {
         $this->enabled = null;
         $this->fallbacks = [];
-        $this->statements = [];
     }
 }

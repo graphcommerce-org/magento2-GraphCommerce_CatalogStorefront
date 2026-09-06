@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontGraphQl\Console\Command;
 
 use GraphCommerce\CatalogStorefront\Model\Config;
+use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
 use GraphCommerce\CatalogStorefrontGraphQl\Model\Mode;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -14,12 +15,11 @@ use Symfony\Component\Console\Output\OutputInterface;
 /**
  * The parity gate: runs every query of a directory against one GraphQL
  * endpoint on the core path and on the document path, picked per request
- * with the X-Catalog-Storefront header, and diffs the responses. With strict
- * mode on, the document path's SQL statements and fallbacks come back in the
- * response extensions: a lookup fails the query, a write and a fallback are
- * printed. Every query runs unjudged first so the gate sees the steady state.
- * A query file sends extra request headers through comment lines of the form
- * `# @header Content-Currency: EUR`.
+ * with the X-Catalog-Storefront header under the storefront key, and diffs
+ * the responses. The document path's fallbacks come back in the response
+ * extensions and are printed. Every query runs unjudged first so the gate
+ * sees the steady state. A query file sends extra request headers through
+ * comment lines of the form `# @header Content-Currency: EUR`.
  */
 class Parity extends Command
 {
@@ -46,14 +46,11 @@ class Parity extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        if (!$this->config->requestOverride()) {
-            $output->writeln('<error>Turn on Catalog > Catalog > Catalog Storefront Document Store > Allow Request Override first.</error>');
+        $key = $this->config->key();
+        if ($key === '') {
+            $output->writeln('<error>Save Catalog > Catalog > Catalog Storefront Document Store once to generate the storefront key.</error>');
 
             return Command::FAILURE;
-        }
-        $strict = $this->config->strict();
-        if (!$strict) {
-            $output->writeln('NOTE  SQL gate skipped: turn on Strict Mode to judge the SQL of the document path');
         }
         $endpoint = (string)$input->getArgument(self::ENDPOINT);
         $files = glob(rtrim((string)$input->getOption(self::QUERIES), '/') . '/*.graphql') ?: [];
@@ -75,19 +72,9 @@ class Parity extends Command
             $responses = [];
             foreach ([Mode::CORE, Mode::DOCUMENTS] as $mode) {
                 for ($run = 0; $run < $warm; $run++) {
-                    $this->request($endpoint, $query, $mode, $headers);
+                    $this->request($endpoint, $query, $mode, $key, $headers);
                 }
-                // Judged three times: a worker thread that has not served the shape yet fills its memos with
-                // a few lookups, and the gate judges the steady state, so the response with the fewest
-                // statements counts.
-                $best = null;
-                foreach ([1, 2, 3] as $attempt) {
-                    $response = $this->request($endpoint, $query, $mode, $headers);
-                    if ($best === null || count($response['extensions']['catalogStorefront']['sql'] ?? []) < count($best['extensions']['catalogStorefront']['sql'] ?? [])) {
-                        $best = $response;
-                    }
-                }
-                $responses[$mode] = $best;
+                $responses[$mode] = $this->request($endpoint, $query, $mode, $key, $headers);
             }
             if ($dump) {
                 @mkdir($dump, 0777, true);
@@ -95,14 +82,14 @@ class Parity extends Command
                     file_put_contents("$dump/$name.$mode.json", json_encode($response, JSON_PRETTY_PRINT));
                 }
             }
-            $failed += $this->judge($output, $name, $responses[Mode::CORE], $responses[Mode::DOCUMENTS], $strict) ? 0 : 1;
+            $failed += $this->judge($output, $name, $responses[Mode::CORE], $responses[Mode::DOCUMENTS]) ? 0 : 1;
         }
         $output->writeln(sprintf("\n%d of %d queries identical", count($files) - $failed, count($files)));
 
         return $failed > 0 ? Command::FAILURE : Command::SUCCESS;
     }
 
-    private function judge(OutputInterface $output, string $name, array $core, array $documents, bool $strict): bool
+    private function judge(OutputInterface $output, string $name, array $core, array $documents): bool
     {
         // An error on either path is never parity, even when both paths fail alike.
         foreach ([Mode::CORE => $core, Mode::DOCUMENTS => $documents] as $mode => $response) {
@@ -119,7 +106,7 @@ class Parity extends Command
             }
         }
         $report = $documents['extensions']['catalogStorefront'] ?? [];
-        if ($strict && ($report['mode'] ?? null) !== Mode::DOCUMENTS) {
+        if (($report['mode'] ?? null) !== Mode::DOCUMENTS) {
             $output->writeln(sprintf('ERROR %s: the endpoint did not honour the %s header', $name, Mode::HEADER));
 
             return false;
@@ -127,23 +114,7 @@ class Parity extends Command
         foreach ((array)($report['fallbacks'] ?? []) as $fallback) {
             $output->writeln(sprintf('FALLBACK %s: %s', $name, $fallback));
         }
-        $lookups = [];
-        foreach ((array)($report['sql'] ?? []) as $statement => $count) {
-            // A write is not a lookup: core records the search term's popularity on every search.
-            if (preg_match('/^\s*(INSERT|UPDATE|DELETE|REPLACE)\b/i', $statement)) {
-                $output->writeln(sprintf('WRITE %s (document path): %dx %s', $name, $count, substr($statement, 0, 160)));
-            } else {
-                $lookups[$statement] = $count;
-            }
-        }
         $ok = true;
-        if ($lookups) {
-            $ok = false;
-            $output->writeln(sprintf('SQL   %s (document path): %d queries', $name, array_sum($lookups)));
-            foreach (array_slice($lookups, 0, 8, true) as $statement => $count) {
-                $output->writeln(sprintf('      %dx %s', $count, $statement));
-            }
-        }
         $diffs = $this->diff($this->normalize($core['data'] ?? null), $this->normalize($documents['data'] ?? null));
         if ($diffs) {
             $ok = false;
@@ -165,9 +136,9 @@ class Parity extends Command
     /**
      * @param array<string, string> $headers
      */
-    private function request(string $endpoint, string $query, string $mode, array $headers): array
+    private function request(string $endpoint, string $query, string $mode, string $key, array $headers): array
     {
-        $headers = ['Content-Type' => 'application/json', Mode::HEADER => $mode] + $headers;
+        $headers = ['Content-Type' => 'application/json', Mode::HEADER => $mode, StorefrontKey::HEADER => $key] + $headers;
         $context = stream_context_create(['http' => [
             'method' => 'POST',
             'header' => implode('', array_map(static fn($name, $value) => "$name: $value\r\n", array_keys($headers), $headers)),

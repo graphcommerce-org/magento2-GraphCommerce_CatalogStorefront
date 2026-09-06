@@ -74,6 +74,15 @@ class Client
         return $documents;
     }
 
+    public function count(string $index): int
+    {
+        try {
+            return (int)($this->client()->count(['index' => $index])['count'] ?? 0);
+        } catch (Missing404Exception) {
+            return 0;
+        }
+    }
+
     public function search(string $index, array $body): array
     {
         try {

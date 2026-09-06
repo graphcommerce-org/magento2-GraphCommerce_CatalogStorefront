@@ -40,16 +40,21 @@ passes.
   products, prices, categories and attributes feeds, the composite links, the
   image URL field, the exporter patch-ups the core feeds need, the model
   builder, `ProductDocuments`, `AttributeDocuments`, the
-  configuration (`Model/Config`: storefront indexing, serve GraphQL, request
-  override, strict mode, search term recording; the group sits under Catalog >
-  Catalog in the admin), `Model/Strict` (the strict mode report) and the plugins
-  on non-GraphQL core: product links, the layer price step, the single price
-  range mode, the search field name memo, salable, the SQL statement recorder.
+  configuration (`Model/Config`: storefront indexing, serve GraphQL, the
+  storefront key, search term recording; the group sits under Catalog >
+  Catalog in the admin; `Model/Config/Backend/Key` generates the key on a
+  save with the field empty), `Model/StorefrontKey` (whether the request
+  carries the key in `X-Catalog-Storefront-Key`), `Model/Strict` (the fallback
+  report of a keyed request), `Model/Feeds` (the feeds per entity, for the
+  rebuild and status commands), `Plugin/Customer/PricesFeedOnNewGroup` (a new
+  group truncates the prices feed table and invalidates its indexer) and the
+  plugins on non-GraphQL core: product links, the layer price step, the single
+  price range mode, the search field name memo, salable.
 - `CatalogStorefrontGraphQl`: `Model/Mode` (the request's path), `DocumentHydration`
   with the prefiller list, the product prefiller, the listing data
   provider plugins, the resolver plugins for categories, media gallery, URL
   rewrites, custom attributes and linked products, the layered navigation
-  plugins, the prefilled field routing and the strict report on the query
+  plugins, the prefilled field routing and the fallback report on the query
   processor, the cache factor of the path, the parity console command, and the
   request plugins (`Plugin/Request`, `Plugin/Token`, request-scoped, no
   process memory): `UserTokenMemo` reads the bearer token
@@ -96,7 +101,8 @@ passes.
   generation (`Plugin/Bump`). Not needed under php-fpm.
 - `CatalogStorefrontExplorer`: the Catalog switcher (Default, Documents,
   Database) of the MageOS_GraphQLAdminHtml explorer, through its
-  `headerSwitchers` block argument.
+  `headerSwitchers` block argument; `Model/Switcher` builds it at page load so
+  the Documents and Database options send the storefront key with the path.
 - `CatalogStorefrontInventory` / `...InventoryGraphQl`: the stock feed writer
   (a stock's rows land on the store views of the websites it sells through)
   and stock item feed fields / the stock prefiller (the MSI source item
@@ -160,24 +166,20 @@ registers all modules through composer autoload.
   on the document. Index-time feed processing (the `ExportFeedInterface`
   implementation and feed plugins, run by `indexer:reindex`) assembles the
   documents and uses SQL freely. A deployment whose read side has no catalog
-  database turns the SHOULD into a MUST NOT and fails the gate on a
-  statement, so a lookup added here MUST stay visible in the strict report
-  and MUST be replaceable by a document field.
+  database turns the SHOULD into a MUST NOT, so a lookup added here MUST be
+  replaceable by a document field. The statements a request runs show in a
+  MageOS_Profiler trace; this package records none itself.
 - The read path MUST fall back to the core resolver whenever the document lacks
   what a field needs, never to a database read written into a document plugin.
 - Parity is the gate: `bin/magento catalog-storefront:parity <endpoint>` MUST
-  stay green before a change ships. It needs Allow Request Override on (each
-  request picks its path with the `X-Catalog-Storefront` header) and Strict
-  Mode on (the response extensions carry the document path's SQL statements
-  and fallbacks): a document-path query that runs a SQL lookup fails with its
-  statements; that failure becomes the `--no-sql` option once the gate has
-  it, and the default prints the statement. Run it against the worker's
-  own host name (`https://worker.localhost.reachdigital.io/graphql`; the
-  backend host name goes to the host PHP-FPM). Every query runs twice unjudged
-  first, so the gate sees the steady state and not the memo fill. Every query
-  passes with no lookup; the search listing's two writes (core records the
-  search term) appear only with the Record Search Terms setting on; it is off
-  by default. A fallback is printed, not failed: it is allowed when the
+  stay green before a change ships. It sends the storefront key (saved once
+  in the configuration; `config:set catalog/storefront_documents/key ""`
+  generates one) and picks each request's path with the `X-Catalog-Storefront`
+  header; the response extensions carry the document path's fallbacks. Run it
+  against the worker's own host name
+  (`https://worker.localhost.reachdigital.io/graphql`; the backend host name
+  goes to the host PHP-FPM). Every query runs twice unjudged first, so the
+  gate sees the steady state and not the memo fill. A fallback is printed, not failed: it is allowed when the
   document cannot answer, and the reason says whether that is so. Add a query
   for every field a new plugin serves. A poison test (edit a document in
   OpenSearch, see the change in the response) proves a field is live; the gate
@@ -187,7 +189,7 @@ registers all modules through composer autoload.
 - Every fallback to core in a document plugin goes through `Model/Strict`:
   `fallback(self::class, reason)` where the document cannot answer,
   `exception(self::class, $e)` where the plugin failed (it logs a warning).
-  Strict mode is what makes a silent fallback visible outside the gate.
+  The keyed report is what makes a silent fallback visible outside the gate.
 
 ## Boundary note
 
@@ -200,7 +202,11 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
 ## Shape
 
 - Write: `Model/Document/Delivery` hands each feed batch to its writer
-  (`Model/Document/Writer/*`, di.xml `writers`); together they build one document per store view
+  (`Model/Document/Writer/*`, di.xml `writers`) and then purges the cache tags
+  of the products and categories the batch touched (di.xml `identities`, the
+  `clean_cache_by_tags` event plus the app cache, as an indexer does), so the
+  page, response and resolver caches hold nothing built from the replaced
+  documents; together they build one document per store view
   (products = base, prices = the feed rows under `prices` with their customer
   `group` id (the feed names a group by the hash of its id; the writer maps it
   back, rows of an unknown group are dropped) plus `priceIndex`, a nested list
@@ -362,19 +368,26 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   inside the container (`docker exec project-backend-frankenphp-1 php
   bin/magento cache:flush`); that flush also lifts every worker memo, so no
   restart is needed after a config change. A benchmark or the parity gate
-  picks the path per request with the `X-Catalog-Storefront` header (Allow
-  Request Override on in the container's cache too), so no flag flips at all.
+  picks the path per request with the `X-Catalog-Storefront` header under the
+  storefront key (`config:show catalog/storefront_documents/key`), so no flag
+  flips at all. The split cache cuts the other way too: a host-side reindex
+  purges its cache tags in the host's Redis only, so the worker's core path
+  serves a stale price until the container flush; the document path does not,
+  the feed write purges through the same tags but the document itself is what
+  it reads. `bin/magento catalog-storefront:status` shows the documents per
+  store view against the products, and per feed the rows waiting for a retry
+  and the indexer state.
 - With immediate export, a full `indexer:reindex` of a feed skips rows whose
   feed hash is unchanged, so it does not repair a document store.
   `bin/magento catalog-storefront:rebuild [entities]` does the whole repair:
   it drops the entity's indices, truncates the feed tables registered for it
-  (di.xml `feeds` on the command) and runs their indexers; about ten seconds
+  (di.xml `feeds` on `Model/Feeds`) and runs their indexers; about ten seconds
   for the demo catalog. By hand: drop the index, truncate `cde_products_feed`,
   `cde_product_prices_feed`, `cde_product_variants_feed`,
   `inventory_data_exporter_stock_status_feed` and
   `catalog_data_exporter_product_reviews`, then reindex the products, stock,
-  prices, variants and reviews feeds. A mapping change needs this too, and a
-  new customer group needs the prices feed re-exported. The metadata documents
+  prices, variants and reviews feeds. A mapping change needs this too; a new
+  customer group does it for the prices feed by itself. The metadata documents
   rebuild the same way: drop the category, attribute or rating index, truncate
   `cde_categories_feed`, `cde_product_attributes_feed` or
   `catalog_data_exporter_rating_metadata`, reindex that feed. The indices are
@@ -387,9 +400,7 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   hidden product passed vacuously for hours before that check existed. The
   stock query (`18-*.graphql`) needs `24-WG01` at quantity 1 (source item and
   legacy stock item, then reindex `inventory`, `cataloginventory_stock` and
-  the stock feed), so only_x_left_in_stock has a number to compare. A SQL
-  write on the document path (core records a search term's popularity) is
-  printed as `WRITE`, not failed: the rule forbids lookups.
+  the stock feed), so only_x_left_in_stock has a number to compare.
 - After di.xml changes: `setup:di:compile`, `cache:flush` on the host and in
   the worker container, then restart the worker (new classes; a flush alone
   lifts the memos but not the loaded code). After a module link in

@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Console\Command;
 
+use GraphCommerce\CatalogStorefront\Model\Feeds;
 use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
 use GraphCommerce\CatalogStorefrontApi\Storage\ProductDocumentStorageInterface;
 use Magento\Backend\App\Area\FrontNameResolver;
-use Magento\DataExporter\Model\Indexer\FeedIndexMetadata;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\App\State;
 use Magento\Framework\Exception\LocalizedException;
@@ -20,7 +20,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 /**
  * Rebuilds the documents of an entity from scratch: drops its indices of
  * every store view, truncates the feed tables of the feeds that write it
- * (di.xml `feeds`, entity name to indexer id to feed metadata), so the exporter re-exports
+ * (`Model\Feeds`), so the exporter re-exports
  * every row instead of skipping the unchanged ones, and runs those feed
  * indexers. The read path falls back to core while the documents are away.
  */
@@ -29,9 +29,6 @@ class Rebuild extends Command
     private const ENTITIES = 'entities';
     private const PRODUCT = 'product';
 
-    /**
-     * @param array<string, array<string, FeedIndexMetadata>> $feeds by entity name and indexer id
-     */
     public function __construct(
         private readonly ProductDocumentStorageInterface $products,
         private readonly MetadataDocumentStorageInterface $metadata,
@@ -39,7 +36,7 @@ class Rebuild extends Command
         private readonly ResourceConnection $resourceConnection,
         private readonly IndexerRegistry $indexerRegistry,
         private readonly State $appState,
-        private readonly array $feeds = [],
+        private readonly Feeds $feeds,
     ) {
         parent::__construct();
     }
@@ -47,14 +44,15 @@ class Rebuild extends Command
     protected function configure(): void
     {
         $this->setName('catalog-storefront:rebuild')
-            ->setDescription('Rebuilds the document store of the given entities (' . implode(', ', array_keys($this->feeds)) . '), all by default')
+            ->setDescription('Rebuilds the document store of the given entities (' . implode(', ', array_keys($this->feeds->byEntity())) . '), all by default')
             ->addArgument(self::ENTITIES, InputArgument::IS_ARRAY, 'Entity names');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $entities = $input->getArgument(self::ENTITIES) ?: array_keys($this->feeds);
-        $unknown = array_diff($entities, array_keys($this->feeds));
+        $feeds = $this->feeds->byEntity();
+        $entities = $input->getArgument(self::ENTITIES) ?: array_keys($feeds);
+        $unknown = array_diff($entities, array_keys($feeds));
         if ($unknown) {
             $output->writeln('<error>Unknown entities: ' . implode(', ', $unknown) . '</error>');
 
@@ -74,7 +72,7 @@ class Rebuild extends Command
                     : $this->metadata->drop($entity, $store->getCode());
             }
             $output->writeln(sprintf('Dropped the %s documents', $entity));
-            foreach ($this->feeds[$entity] as $indexerId => $feed) {
+            foreach ($feeds[$entity] as $indexerId => $feed) {
                 $connection->truncateTable($this->resourceConnection->getTableName($feed->getFeedTableName()));
                 $indexers[$indexerId] = $feed->getFeedName();
             }

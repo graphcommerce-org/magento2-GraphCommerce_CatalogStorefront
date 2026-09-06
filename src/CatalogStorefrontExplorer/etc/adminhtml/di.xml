@@ -1,18 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
-    <!-- The API explorer picks the request path; the header counts only with Allow Request Override on. -->
     <type name="MageOS\GraphQLAdminHtml\Block\Adminhtml\Explorer">
         <arguments>
             <argument name="headerSwitchers" xsi:type="array">
-                <item name="catalog_storefront" xsi:type="array">
-                    <item name="label" xsi:type="string">Catalog</item>
-                    <item name="header" xsi:type="const">GraphCommerce\CatalogStorefrontGraphQl\Model\Mode::HEADER</item>
-                    <item name="options" xsi:type="array">
-                        <item name="" xsi:type="string">Default</item>
-                        <item name="documents" xsi:type="string">Documents</item>
-                        <item name="core" xsi:type="string">Database</item>
-                    </item>
-                </item>
+                <item name="catalog_storefront" xsi:type="object">GraphCommerce\CatalogStorefrontExplorer\Model\Switcher</item>
             </argument>
         </arguments>
     </type>

@@ -5,6 +5,14 @@
             <argument name="writers" xsi:type="array">
                 <item name="variants" xsi:type="object">GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Document\Writer\Variants</item>
             </argument>
+            <argument name="identities" xsi:type="array">
+                <item name="variants" xsi:type="array">
+                    <item name="cat_p" xsi:type="array">
+                        <item name="productId" xsi:type="string">productId</item>
+                        <item name="parentId" xsi:type="string">parentId</item>
+                    </item>
+                </item>
+            </argument>
         </arguments>
     </type>
     <type name="Magento\ConfigurableProductDataExporter\Model\Provider\Product\Options">
@@ -20,7 +28,7 @@
             </argument>
         </arguments>
     </type>
-    <type name="GraphCommerce\CatalogStorefront\Console\Command\Rebuild">
+    <type name="GraphCommerce\CatalogStorefront\Model\Feeds">
         <arguments>
             <argument name="feeds" xsi:type="array">
                 <item name="product" xsi:type="array">

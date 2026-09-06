@@ -6,8 +6,7 @@ The feeds (products, prices, inventory, variants, reviews, categories, attribute
 are computed by the maintained exporter modules as ordinary Magento indexers. This
 package implements the delivery seam (`ExportFeedInterface`) to assemble the feed
 slices into one product document per store view in OpenSearch, and serves catalog
-GraphQL reads from those documents. A request runs no SQL of its own for catalog
-data; any miss falls back to the core resolver.
+GraphQL reads from those documents; any miss falls back to the core resolver.
 
 ## Scope
 
@@ -15,9 +14,10 @@ This package runs in the monolith, next to the catalog database. The read path s
 from documents and may read the database where a document cannot answer, or where a
 lookup is cheaper than carrying the data on the document; the fallback to the core
 resolver is the norm. The feeds are a latency layer over the database, not a
-replacement. Strict mode reports every statement, so the cost of a lookup stays visible
-and a lookup can become a document field later. Extensions plug in through the Api
-modules, never through a preference on a class of this package.
+replacement. A request with the storefront key gets every fallback to core reported, and
+a MageOS_Profiler trace shows the statements a request runs, so the cost of a lookup
+stays visible and a lookup can become a document field later. Extensions plug in
+through the Api modules, never through a preference on a class of this package.
 
 ## Requirements
 
@@ -41,8 +41,7 @@ Stores > Configuration > Catalog > Catalog > Catalog Storefront Document Store:
 | --- | --- |
 | Enable Storefront Indexing | The feeds are written into the document store as they export. |
 | Serve GraphQL From Documents | Per store view: catalog GraphQL reads come from documents. |
-| Allow Request Override | A request picks its own path with the `X-Catalog-Storefront` header: `documents` or `core`. For test environments, the admin API explorer and the parity gate. The path is a factor of the response cache id and of the resolver result cache keys. |
-| Strict Mode | A request reports its path, every fallback to core with its reason and every SQL statement under `extensions.catalogStorefront` of the GraphQL response. Test environments only: the report exposes statements. |
+| Storefront Key | Generated when the page is saved with the field empty. A request that sends it in the `X-Catalog-Storefront-Key` header picks its own path with the `X-Catalog-Storefront` header (`documents` or `core`) and gets its path and every fallback to core with its reason under `extensions.catalogStorefront` of the response. The admin API explorer and the parity gate send it. The path is a factor of the response cache id and of the resolver result cache keys. |
 | Record Search Terms | Off by default: the search terms report and the suggestions stop updating, the request path stops writing. |
 | Index Prefix | The indices are named prefix, entity and store view code, for example `catalog_storefront_product_default`. |
 
@@ -66,7 +65,7 @@ modules next to the `*GraphQl` ones.
 | `GraphCommerce_CatalogStorefrontApi` | The contracts: document stores, feed writers, document fields, product documents, price ranges |
 | `GraphCommerce_CatalogStorefrontGraphQlApi` | The GraphQL contracts: prefillers, hydration |
 | `GraphCommerce_CatalogStorefrontOpenSearch` | The document stores on OpenSearch, through core's client |
-| `GraphCommerce_CatalogStorefront` | Feed delivery, documents to models, metadata readers, strict mode, plugins on non-GraphQL core |
+| `GraphCommerce_CatalogStorefront` | Feed delivery with the cache purge after a write, documents to models, metadata readers, the fallback report, the storefront key, the rebuild and status commands, plugins on non-GraphQL core |
 | `GraphCommerce_CatalogStorefrontGraphQl` | Listings and layered navigation, categories, media, URL rewrites, custom attributes, linked products, the request path, the parity command |
 | `GraphCommerce_CatalogStorefrontPrice` / `...PriceGraphQl` | Display prices and price ranges: currency and tax at read time through core's tax service / the prices prefiller, the customer's tax address |
 | `GraphCommerce_CatalogStorefrontWorker` | What a persistent PHP worker keeps between requests: kept schemas, validated documents, the guest tax, customer group and currency rate memos, each lifted by a cache generation. Nothing is keyed by customer. Only for FrankenPHP worker mode. |
@@ -109,15 +108,19 @@ whatever the number of customer groups. The display currency and the taxes are a
 at request time the way core's price classes and tax adjustment apply them, through
 core's own tax service with the product's tax class (a dynamic bundle's selections
 with their own); the Worker module keeps its rate lookups between requests.
-Fixed product taxes are not answered. A customer group created after a price row was
-exported gets its index entry when the row exports again: truncate the prices feed
-table and reindex it.
+Fixed product taxes are not answered. A new customer group needs an index entry on
+every product, so its save truncates the prices feed table and invalidates the feed
+indexer; the next cron run re-exports every row.
 
 ## Extending
 
 A module registers its parts through di.xml:
 
-- `writers` on `Model\Document\Delivery`: a `FeedWriterInterface` per feed name.
+- `writers` on `Model\Document\Delivery`: a `FeedWriterInterface` per feed name;
+  `identities` next to it: per feed name, the cache tag and the row keys of the
+  entities a batch touches, purged after the write.
+- `feeds` on `Model\Feeds`: the feed metadata per entity and indexer id, for the
+  rebuild and the status command.
 - `fields` on the products writer: a `ProductDocumentFieldInterface` per computed field.
 - `prefillers` on the GraphQl module's `Model\DocumentHydration`: a `PrefillerInterface` fills fields on
   the product value from the model and the document, so the executor returns them
@@ -143,11 +146,23 @@ bin/magento catalog-storefront:parity https://shop.example/graphql
 
 runs every query in `dev/parity/queries/` (or `--queries=<dir>`) against the core path
 and the document path, picked per request with the `X-Catalog-Storefront` header, and
-diffs the responses. It needs Allow Request Override on; with Strict Mode on it also
-fails a document-path query that ran a SQL lookup and prints its fallbacks and writes.
-`--dump=<dir>` keeps both responses of every query. A query file sends its own request
+diffs the responses. It sends the storefront key, so the configuration must have been
+saved once, and prints every fallback of the document path. `--dump=<dir>` keeps both
+responses of every query. A query file sends its own request
 headers through `# @header Content-Currency: EUR` comment lines. See `CLAUDE.md` for the
 operating notes, the fixtures the query set needs and the known deviations.
+
+## Status
+
+```sh
+bin/magento catalog-storefront:status
+```
+
+prints per store view the documents of every entity, the product documents next to the
+products assigned to the store's website, and per feed its rows, the rows the store did
+not accept yet (the feed machinery retries them by cron), the last export and the state
+of its indexer. It fails when rows are waiting or an indexer is invalid, so a deployment
+check can call it.
 
 ## Rebuild
 
@@ -207,53 +222,33 @@ of the links.
    paths, so an integrator proves an extension on every surface it touches.
 5. **REST integration.** The product repository and the search API behind the same
    document models, for headless setups that read the catalog over REST.
-6. **Cache coherence.** A product save purges the response and resolver cache tags at
-   once; the document updates after the feed export and the index refresh. A request in
-   between re-caches the old document for the full TTL. The purge belongs after the
-   document write, and that is also the moment a frontend cache gets its notification.
-7. **Document store status.** A status command and an admin page: the document count
-   against the product count per store view, the feed lag, the rows waiting for a retry
-   and the last export failure. Today a failed batch is a status 500 in a feed table
-   that nobody sees.
-8. **Storefront key.** Allow Request Override and Strict Mode unlock with a key
-   generated in the admin and sent as a request header, instead of two global flags a
-   production shop can leave on. The same key later exempts a storefront from rate
-   limits.
-9. **New customer group.** Core reindexes prices and rules for a new group, but the
-   price feed re-exports only rows whose hash changes, so a product without
-   group-specific prices keeps a `priceIndex` without the group's entry: its composite
-   ranges miss for that group until a re-export. A group save must re-export the prices
-   feed, or the aggregation must take the group 0 entry when the group has none.
-10. **Signed-in parity in CI.** A job with a customer token in every tax display mode,
+6. **Signed-in parity in CI.** A job with a customer token in every tax display mode,
     and a second store view in the CI install, so the per-website fan-out of prices and
     stock is covered.
-11. **Integration tests.** Magento integration tests for the writers and the model
+7. **Integration tests.** Magento integration tests for the writers and the model
     builder next to the unit tests, which is what a Mage-OS review asks for.
-12. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
+8. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
     hook on the search request and a permission hook on the documents, so an extension
     plugs in without a preference on a class of this package.
-13. **Gate option for the SQL rule.** The parity gate fails a document-path SQL
-    statement only with `--no-sql`, for a deployment whose read side has no catalog
-    database; by default it prints the statement.
-14. **A php-fpm benchmark.** Core against documents, on php-fpm and on the worker,
+9. **A php-fpm benchmark.** Core against documents, on php-fpm and on the worker,
     published. Most shops run php-fpm and every number in the docs is a worker number.
-15. **Write conflicts under parallel feeds.** A retry on version conflict for the bulk
+10. **Write conflicts under parallel feeds.** A retry on version conflict for the bulk
     updates, and a re-read for the writers that merge into a stored document (prices,
     variants, composite links), so parallel feed threads cannot lose an update.
-16. **A blue/green rebuild.** The rebuild command drops an entity's documents first,
+11. **A blue/green rebuild.** The rebuild command drops an entity's documents first,
     so the read path serves from core until the export completes. A rebuild into a
     fresh index behind an alias, switched over when it is complete, keeps the
     documents live.
-17. **Category attributes on the category documents.** Custom category attributes such
+12. **Category attributes on the category documents.** Custom category attributes such
     as SEO fields fall back to the database; a category attributes slice like the
     product one serves them.
-18. **Fixed product taxes.** The last price display setup that falls back to core.
+13. **Fixed product taxes.** The last price display setup that falls back to core.
     The weee amounts per product travel on the document; the read side adds them the
     way the weee adjustment does.
-19. **Composite ranges per child tax class.** A configurable or grouped range is taxed
+14. **Composite ranges per child tax class.** A configurable or grouped range is taxed
     with the parent's tax class; core taxes each child's regular price with the child's
     own class. A terms aggregation on the child's tax class next to the nested price
     index makes the regular range exact. Bundles are exact already.
-20. **Package publishing.** A subtree split of the module directories to their own
+15. **Package publishing.** A subtree split of the module directories to their own
     repositories and a release on packagist, so the modules install separately while
     the repository stays one.

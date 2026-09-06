@@ -27,6 +27,8 @@ interface MetadataDocumentStorageInterface
      */
     public function drop(string $entity, string $storeViewCode): void;
 
+    public function count(string $entity, string $storeViewCode): int;
+
     /**
      * @param array<int|string> $ids
      * @param string[] $fields the document keys to return; empty returns the whole document

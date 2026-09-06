@@ -15,8 +15,7 @@ class Config
     public const INDEX_ENABLED = 'catalog/storefront_documents/index_enabled';
     public const SERVE_GRAPHQL = 'catalog/storefront_documents/serve_graphql';
     public const RECORD_SEARCH_TERMS = 'catalog/storefront_documents/record_search_terms';
-    public const REQUEST_OVERRIDE = 'catalog/storefront_documents/request_override';
-    public const STRICT = 'catalog/storefront_documents/strict';
+    public const KEY = 'catalog/storefront_documents/key';
 
     public function __construct(
         private readonly ScopeConfigInterface $scopeConfig,
@@ -40,22 +39,13 @@ class Config
     }
 
     /**
-     * Whether a request may pick its own path with the X-Catalog-Storefront
-     * header: `documents` or `core`. For test environments and the parity gate.
+     * The key a request sends in the X-Catalog-Storefront-Key header to pick
+     * its path and get the fallback report; empty until the configuration is
+     * saved once.
      */
-    public function requestOverride(): bool
+    public function key(): string
     {
-        return $this->scopeConfig->isSetFlag(self::REQUEST_OVERRIDE);
-    }
-
-    /**
-     * Whether a request served from documents reports every fallback to core
-     * and every SQL statement in the response extensions. For test
-     * environments only: the report exposes statements.
-     */
-    public function strict(): bool
-    {
-        return $this->scopeConfig->isSetFlag(self::STRICT);
+        return trim((string)$this->scopeConfig->getValue(self::KEY));
     }
 
     /**

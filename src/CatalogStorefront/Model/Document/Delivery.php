@@ -9,6 +9,9 @@ use Magento\DataExporter\Model\ExportFeedInterface;
 use Magento\DataExporter\Model\FeedExportStatus;
 use Magento\DataExporter\Model\FeedExportStatusBuilder;
 use Magento\DataExporter\Model\Indexer\FeedIndexMetadata;
+use Magento\Framework\App\CacheInterface;
+use Magento\Framework\Event\ManagerInterface;
+use Magento\Framework\Indexer\CacheContextFactory;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -18,6 +21,12 @@ use Psr\Log\LoggerInterface;
  * persisted in its feed table, as is every feed while storefront indexing is
  * off. A storage failure reports status 500, so the feed machinery retries the
  * batch by cron.
+ *
+ * After a write, the cache tags of the entities the batch touched (di.xml
+ * `identities`: feed name to cache tag to row keys) are purged the way an
+ * indexer purges them: the response and resolver caches and the page cache
+ * hold nothing built from the documents the batch replaced. The product
+ * save purges the same tags at once, when the document is still the old one.
  */
 class Delivery implements ExportFeedInterface
 {
@@ -26,12 +35,17 @@ class Delivery implements ExportFeedInterface
 
     /**
      * @param FeedWriterInterface[] $writers by feed name
+     * @param array<string, array<string, string[]>> $identities feed name to cache tag to row keys
      */
     public function __construct(
         private readonly FeedExportStatusBuilder $feedExportStatusBuilder,
         private readonly Config $config,
         private readonly LoggerInterface $logger,
+        private readonly CacheContextFactory $cacheContextFactory,
+        private readonly ManagerInterface $eventManager,
+        private readonly CacheInterface $cache,
         private readonly array $writers = [],
+        private readonly array $identities = [],
     ) {
     }
 
@@ -40,14 +54,33 @@ class Delivery implements ExportFeedInterface
         if (!$this->config->indexing()) {
             return $this->feedExportStatusBuilder->build(self::STATUS_ACCEPTED, 'Storefront indexing is off');
         }
+        $feed = $metadata->getFeedName();
         try {
-            ($this->writers[$metadata->getFeedName()] ?? null)?->write($data);
+            ($this->writers[$feed] ?? null)?->write($data);
         } catch (\Throwable $e) {
-            $this->logger->error(
-                sprintf('catalog-storefront: storing feed "%s" failed: %s', $metadata->getFeedName(), $e->getMessage())
-            );
+            $this->logger->error(sprintf('catalog-storefront: storing feed "%s" failed: %s', $feed, $e->getMessage()));
 
             return $this->feedExportStatusBuilder->build(self::STATUS_RETRY, $e->getMessage());
+        }
+        if (isset($this->writers[$feed], $this->identities[$feed])) {
+            $context = $this->cacheContextFactory->create();
+            foreach ($this->identities[$feed] as $tag => $keys) {
+                $ids = [];
+                foreach ($data as $row) {
+                    foreach ($keys as $key) {
+                        if (!empty($row[$key])) {
+                            $ids[] = (int)$row[$key];
+                        }
+                    }
+                }
+                if ($ids) {
+                    $context->registerEntities($tag, array_values(array_unique($ids)));
+                }
+            }
+            if ($context->getIdentities()) {
+                $this->eventManager->dispatch('clean_cache_by_tags', ['object' => $context]);
+                $this->cache->clean($context->getIdentities());
+            }
         }
 
         return $this->feedExportStatusBuilder->build(self::STATUS_ACCEPTED, 'Stored in document store');

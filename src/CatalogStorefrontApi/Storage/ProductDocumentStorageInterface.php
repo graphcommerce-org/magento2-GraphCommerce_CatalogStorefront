@@ -28,6 +28,8 @@ interface ProductDocumentStorageInterface
      */
     public function drop(string $storeViewCode): void;
 
+    public function count(string $storeViewCode): int;
+
     /**
      * @param int[] $ids
      * @param string[] $fields the document keys to return; empty returns the whole document
