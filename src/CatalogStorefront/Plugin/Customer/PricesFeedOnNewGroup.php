@@ -10,10 +10,10 @@ use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\Indexer\IndexerRegistry;
 
 /**
- * A new customer group needs an entry in every product's price index, and
- * the price feed re-exports only rows whose hash changed. So the feed table
- * is truncated and its indexer invalidated: the next cron run re-exports
- * every row, with the group's entry.
+ * A new customer group needs an entry in every product's price index, a
+ * deleted one must leave it, and the price feed re-exports only rows whose
+ * hash changed. So the feed table is truncated and its indexer invalidated:
+ * the next cron run re-exports every row, with the groups as they are.
  */
 class PricesFeedOnNewGroup
 {
@@ -30,12 +30,31 @@ class PricesFeedOnNewGroup
         $new = !$group->getId();
         $result = $proceed($group);
         if ($new) {
-            $this->resourceConnection->getConnection()->truncateTable(
-                $this->resourceConnection->getTableName($this->feed->getFeedTableName())
-            );
-            $this->indexerRegistry->get($this->indexerId)->invalidate();
+            $this->reexport();
         }
 
         return $result;
+    }
+
+    public function afterDeleteById(GroupRepositoryInterface $subject, bool $result): bool
+    {
+        $this->reexport();
+
+        return $result;
+    }
+
+    public function afterDelete(GroupRepositoryInterface $subject, bool $result): bool
+    {
+        $this->reexport();
+
+        return $result;
+    }
+
+    private function reexport(): void
+    {
+        $this->resourceConnection->getConnection()->truncateTable(
+            $this->resourceConnection->getTableName($this->feed->getFeedTableName())
+        );
+        $this->indexerRegistry->get($this->indexerId)->invalidate();
     }
 }

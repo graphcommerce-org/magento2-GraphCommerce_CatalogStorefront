@@ -52,8 +52,8 @@ passes.
   save with the field empty), `Model/StorefrontKey` (whether the request
   carries the key in `X-Catalog-Storefront-Key`), `Model/Strict` (the fallback
   report of a keyed request), `Model/Feeds` (the feeds per entity, for the
-  rebuild and status commands), `Plugin/Customer/PricesFeedOnNewGroup` (a new
-  group truncates the prices feed table and invalidates its indexer) and the
+  rebuild and status commands), `Plugin/Customer/PricesFeedOnNewGroup` (a new or
+  deleted group truncates the prices feed table and invalidates its indexer) and the
   plugins on non-GraphQL core: product links, the layer price step, the single
   price range mode, the search field name memo, salable.
 - `CatalogStorefrontGraphQl`: `Model/Mode` (the request's path), `DocumentHydration`
