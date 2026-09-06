@@ -27,8 +27,10 @@ passes.
   filtering, sorting and statistics).
 - `CatalogStorefrontGraphQlApi`: the GraphQL contracts.
   `Read\PrefillerInterface` (fills fields on the product value, KEY),
-  `Read\PrefillRequest` (a DocumentContext plus the selected fields) and
-  `Read\HydrationInterface` (models prefilled for a query).
+  `Read\PrefillRequest` (a DocumentContext plus the selected fields),
+  `Read\HydrationInterface` (models prefilled for a query) and
+  `Parity\JudgeInterface` (a verdict of the parity gate, di.xml `judges` on
+  the command).
 - `CatalogStorefrontOpenSearch`: the storage interfaces on OpenSearch:
   `Model/Client` (core's OpenSearch client from the engine resolver, so the
   document store shares the search engine connection; one request per

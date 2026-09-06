@@ -130,6 +130,8 @@ A module registers its parts through di.xml:
 - `fieldDocumentKeys` and `baseFields` on the hydration tell a listing fetch which
   document keys a field needs.
 - `mappings` on `EntityMappings`: the fields of an entity that filter, sort or aggregate.
+- `judges` on the parity command: a `JudgeInterface` adds a verdict per query next to the
+  response diff, with both responses in hand.
 
 Another search engine implements the two storage interfaces of the Api module and
 sets the preferences in its own di.xml, as the OpenSearch module does.

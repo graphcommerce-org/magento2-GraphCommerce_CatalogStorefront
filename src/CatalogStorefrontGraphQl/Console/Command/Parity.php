@@ -5,6 +5,7 @@ namespace GraphCommerce\CatalogStorefrontGraphQl\Console\Command;
 
 use GraphCommerce\CatalogStorefront\Model\Config;
 use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
+use GraphCommerce\CatalogStorefrontGraphQlApi\Parity\JudgeInterface;
 use GraphCommerce\CatalogStorefrontGraphQl\Model\Mode;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -20,7 +21,8 @@ use Symfony\Component\Console\Output\OutputInterface;
  * extensions and are printed. Every query runs unjudged first so the gate
  * sees the steady state. A query file sends extra request headers through
  * comment lines of the form `# @header Content-Currency: EUR`; `--header`
- * sends one with every query, a customer token for a signed-in gate.
+ * sends one with every query, a customer token for a signed-in gate. Other
+ * modules add verdicts through di.xml `judges`.
  */
 class Parity extends Command
 {
@@ -30,8 +32,12 @@ class Parity extends Command
     private const WARM = 'warm';
     private const HEADER = 'header';
 
+    /**
+     * @param JudgeInterface[] $judges
+     */
     public function __construct(
         private readonly Config $config,
+        private readonly array $judges = [],
     ) {
         parent::__construct();
     }
@@ -133,6 +139,9 @@ class Parity extends Command
             if (count($diffs) > 12) {
                 $output->writeln(sprintf('      ... and %d more', count($diffs) - 12));
             }
+        }
+        foreach ($this->judges as $judge) {
+            $ok = $judge->judge($name, $core, $documents, $output) && $ok;
         }
         if ($ok) {
             $output->writeln('PASS  ' . $name);
