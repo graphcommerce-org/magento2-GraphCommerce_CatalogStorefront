@@ -72,6 +72,7 @@
             <argument name="fields" xsi:type="array">
                 <item name="imageUrls" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Field\ImageUrls</item>
                 <item name="taxClassId" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Field\TaxClassId</item>
+                <item name="websiteIds" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Field\WebsiteIds</item>
             </argument>
         </arguments>
     </type>

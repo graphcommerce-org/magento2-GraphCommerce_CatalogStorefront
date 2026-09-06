@@ -60,6 +60,20 @@ interface ProductDocumentStorageInterface
     public function findBySku(string $storeViewCode, array $skus): array;
 
     /**
+     * The documents as a writer sees them: read from the index that takes the
+     * writes, which during a rebuild is the staged one. A writer that merges
+     * into stored documents reads here, never through get().
+     *
+     * @return array<int, array> by product id
+     */
+    public function stored(string $storeViewCode, array $ids, array $fields = []): array;
+
+    /**
+     * @return array<int, array> by product id, the writer's view as stored()
+     */
+    public function storedBySku(string $storeViewCode, array $skus): array;
+
+    /**
      * The documents of a listing page in one round trip and, when a group key
      * is given, the price data of the page's composite products with them.
      *

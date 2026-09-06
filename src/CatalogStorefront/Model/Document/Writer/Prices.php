@@ -58,7 +58,7 @@ class Prices implements FeedWriterInterface
 
         foreach ($rowsByStore as $store => $products) {
             $stored = [];
-            foreach ($this->storage->get($store, array_keys($products), ['prices']) as $id => $document) {
+            foreach ($this->storage->stored($store, array_keys($products), ['prices']) as $id => $document) {
                 foreach ((array)($document['prices'] ?? []) as $row) {
                     $stored[$id][(string)$row['group']] = $row;
                 }

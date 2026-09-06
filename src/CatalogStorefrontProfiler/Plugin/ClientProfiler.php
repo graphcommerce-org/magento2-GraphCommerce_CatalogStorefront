@@ -59,9 +59,9 @@ class ClientProfiler
         return $this->measure('indexExists', $index, null, null, fn() => $proceed($index));
     }
 
-    public function aroundCreateIndex(Client $subject, callable $proceed, string $index, array $mapping): void
+    public function aroundCreateIndex(Client $subject, callable $proceed, string $index, array $mapping, array $aliases = []): void
     {
-        $this->measure('createIndex', $index, null, null, fn() => $proceed($index, $mapping));
+        $this->measure('createIndex', $index, null, null, fn() => $proceed($index, $mapping, $aliases));
     }
 
     public function aroundDeleteIndex(Client $subject, callable $proceed, string $index): void

@@ -59,20 +59,40 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
 
     public function get(string $storeViewCode, array $ids, array $fields = []): array
     {
+        return $this->byId($this->indexName($storeViewCode), $ids, $fields);
+    }
+
+    public function findBySku(string $storeViewCode, array $skus): array
+    {
+        return $this->bySku($this->indexName($storeViewCode), $skus);
+    }
+
+    public function stored(string $storeViewCode, array $ids, array $fields = []): array
+    {
+        return $this->byId($this->index->ensure(self::ENTITY, $storeViewCode), $ids, $fields);
+    }
+
+    public function storedBySku(string $storeViewCode, array $skus): array
+    {
+        return $this->bySku($this->index->ensure(self::ENTITY, $storeViewCode), $skus);
+    }
+
+    private function byId(string $index, array $ids, array $fields): array
+    {
         $documents = [];
-        foreach ($ids ? $this->client->get($this->indexName($storeViewCode), $ids, $fields) : [] as $id => $document) {
+        foreach ($ids ? $this->client->get($index, $ids, $fields) : [] as $id => $document) {
             $documents[(int)$id] = $document;
         }
 
         return $documents;
     }
 
-    public function findBySku(string $storeViewCode, array $skus): array
+    private function bySku(string $index, array $skus): array
     {
         if (!$skus) {
             return [];
         }
-        $response = $this->client->search($this->indexName($storeViewCode), [
+        $response = $this->client->search($index, [
             'size' => count($skus),
             'query' => ['terms' => ['sku' => array_values($skus)]],
         ]);

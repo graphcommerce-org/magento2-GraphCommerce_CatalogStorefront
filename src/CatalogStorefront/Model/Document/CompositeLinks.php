@@ -64,7 +64,7 @@ class CompositeLinks
             $ids[$row['sku']] = (int)$id;
         }
         if ($skus) {
-            foreach ($this->storage->findBySku($storeViewCode, array_values(array_unique($skus))) as $id => $document) {
+            foreach ($this->storage->storedBySku($storeViewCode, array_values(array_unique($skus))) as $id => $document) {
                 $ids[$document['sku']] ??= $id;
             }
         }
@@ -95,7 +95,7 @@ class CompositeLinks
         if (!$parents) {
             return [$upserts, []];
         }
-        $storedChildren = $this->storage->get($storeViewCode, array_keys($parents), array_column(self::TYPES, 'childIds'));
+        $storedChildren = $this->storage->stored($storeViewCode, array_keys($parents), array_column(self::TYPES, 'childIds'));
         $changes = [];
         foreach ($parents as $parentId => [$type, $childIds]) {
             foreach (self::TYPES as $linkType => $keys) {

@@ -10,8 +10,9 @@ use Magento\Tax\Model\ResourceModel\TaxClass\CollectionFactory;
 /**
  * The product's tax class id as a field of its own, so a read that leaves the
  * custom attributes slice out still taxes the price. The custom attribute
- * carries the raw id; a feed that carries the class by name maps back to the
- * id through the product classes.
+ * carries the raw id; the feed's own field carries the class by name, or
+ * "no" for a product without a class, and maps back to the id through the
+ * product classes, null when there is none.
  */
 class TaxClassId implements ProductDocumentFieldInterface
 {
@@ -26,13 +27,14 @@ class TaxClassId implements ProductDocumentFieldInterface
     public function add(string $storeViewCode, array $documents): array
     {
         foreach ($documents as $id => $document) {
+            $value = (string)($document['taxClassId'] ?? '');
             foreach ((array)($document['customAttributes'] ?? []) as $attribute) {
                 if (($attribute['attributeCode'] ?? null) === 'tax_class_id') {
                     $value = (string)($attribute['value'] ?? '');
-                    $documents[$id]['taxClassId'] = is_numeric($value) ? (int)$value : ($this->idsByName()[$value] ?? null);
                     break;
                 }
             }
+            $documents[$id]['taxClassId'] = is_numeric($value) ? (int)$value : ($this->idsByName()[$value] ?? null);
         }
 
         return $documents;

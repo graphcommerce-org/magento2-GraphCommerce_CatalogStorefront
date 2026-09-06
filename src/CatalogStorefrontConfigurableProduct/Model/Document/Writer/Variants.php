@@ -39,7 +39,7 @@ class Variants implements FeedWriterInterface
         foreach ($this->storeManager->getStores() as $storeModel) {
             $store = $storeModel->getCode();
             $stored = [];
-            foreach ($this->storage->get($store, array_keys($links), ['parentIds']) as $id => $document) {
+            foreach ($this->storage->stored($store, array_keys($links), ['parentIds']) as $id => $document) {
                 $stored[$id] = (array)($document['parentIds'] ?? []);
             }
             $upserts = [];

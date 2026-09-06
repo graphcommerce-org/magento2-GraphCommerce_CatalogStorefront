@@ -31,7 +31,7 @@ class PricesTest extends TestCase
         $groupManagement->method('getLoggedInGroups')->willReturn([$group]);
 
         $storage = $this->createMock(ProductDocumentStorageInterface::class);
-        $storage->method('get')->with('default', [7], ['prices'])->willReturn([
+        $storage->method('stored')->with('default', [7], ['prices'])->willReturn([
             7 => ['prices' => [['group' => '0', 'regular' => 10.0, 'discounts' => []]]],
         ]);
         $storage->expects(self::once())->method('upsert')->with('default', [
