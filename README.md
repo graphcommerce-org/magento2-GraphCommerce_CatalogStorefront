@@ -138,6 +138,20 @@ sets the preferences in its own di.xml, as the OpenSearch module does.
 adds catalog data: what to build at index time and at request time, and how to prove
 it with the parity gate. It is written to be loaded as a skill by an LLM.
 
+## Measured
+
+The GraphCommerce product list query for 200 items (`dev/parity/queries/13-*.graphql`
+with `pageSize: 200`) on the demo catalog, over the wire on a development machine, median
+of fifteen requests after three warm ones, guest, prices excluding tax:
+
+| Runtime | Core path | Document path |
+| --- | --- | --- |
+| php-fpm (PHP 8.4, opcache on) | 816 ms | 112 ms |
+| FrankenPHP worker (Worker module on) | 425 ms | 78 ms |
+
+The document path carries most of the gain on php-fpm already; the worker adds the kept
+schema and the memos. Both runtimes read the same database and OpenSearch.
+
 ## Parity gate
 
 ```sh
@@ -231,25 +245,23 @@ of the links.
 8. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
     hook on the search request and a permission hook on the documents, so an extension
     plugs in without a preference on a class of this package.
-9. **A php-fpm benchmark.** Core against documents, on php-fpm and on the worker,
-    published. Most shops run php-fpm and every number in the docs is a worker number.
-10. **Write conflicts under parallel feeds.** A retry on version conflict for the bulk
+9. **Write conflicts under parallel feeds.** A retry on version conflict for the bulk
     updates, and a re-read for the writers that merge into a stored document (prices,
     variants, composite links), so parallel feed threads cannot lose an update.
-11. **A blue/green rebuild.** The rebuild command drops an entity's documents first,
+10. **A blue/green rebuild.** The rebuild command drops an entity's documents first,
     so the read path serves from core until the export completes. A rebuild into a
     fresh index behind an alias, switched over when it is complete, keeps the
     documents live.
-12. **Category attributes on the category documents.** Custom category attributes such
+11. **Category attributes on the category documents.** Custom category attributes such
     as SEO fields fall back to the database; a category attributes slice like the
     product one serves them.
-13. **Fixed product taxes.** The last price display setup that falls back to core.
+12. **Fixed product taxes.** The last price display setup that falls back to core.
     The weee amounts per product travel on the document; the read side adds them the
     way the weee adjustment does.
-14. **Composite ranges per child tax class.** A configurable or grouped range is taxed
+13. **Composite ranges per child tax class.** A configurable or grouped range is taxed
     with the parent's tax class; core taxes each child's regular price with the child's
     own class. A terms aggregation on the child's tax class next to the nested price
     index makes the regular range exact. Bundles are exact already.
-15. **Package publishing.** A subtree split of the module directories to their own
+14. **Package publishing.** A subtree split of the module directories to their own
     repositories and a release on packagist, so the modules install separately while
     the repository stays one.
