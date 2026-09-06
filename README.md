@@ -9,6 +9,16 @@ slices into one product document per store view in OpenSearch, and serves catalo
 GraphQL reads from those documents. A request runs no SQL of its own for catalog
 data; any miss falls back to the core resolver.
 
+## Scope
+
+This package runs in the monolith, next to the catalog database. The read path serves
+from documents and may read the database where a document cannot answer, or where a
+lookup is cheaper than carrying the data on the document; the fallback to the core
+resolver is the norm. The feeds are a latency layer over the database, not a
+replacement. Strict mode reports every statement, so the cost of a lookup stays visible
+and a lookup can become a document field later. Extensions plug in through the Api
+modules, never through a preference on a class of this package.
+
 ## Requirements
 
 - Mage-OS or Magento Open Source 2.4.7 or later, with OpenSearch as the configured
@@ -197,35 +207,53 @@ of the links.
    paths, so an integrator proves an extension on every surface it touches.
 5. **REST integration.** The product repository and the search API behind the same
    document models, for headless setups that read the catalog over REST.
-6. **Split writer and reader deployments.** A minimal Mage-OS installation that only
-   holds the read side, distributed close to the shoppers. Reads need no catalog tables,
-   but a Magento bootstrap still needs a database and a cache for configuration, stores
-   and EAV metadata, so this is a read replica plus a local cache per region, with the
-   writers and the feeds in one place.
-7. **The router at the edge.** The `route` query and the URL rewrite lookup still read
-   the database. A URL rewrite read model next to the documents, with redirects and
-   custom URLs, and products and categories queryable by url path, brings the whole
-   router to the read side.
-8. **Write conflicts under parallel feeds.** A retry on version conflict for the bulk
-   updates, and a re-read for the writers that merge into a stored document (prices,
-   variants, composite links), so parallel feed threads cannot lose an update.
-9. **A blue/green rebuild.** The rebuild command drops an entity's documents first,
-   so the read path serves from core until the export completes. A rebuild into a
-   fresh index behind an alias, switched over when it is complete, keeps the
-   documents live.
-10. **Category attributes on the category documents.** Custom category attributes such
+6. **Cache coherence.** A product save purges the response and resolver cache tags at
+   once; the document updates after the feed export and the index refresh. A request in
+   between re-caches the old document for the full TTL. The purge belongs after the
+   document write, and that is also the moment a frontend cache gets its notification.
+7. **Document store status.** A status command and an admin page: the document count
+   against the product count per store view, the feed lag, the rows waiting for a retry
+   and the last export failure. Today a failed batch is a status 500 in a feed table
+   that nobody sees.
+8. **Storefront key.** Allow Request Override and Strict Mode unlock with a key
+   generated in the admin and sent as a request header, instead of two global flags a
+   production shop can leave on. The same key later exempts a storefront from rate
+   limits.
+9. **New customer group.** Core reindexes prices and rules for a new group, but the
+   price feed re-exports only rows whose hash changes, so a product without
+   group-specific prices keeps a `priceIndex` without the group's entry: its composite
+   ranges miss for that group until a re-export. A group save must re-export the prices
+   feed, or the aggregation must take the group 0 entry when the group has none.
+10. **Signed-in parity in CI.** A job with a customer token in every tax display mode,
+    and a second store view in the CI install, so the per-website fan-out of prices and
+    stock is covered.
+11. **Integration tests.** Magento integration tests for the writers and the model
+    builder next to the unit tests, which is what a Mage-OS review asks for.
+12. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
+    hook on the search request and a permission hook on the documents, so an extension
+    plugs in without a preference on a class of this package.
+13. **Gate option for the SQL rule.** The parity gate fails a document-path SQL
+    statement only with `--no-sql`, for a deployment whose read side has no catalog
+    database; by default it prints the statement.
+14. **A php-fpm benchmark.** Core against documents, on php-fpm and on the worker,
+    published. Most shops run php-fpm and every number in the docs is a worker number.
+15. **Write conflicts under parallel feeds.** A retry on version conflict for the bulk
+    updates, and a re-read for the writers that merge into a stored document (prices,
+    variants, composite links), so parallel feed threads cannot lose an update.
+16. **A blue/green rebuild.** The rebuild command drops an entity's documents first,
+    so the read path serves from core until the export completes. A rebuild into a
+    fresh index behind an alias, switched over when it is complete, keeps the
+    documents live.
+17. **Category attributes on the category documents.** Custom category attributes such
     as SEO fields fall back to the database; a category attributes slice like the
     product one serves them.
-11. **Fixed product taxes.** The last price display setup that falls back to core.
+18. **Fixed product taxes.** The last price display setup that falls back to core.
     The weee amounts per product travel on the document; the read side adds them the
     way the weee adjustment does.
-12. **Composite ranges per child tax class.** A configurable or grouped range is taxed
+19. **Composite ranges per child tax class.** A configurable or grouped range is taxed
     with the parent's tax class; core taxes each child's regular price with the child's
     own class. A terms aggregation on the child's tax class next to the nested price
     index makes the regular range exact. Bundles are exact already.
-13. **Search term analytics as its own concern.** Recording is off by default; when
-    search analytics comes back it belongs off the request path, in a queue or the
-    search engine's own logs.
-14. **Package publishing.** A subtree split of the module directories to their own
+20. **Package publishing.** A subtree split of the module directories to their own
     repositories and a release on packagist, so the modules install separately while
     the repository stays one.

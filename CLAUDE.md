@@ -154,18 +154,24 @@ registers all modules through composer autoload.
 
 ## Rules
 
-- A GraphQL request MUST NOT run any custom SQL lookup. Every piece of data a
-  request needs MUST come from the OpenSearch document. Index-time feed
-  processing (the `ExportFeedInterface` implementation and feed plugins, run by
-  `indexer:reindex`) MAY use SQL to assemble documents; the request path may not.
+- This package runs in the monolith: a GraphQL request SHOULD take everything
+  it needs from the OpenSearch document, and MAY read the database where the
+  document cannot answer or where a lookup is cheaper than carrying the data
+  on the document. Index-time feed processing (the `ExportFeedInterface`
+  implementation and feed plugins, run by `indexer:reindex`) assembles the
+  documents and uses SQL freely. A deployment whose read side has no catalog
+  database turns the SHOULD into a MUST NOT and fails the gate on a
+  statement, so a lookup added here MUST stay visible in the strict report
+  and MUST be replaceable by a document field.
 - The read path MUST fall back to the core resolver whenever the document lacks
-  what a field needs, never to a database read of its own.
+  what a field needs, never to a database read written into a document plugin.
 - Parity is the gate: `bin/magento catalog-storefront:parity <endpoint>` MUST
   stay green before a change ships. It needs Allow Request Override on (each
   request picks its path with the `X-Catalog-Storefront` header) and Strict
   Mode on (the response extensions carry the document path's SQL statements
   and fallbacks): a document-path query that runs a SQL lookup fails with its
-  statements, which is the first rule enforced. Run it against the worker's
+  statements; that failure becomes the `--no-sql` option once the gate has
+  it, and the default prints the statement. Run it against the worker's
   own host name (`https://worker.localhost.reachdigital.io/graphql`; the
   backend host name goes to the host PHP-FPM). Every query runs twice unjudged
   first, so the gate sees the steady state and not the memo fill. Every query

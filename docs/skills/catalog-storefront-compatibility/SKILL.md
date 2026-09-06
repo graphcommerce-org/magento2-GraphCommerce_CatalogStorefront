@@ -13,10 +13,14 @@ from a document, and the gate below proves it.
 
 ## The rule
 
-A GraphQL request MUST NOT run a SQL lookup for catalog data. Index time (feed
+Two levels. In the monolith a GraphQL request SHOULD answer catalog data from
+documents and MAY read the database where a document cannot; the strict report
+shows every statement. On a deployment whose read side has no catalog database
+a request MUST NOT run a SQL lookup for catalog data, and the parity gate fails
+a statement. Build for the second level: it is compatible with both. Index time (feed
 providers, writers, document fields) MAY run SQL. When a document cannot answer
-a field, hand the call to the core resolver; never read the database yourself on
-the request path. Nothing derived from catalog data may live longer than one
+a field, hand the call to the core resolver; never read the database yourself in
+a document plugin. Nothing derived from catalog data may live longer than one
 request: a per-request memo implements `ResetAfterRequestInterface`.
 
 ## Decide what you have
