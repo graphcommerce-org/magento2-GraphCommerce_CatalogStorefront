@@ -73,7 +73,7 @@ copy the pattern, not the code.
   entity name to field name to `keyword`, `integer`, `float`, `boolean` or
   `date`. Only declared fields filter, sort and aggregate; every other field
   stays in the source. Example: `CatalogStorefrontReview/etc/di.xml`. A mapping
-  change needs the index dropped and the feed re-exported.
+  change needs a rebuild (`catalog-storefront:rebuild <entity>`).
 
 ## Request time
 
@@ -132,7 +132,7 @@ core modules they plug into, so a shop without them leaves yours disabled.
    into the query; see `21-` to `24-` for the shape.
 2. Re-export what changed: truncate the feed table (`cde_products_feed`,
    `cde_categories_feed`, `inventory_data_exporter_stock_status_feed`, ...) and
-   reindex the feed; after a mapping change, drop the entity's index first.
+   reindex the feed; after a mapping change, `catalog-storefront:rebuild <entity>`.
 3. Compile after di.xml changes, flush the host and the worker caches, restart
    the worker, reload the host php-fpm masters after a module link changes.
 4. Save Catalog > Catalog > Catalog Storefront Document Store once, so the

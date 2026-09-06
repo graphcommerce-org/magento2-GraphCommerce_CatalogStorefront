@@ -18,11 +18,13 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
- * Rebuilds the documents of an entity from scratch: drops its indices of
- * every store view, truncates the feed tables of the feeds that write it
- * (`Model\Feeds`), so the exporter re-exports
- * every row instead of skipping the unchanged ones, and runs those feed
- * indexers. The read path falls back to core while the documents are away.
+ * Rebuilds the documents of an entity from scratch: stages a fresh index per
+ * store view that takes the writes while the reads keep the current
+ * documents, truncates the feed tables of the feeds that write it
+ * (`Model\Feeds`), so the exporter re-exports every row instead of skipping
+ * the unchanged ones, runs those feed indexers, and promotes the fresh
+ * indices when they are through. A rebuild that fails leaves the reads where
+ * they were; the next rebuild replaces the staged index.
  */
 class Rebuild extends Command
 {
@@ -68,10 +70,10 @@ class Rebuild extends Command
         foreach ($entities as $entity) {
             foreach ($this->storeManager->getStores() as $store) {
                 $entity === self::PRODUCT
-                    ? $this->products->drop($store->getCode())
-                    : $this->metadata->drop($entity, $store->getCode());
+                    ? $this->products->stage($store->getCode())
+                    : $this->metadata->stage($entity, $store->getCode());
             }
-            $output->writeln(sprintf('Dropped the %s documents', $entity));
+            $output->writeln(sprintf('Staged a fresh index for the %s documents', $entity));
             foreach ($feeds[$entity] as $indexerId => $feed) {
                 $connection->truncateTable($this->resourceConnection->getTableName($feed->getFeedTableName()));
                 $indexers[$indexerId] = $feed->getFeedName();
@@ -81,6 +83,14 @@ class Rebuild extends Command
             $started = microtime(true);
             $this->indexerRegistry->get($indexerId)->reindexAll();
             $output->writeln(sprintf('Exported the %s feed in %.1fs', $feedName, microtime(true) - $started));
+        }
+        foreach ($entities as $entity) {
+            foreach ($this->storeManager->getStores() as $store) {
+                $entity === self::PRODUCT
+                    ? $this->products->promote($store->getCode())
+                    : $this->metadata->promote($entity, $store->getCode());
+            }
+            $output->writeln(sprintf('The fresh %s documents serve the reads', $entity));
         }
 
         return Command::SUCCESS;

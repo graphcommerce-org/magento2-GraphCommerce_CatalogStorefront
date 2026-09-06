@@ -1,12 +1,18 @@
 // OpenSearch inspection of the document store, in the Dev Tools syntax of
 // OpenSearch Dashboards: the VS Code OpenSearch extension runs a request from
 // the cursor against the cluster configured in the extension. The store keeps
-// one index per entity and store view, named prefix, entity and store view
-// code. Replace "default" for another store view. The magento2_* indices are
-// core's search indexes, not ours.
+// one index per entity and store view behind two aliases, prefix, entity and
+// store view code for the reads and its _write twin for the writes; a rebuild
+// stages a fresh index behind the write alias and promotes it when the feeds
+// are through. Replace "default" for another store view. The magento2_*
+// indices are core's search indexes, not ours.
 
 // Every index with its document count and size
 GET _cat/indices?v&h=index,health,docs.count,store.size&s=index
+{}
+
+// The aliases: which index serves the reads and which takes the writes
+GET _cat/aliases/catalog_storefront_*?v&h=alias,index&s=alias
 {}
 
 // Mapping of the product index: only the filtered and aggregated fields are mapped

@@ -44,10 +44,12 @@ class Products implements FeedWriterInterface
             foreach ($this->fields as $field) {
                 $documents = $field->add($store, $documents);
             }
-            foreach ($this->compositeLinks->upserts($store, $documents, $deletes[$store] ?? []) as $id => $links) {
-                $documents[$id] = array_replace($documents[$id] ?? [], $links);
+            [$links, $listChanges] = $this->compositeLinks->upserts($store, $documents, $deletes[$store] ?? []);
+            foreach ($links as $id => $keys) {
+                $documents[$id] = array_replace($documents[$id] ?? [], $keys);
             }
             $this->storage->upsert($store, $documents);
+            $this->storage->updateLists($store, $listChanges);
             $this->storage->delete($store, $deletes[$store] ?? []);
         }
     }

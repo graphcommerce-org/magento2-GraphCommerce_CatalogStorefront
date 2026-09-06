@@ -24,9 +24,25 @@ interface ProductDocumentStorageInterface
     public function delete(string $storeViewCode, array $ids): void;
 
     /**
-     * Removes the store view's documents as a whole; the next write starts a fresh store.
+     * A fresh, empty index takes the writes of the store view; the reads stay
+     * on the current documents until promote().
      */
-    public function drop(string $storeViewCode): void;
+    public function stage(string $storeViewCode): void;
+
+    /**
+     * The staged documents serve the reads from now on; the ones they replace
+     * are deleted.
+     */
+    public function promote(string $storeViewCode): void;
+
+    /**
+     * Adds ids to and removes ids from id lists of stored documents in the
+     * store itself, so parallel writers cannot lose each other's change; a
+     * missing document is created with the added ids.
+     *
+     * @param array<int, array<string, array{add?: int[], remove?: int[]}>> $changes by product id and list key
+     */
+    public function updateLists(string $storeViewCode, array $changes): void;
 
     public function count(string $storeViewCode): int;
 

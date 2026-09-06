@@ -185,12 +185,15 @@ check can call it.
 bin/magento catalog-storefront:rebuild [product|category|attribute|review|rating ...]
 ```
 
-drops the indices of the given entities (all by default) in every store view, truncates
-the feed tables of the feeds that write them, so the exporter re-exports every row instead
-of skipping the unchanged ones, and runs those feed indexers. Needed after a mapping change,
-after a new customer group, and whenever the documents drifted from the database. The read
-path falls back to core while the documents are away. A module that writes a feed registers
-it under `feeds` on the command.
+stages a fresh index per store view for the given entities (all by default), truncates the
+feed tables of the feeds that write them, so the exporter re-exports every row instead of
+skipping the unchanged ones, runs those feed indexers into the fresh indices, and then
+moves the reads over and deletes the old indices. The reads keep the current documents
+until the export is through; a rebuild that fails leaves them untouched and the next
+rebuild replaces the staged index. Needed after a mapping change and whenever the
+documents drifted from the database. Each entity and store view has one index behind two
+aliases, `<prefix>_<entity>_<store view>` for the reads and its `_write` twin for the
+writes. A module that writes a feed registers it under `feeds` on `Model\Feeds`.
 
 ## Tests
 
@@ -245,23 +248,16 @@ of the links.
 8. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
     hook on the search request and a permission hook on the documents, so an extension
     plugs in without a preference on a class of this package.
-9. **Write conflicts under parallel feeds.** A retry on version conflict for the bulk
-    updates, and a re-read for the writers that merge into a stored document (prices,
-    variants, composite links), so parallel feed threads cannot lose an update.
-10. **A blue/green rebuild.** The rebuild command drops an entity's documents first,
-    so the read path serves from core until the export completes. A rebuild into a
-    fresh index behind an alias, switched over when it is complete, keeps the
-    documents live.
-11. **Category attributes on the category documents.** Custom category attributes such
+9. **Category attributes on the category documents.** Custom category attributes such
     as SEO fields fall back to the database; a category attributes slice like the
     product one serves them.
-12. **Fixed product taxes.** The last price display setup that falls back to core.
+10. **Fixed product taxes.** The last price display setup that falls back to core.
     The weee amounts per product travel on the document; the read side adds them the
     way the weee adjustment does.
-13. **Composite ranges per child tax class.** A configurable or grouped range is taxed
+11. **Composite ranges per child tax class.** A configurable or grouped range is taxed
     with the parent's tax class; core taxes each child's regular price with the child's
     own class. A terms aggregation on the child's tax class next to the nested price
     index makes the regular range exact. Bundles are exact already.
-14. **Package publishing.** A subtree split of the module directories to their own
+12. **Package publishing.** A subtree split of the module directories to their own
     repositories and a release on packagist, so the modules install separately while
     the repository stays one.

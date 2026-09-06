@@ -35,9 +35,21 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
         }
     }
 
-    public function drop(string $storeViewCode): void
+    public function stage(string $storeViewCode): void
     {
-        $this->index->drop(self::ENTITY, $storeViewCode);
+        $this->index->stage(self::ENTITY, $storeViewCode);
+    }
+
+    public function promote(string $storeViewCode): void
+    {
+        $this->index->promote(self::ENTITY, $storeViewCode);
+    }
+
+    public function updateLists(string $storeViewCode, array $changes): void
+    {
+        if ($changes) {
+            $this->client->updateLists($this->index->ensure(self::ENTITY, $storeViewCode), $changes);
+        }
     }
 
     public function count(string $storeViewCode): int

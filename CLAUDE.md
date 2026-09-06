@@ -32,10 +32,14 @@ passes.
 - `CatalogStorefrontOpenSearch`: the storage interfaces on OpenSearch:
   `Model/Client` (core's OpenSearch client from the engine resolver, so the
   document store shares the search engine connection; one request per
-  method; the id travels in the source under `id`), `Model/Index` (one index
-  per entity and store view, named `<prefix>_<entity>_<store view>`, created
-  on first write with the entity's `EntityMappings` fields and nothing else
-  mapped) and the two stores.
+  method; the id travels in the source under `id`; `updateLists` changes id
+  lists inside the store with a painless script, so parallel writers cannot
+  lose each other's change), `Model/Index` (one index per entity and store
+  view behind two aliases, `<prefix>_<entity>_<store view>` for the reads and
+  its `_write` twin for the writes, created on first write with the entity's
+  `EntityMappings` fields and nothing else mapped; `stage` puts a fresh index
+  behind the write alias, `promote` moves the read alias to it and deletes the
+  old one) and the two stores.
 - `CatalogStorefront`: the base. Feed delivery and the writers for the
   products, prices, categories and attributes feeds, the composite links, the
   image URL field, the exporter patch-ups the core feeds need, the model
@@ -135,7 +139,11 @@ Inside a base module the folders name the stage of the pipeline:
 - `Model/Document/`: the document store side. `Delivery` implements the
   exporter's `ExportFeedInterface` and hands each batch to the `Writer/` of its
   feed; `Field/` classes compute product document fields; `CompositeLinks`
-  keeps the composite relations by id.
+  keeps the composite relations by id; a child outside the batch gets its
+  parent id lists changed in the store (`updateLists`), the only
+  read-modify-write a parallel feed thread could race, since the exporter
+  partitions a feed's batches by source entity id and every other merge
+  (prices per product, variant parents per child) stays inside one batch.
 - `Model/Read/`: the request side any frontend shares: `ProductDocuments`,
   `ProductModelBuilder`, `PriceRanges` and `Price/`, `AttributeDocuments`.
 
@@ -380,9 +388,10 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
 - With immediate export, a full `indexer:reindex` of a feed skips rows whose
   feed hash is unchanged, so it does not repair a document store.
   `bin/magento catalog-storefront:rebuild [entities]` does the whole repair:
-  it drops the entity's indices, truncates the feed tables registered for it
-  (di.xml `feeds` on `Model/Feeds`) and runs their indexers; about ten seconds
-  for the demo catalog. By hand: drop the index, truncate `cde_products_feed`,
+  it stages a fresh index per store view, truncates the feed tables
+  registered for it (di.xml `feeds` on `Model/Feeds`), runs their indexers
+  and promotes the fresh indices; the reads keep the old documents until then;
+  about ten seconds for the demo catalog. By hand: stage or drop the index, truncate `cde_products_feed`,
   `cde_product_prices_feed`, `cde_product_variants_feed`,
   `inventory_data_exporter_stock_status_feed` and
   `catalog_data_exporter_product_reviews`, then reindex the products, stock,

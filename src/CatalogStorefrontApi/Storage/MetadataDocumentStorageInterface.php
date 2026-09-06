@@ -23,9 +23,16 @@ interface MetadataDocumentStorageInterface
     public function delete(string $entity, string $storeViewCode, array $ids): void;
 
     /**
-     * Removes the entity's documents of the store view as a whole; the next write starts a fresh store.
+     * A fresh, empty index takes the writes of the entity in the store view;
+     * the reads stay on the current documents until promote().
      */
-    public function drop(string $entity, string $storeViewCode): void;
+    public function stage(string $entity, string $storeViewCode): void;
+
+    /**
+     * The staged documents serve the reads from now on; the ones they replace
+     * are deleted.
+     */
+    public function promote(string $entity, string $storeViewCode): void;
 
     public function count(string $entity, string $storeViewCode): int;
 

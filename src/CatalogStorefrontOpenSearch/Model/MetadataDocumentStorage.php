@@ -33,9 +33,14 @@ class MetadataDocumentStorage implements MetadataDocumentStorageInterface
         }
     }
 
-    public function drop(string $entity, string $storeViewCode): void
+    public function stage(string $entity, string $storeViewCode): void
     {
-        $this->index->drop($entity, $storeViewCode);
+        $this->index->stage($entity, $storeViewCode);
+    }
+
+    public function promote(string $entity, string $storeViewCode): void
+    {
+        $this->index->promote($entity, $storeViewCode);
     }
 
     public function count(string $entity, string $storeViewCode): int
