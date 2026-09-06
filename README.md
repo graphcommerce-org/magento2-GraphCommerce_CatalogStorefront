@@ -149,7 +149,8 @@ and the document path, picked per request with the `X-Catalog-Storefront` header
 diffs the responses. It sends the storefront key, so the configuration must have been
 saved once, and prints every fallback of the document path. `--dump=<dir>` keeps both
 responses of every query. A query file sends its own request
-headers through `# @header Content-Currency: EUR` comment lines. See `CLAUDE.md` for the
+headers through `# @header Content-Currency: EUR` comment lines; `--header "Authorization:
+Bearer <token>"` sends a customer token with every query, which makes it a signed-in gate. See `CLAUDE.md` for the
 operating notes, the fixtures the query set needs and the known deviations.
 
 ## Status
@@ -185,7 +186,8 @@ installation that holds the package (`MAGENTO_ROOT`, else the project two levels
 [graycore actions](https://github.com/graycoreio/github-actions-magento2), then installs
 the sample data with OpenSearch, MySQL and Redis as service containers, adds the query set's
 fixtures, exports the feeds and runs the parity gate in three price setups: excluding tax,
-catalog prices including tax, both prices displayed. PHPUnit runs from its phar in both
+catalog prices including tax, both prices displayed; each as a guest and as a signed-in
+customer with a Michigan address. PHPUnit runs from its phar in both
 jobs: Magento's composer.json excludes every `Test` directory from the classmap, which
 drops PHPUnit's own event classes.
 
@@ -222,9 +224,8 @@ of the links.
    paths, so an integrator proves an extension on every surface it touches.
 5. **REST integration.** The product repository and the search API behind the same
    document models, for headless setups that read the catalog over REST.
-6. **Signed-in parity in CI.** A job with a customer token in every tax display mode,
-    and a second store view in the CI install, so the per-website fan-out of prices and
-    stock is covered.
+6. **A second store view in CI.** The CI install has one store view, so the per-website
+   fan-out of prices and stock is not covered.
 7. **Integration tests.** Magento integration tests for the writers and the model
     builder next to the unit tests, which is what a Mage-OS review asks for.
 8. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking

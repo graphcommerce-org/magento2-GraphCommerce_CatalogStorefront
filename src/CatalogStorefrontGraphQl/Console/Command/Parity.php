@@ -19,7 +19,8 @@ use Symfony\Component\Console\Output\OutputInterface;
  * the responses. The document path's fallbacks come back in the response
  * extensions and are printed. Every query runs unjudged first so the gate
  * sees the steady state. A query file sends extra request headers through
- * comment lines of the form `# @header Content-Currency: EUR`.
+ * comment lines of the form `# @header Content-Currency: EUR`; `--header`
+ * sends one with every query, a customer token for a signed-in gate.
  */
 class Parity extends Command
 {
@@ -27,6 +28,7 @@ class Parity extends Command
     private const QUERIES = 'queries';
     private const DUMP = 'dump';
     private const WARM = 'warm';
+    private const HEADER = 'header';
 
     public function __construct(
         private readonly Config $config,
@@ -41,7 +43,8 @@ class Parity extends Command
             ->addArgument(self::ENDPOINT, InputArgument::REQUIRED, 'The GraphQL endpoint, for example https://shop.example/graphql')
             ->addOption(self::QUERIES, null, InputOption::VALUE_REQUIRED, 'Directory of .graphql files', dirname(__DIR__, 4) . '/dev/parity/queries')
             ->addOption(self::DUMP, null, InputOption::VALUE_REQUIRED, 'Directory that keeps both responses of every query')
-            ->addOption(self::WARM, null, InputOption::VALUE_REQUIRED, 'Unjudged runs of every query per path before the judged one', '2');
+            ->addOption(self::WARM, null, InputOption::VALUE_REQUIRED, 'Unjudged runs of every query per path before the judged one', '2')
+            ->addOption(self::HEADER, null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'A request header for every query, "Name: value"; a customer token makes it a signed-in gate');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -62,13 +65,18 @@ class Parity extends Command
         }
         $warm = max(0, (int)$input->getOption(self::WARM));
         $dump = $input->getOption(self::DUMP);
+        $shared = [];
+        foreach ((array)$input->getOption(self::HEADER) as $header) {
+            [$headerName, $value] = array_map('trim', explode(':', $header, 2) + [1 => '']);
+            $shared[$headerName] = $value;
+        }
 
         $failed = 0;
         foreach ($files as $file) {
             $name = basename($file, '.graphql');
             $query = (string)file_get_contents($file);
             preg_match_all('/^#\s*@header\s+([\w-]+):\s*(.+?)\s*$/m', $query, $matches, PREG_SET_ORDER);
-            $headers = array_combine(array_column($matches, 1), array_column($matches, 2));
+            $headers = array_combine(array_column($matches, 1), array_column($matches, 2)) + $shared;
             $responses = [];
             foreach ([Mode::CORE, Mode::DOCUMENTS] as $mode) {
                 for ($run = 0; $run < $warm; $run++) {
