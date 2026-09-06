@@ -135,6 +135,8 @@ jobs:
           php ${{ github.workspace }}/dev/parity/fixtures/second-store.php
           # A reduced product tax class on one variant of WJ02, so a composite mixes child tax classes.
           php ${{ github.workspace }}/dev/parity/fixtures/reduced-tax-class.php
+          # A custom category attribute with a value, so the category queries select a field GraphQL adds for it.
+          php ${{ github.workspace }}/dev/parity/fixtures/category-attribute.php
       - name: Configure and export the feeds
         working-directory: ${{ steps.magento.outputs.path }}
         run: |

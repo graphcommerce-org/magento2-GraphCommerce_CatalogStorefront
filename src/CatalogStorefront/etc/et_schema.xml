@@ -18,7 +18,15 @@
             <using field="type"/>
         </field>
     </record>
+    <record name="CategoryCustomAttribute">
+        <field name="attributeCode" type="String"/>
+        <field name="value" type="String"/>
+    </record>
     <record name="Category">
+        <field name="customAttributes" type="CategoryCustomAttribute" repeated="true" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\CategoryCustomAttributes">
+            <using field="categoryId"/>
+            <using field="storeViewCode"/>
+        </field>
         <field name="filterPriceRange" type="String" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\CategoryPriceStep">
             <using field="categoryId"/>
             <using field="storeViewCode"/>

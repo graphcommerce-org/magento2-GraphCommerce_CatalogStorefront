@@ -321,7 +321,11 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   is), categories (`categoryData` is what the category product index holds:
   assignments and anchor ancestors, so only the store root is left out; the
   category documents are fetched once per request for the whole page and
-  hydrated through core's category hydrator; the categories and categoryList
+  hydrated through core's category hydrator, with the raw value of every
+  category attribute from the document's `customAttributes`
+  (`Model/DataExporter/Provider/CategoryCustomAttributes`; the exporter's own
+  `attributes` slice carries option labels where GraphQL answers raw values,
+  so it is not read); the categories and categoryList
   queries resolve their id, uid, url key, url path and parent filters on the
   category documents, with breadcrumbs from the path and the active children
   nested to the depth the query selects, `Model/CategoryDocuments`), and custom_attributesV2
@@ -415,7 +419,10 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   (`php dev/parity/fixtures/second-store.php` from the Magento root) and the
   product tax class Reduced Goods at 2% in Michigan on the variant
   WJ02-XS-Blue (`php dev/parity/fixtures/reduced-tax-class.php`), so the
-  including-tax gates see a composite with mixed child tax classes (then
+  including-tax gates see a composite with mixed child tax classes, and the
+  category attribute `seo_text` with a value on category 20
+  (`php dev/parity/fixtures/category-attribute.php`, then the categories
+  feed rebuilt and the cache flushed, since the GraphQL schema changes) (then
   `cache:flush` before `indexer:reindex`: the exporter and the search indexer
   read the store list from the config cache, and a reindex before the flush
   builds one store view; the dev shop has it): the
