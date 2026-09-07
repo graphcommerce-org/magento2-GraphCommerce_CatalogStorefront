@@ -184,6 +184,49 @@ passes.
   `EntityMappings`), the rating documents reader, the feed table schema / the
   reviews prefiller (one aggregation per page), the reviews resolver (a query
   per page).
+- `CatalogStorefrontProductListing`: rendered category and search listing
+  pages from documents, for a Luma or Hyvä theme, off by default
+  (`Model/Mode`: the store view's Serve Product Listings setting, or the
+  `X-Catalog-Storefront` header under the key, which is part of the page cache
+  id so a keyed request never fills a visitor's slot). `Plugin/Listing/
+  CollectionFlag` marks the collection the layer's item collection provider
+  returns (ElasticSuite's category layer is a virtual type of it), and
+  `ListingHydration` wraps the entity load of a marked collection only, so
+  child, related and bundle collections stay on core. The collection's select
+  still runs: its joins carry `minimal_price` and `max_price`, which the
+  configurable regular price needs and which an order by price refers to;
+  leaving `_itemsById` empty is what skips the attribute load. One product
+  without a document loads the whole page from the database (a plugin cannot
+  fill `_itemsById`, so a row by row merge would leave bare rows), with the
+  ids logged: all of them points at the store code or the cluster, a few at
+  the feeds. `catalog-storefront:parity:listing <base url>` renders
+  `dev/parity/listing-pages.txt` on both paths and compares the lines with
+  form keys, Hyvä's uniqid element ids and the private content stamps
+  normalised (`--pages`, `--dump`, `--warm`, `--host`, `--header`). Hyvä
+  caches each rendered card for an hour, so the gain is on misses: measure
+  warm and cold apart.
+- `CatalogStorefrontConfigurableProductListing`: the configurable card of that
+  page. `getUsedProducts()` builds the children from the parent document's
+  `variantIds` in one read and sets each child's catalog rule price and empty
+  tier prices, so a child's price info costs no query; `getConfigurableAttributes()`
+  builds the super attribute models from `configurableOptions`, which the
+  swatch block's cache key calls before the block cache, so it is paid on
+  every render; the lowest price options provider picks the cheapest child by
+  final and by regular price from `priceIndex` (per-variant discounts make
+  those different children) and wraps core's provider for the rest. A child's
+  `entity_id` and a super attribute's `position` are strings, since
+  `getJsonConfig()` puts them into the rendered JSON as they are. The module
+  requires `...ConfigurableProductGraphQl` until the `configurableOptions`
+  document field moves to `...ConfigurableProduct`, where `variantIds` sits;
+  without the field the plugin hands over to core with nothing logged.
+- `CatalogStorefrontElasticsuite`: the `elasticsuite` engine registered with
+  core's client resolver on core's own client factory, with
+  `Model/Client/Options` answering from `smile_elasticsuite_core_base_settings/
+  es_client` (first server, https flag, credentials when the auth flag and
+  both fields are set, timeout; an empty server list raises). No ElasticSuite
+  class is named. Core's client takes one host and has no certificate
+  validation flag; a `SearchClient` subclass over ElasticSuite's full option
+  set would lift both, not written.
 
 Inside a base module the folders name the stage of the pipeline:
 
