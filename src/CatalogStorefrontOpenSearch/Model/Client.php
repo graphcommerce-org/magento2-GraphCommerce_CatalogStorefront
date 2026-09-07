@@ -19,6 +19,9 @@ class Client
 {
     private const INDEX_PREFIX = 'catalog/storefront_documents/index_prefix';
 
+    // Read responses travel gzipped: the handler sends Accept-Encoding only next to decode_content.
+    private const READ = ['client' => ['decode_content' => true, 'headers' => ['Accept-Encoding' => ['gzip']]]];
+
     // Per list key: the stored ids minus the removed ones, plus the added ones once, compared as numbers.
     private const LIST_SCRIPT = <<<'PAINLESS'
         for (entry in params.changes.entrySet()) {
@@ -124,7 +127,7 @@ class Client
                 'index' => $index,
                 'body' => ['ids' => array_values(array_map('strval', $ids))],
                 '_source' => $fields ?: true,
-            ]);
+            ] + self::READ);
         } catch (Missing404Exception) {
             return [];
         }
@@ -141,7 +144,7 @@ class Client
     public function count(string $index): int
     {
         try {
-            return (int)($this->client()->count(['index' => $index])['count'] ?? 0);
+            return (int)($this->client()->count(['index' => $index] + self::READ)['count'] ?? 0);
         } catch (Missing404Exception) {
             return 0;
         }
@@ -150,7 +153,7 @@ class Client
     public function search(string $index, array $body): array
     {
         try {
-            return $this->client()->search(['index' => $index, 'body' => $body]);
+            return $this->client()->search(['index' => $index, 'body' => $body] + self::READ);
         } catch (Missing404Exception) {
             return [];
         }
@@ -169,7 +172,7 @@ class Client
             $body[] = ['index' => $index];
             $body[] = $search;
         }
-        $responses = $this->client()->msearch(['body' => $body])['responses'] ?? [];
+        $responses = $this->client()->msearch(['body' => $body] + self::READ)['responses'] ?? [];
 
         return array_map(static function (array $response): array {
             if (!isset($response['error'])) {
