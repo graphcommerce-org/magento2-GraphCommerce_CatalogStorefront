@@ -118,6 +118,9 @@
                     <item name="position" xsi:type="string">integer</item>
                     <item name="isActive" xsi:type="string">integer</item>
                     <item name="level" xsi:type="string">integer</item>
+                    <item name="name" xsi:type="string">keyword</item>
+                    <item name="path" xsi:type="string">keyword</item>
+                    <item name="children" xsi:type="string">integer</item>
                 </item>
                 <item name="attribute" xsi:type="array">
                     <item name="id" xsi:type="string">keyword</item>

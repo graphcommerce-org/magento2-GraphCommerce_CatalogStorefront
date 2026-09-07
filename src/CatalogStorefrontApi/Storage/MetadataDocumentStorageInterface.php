@@ -38,7 +38,8 @@ interface MetadataDocumentStorageInterface
 
     /**
      * @param array<int|string> $ids
-     * @param string[] $fields the document keys to return; empty returns the whole document
+     * @param string[] $fields the document keys to return; empty returns the whole document. Keys that
+     *   are all declared fields come back as the index holds them: a scalar, or a list of values.
      * @return array<int|string, array> the documents that exist, keyed by id
      */
     public function get(string $entity, string $storeViewCode, array $ids, array $fields = []): array;

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontOpenSearch\Model;
 
+use GraphCommerce\CatalogStorefrontApi\Storage\EntityMappings;
 use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
 
 /**
@@ -17,6 +18,7 @@ class MetadataDocumentStorage implements MetadataDocumentStorageInterface
     public function __construct(
         private readonly Client $client,
         private readonly Index $index,
+        private readonly EntityMappings $mappings,
     ) {
     }
 
@@ -51,21 +53,25 @@ class MetadataDocumentStorage implements MetadataDocumentStorageInterface
 
     /**
      * A search by id: a multi-get reads every document on its own and costs three times as
-     * much for a few hundred ids, and a request-path read may lag a refresh interval.
+     * much for a few hundred ids. Declared fields come from doc values without the source,
+     * which spares the parse of every document; any other field filters the source.
      */
     public function get(string $entity, string $storeViewCode, array $ids, array $fields = []): array
     {
         if (!$ids) {
             return [];
         }
+        $declared = $fields && !array_diff($fields, array_keys($this->mappings->fields($entity)));
         $response = $this->client->search($this->client->indexName($entity, $storeViewCode), [
             'size' => count($ids),
-            'query' => ['ids' => ['values' => array_values(array_map('strval', $ids))]],
-            '_source' => $fields ?: true,
-        ]);
+            'query' => ['bool' => ['filter' => [['ids' => ['values' => array_values(array_map('strval', $ids))]]]]],
+            'track_total_hits' => false,
+        ] + ($declared ? ['_source' => false, 'docvalue_fields' => $fields] : ['_source' => $fields ?: true]));
         $documents = [];
         foreach ($response['hits']['hits'] ?? [] as $hit) {
-            $documents[$hit['_id']] = $hit['_source'];
+            $documents[$hit['_id']] = $declared
+                ? array_map(static fn(array $values) => count($values) === 1 ? $values[0] : $values, $hit['fields'] ?? [])
+                : $hit['_source'];
         }
 
         return $documents;

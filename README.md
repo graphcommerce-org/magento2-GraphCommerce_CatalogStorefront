@@ -216,8 +216,9 @@ now fetches the few attributes a facet needs. `custom_attributesV2` loaded the s
 per request; a prefiller now fetches the codes the page's documents carry in one search (15 ms
 for a 100-product page with hundreds of codes, the option labels being the payload). An
 unfiltered listing's category facet labels the 500 categories of core's bucket from the
-category documents: 8 ms on the worker, 18 ms on php-fpm, where the search by id replaced a
-multi-get that cost three times as much for hundreds of ids.
+category documents: 4 ms on the worker with the name and the path read from doc values
+instead of the parsed source; the search by id replaced a multi-get that cost three times as
+much for hundreds of ids.
 A page fetch takes its documents whole. Leaving the unselected keys out through a source
 filter made OpenSearch parse every 13 KB document: 15 ms of server time for 200 documents
 against 10 ms for the whole documents, and the smaller transfer did not pay it back. What
@@ -314,26 +315,30 @@ of the links.
 
 1. **Integration tests.** Magento integration tests for the writers and the model
     builder next to the unit tests, which is what a Mage-OS review asks for.
-2. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
+2. **Worker parity and memory.** The parity gate against the worker endpoint with the
+   headers, stores, currencies, customer groups and filters varied per query, so a memo
+   that keeps what it must not shows up as a diff, and the worker's memory per process
+   sampled over a long run, so a memo that grows per request shows up as a slope.
+3. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
     hook on the search request and a permission hook on the documents, so an extension
     plugs in without a preference on a class of this package.
-3. **Fixed product taxes.** The last price display setup that falls back to core.
+4. **Fixed product taxes.** The last price display setup that falls back to core.
     The weee amounts per product travel on the document; the read side adds them the
     way the weee adjustment does.
-4. **Package publishing.** A subtree split of the module directories to their own
+5. **Package publishing.** A subtree split of the module directories to their own
     repositories and a release on packagist, so the modules install separately while
     the repository stays one.
 
-5. **Cart, wishlist and order products.** A cart item's product still loads from the
+6. **Cart, wishlist and order products.** A cart item's product still loads from the
    database. A plugin on the cart items data swaps in the document model by product
    id; the quote keeps what it owns, the row price, the options and the quantity checks.
-6. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
+7. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
    product listing collection, the product page and the layered navigation read from the
    base modules. The price rendering goes through the pricing system, so it needs its
    own document-backed price providers.
-7. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
-8. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
+8. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
+9. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
    listing needs a gate of its own: the rendered listing and product page on both
    paths, so an integrator proves an extension on every surface it touches.
-9. **REST integration.** The product repository and the search API behind the same
+10. **REST integration.** The product repository and the search API behind the same
    document models, for headless setups that read the catalog over REST.

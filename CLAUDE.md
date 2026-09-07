@@ -43,8 +43,12 @@ passes.
   behind the write alias, `promote` moves the read alias to it and deletes the
   old one) and the two stores. A request-path read by id (`get`) is a search
   with an ids query: a multi-get reads every document on its own and costs
-  three times as much for a few hundred ids. The product store's `stored()`
-  stays a multi-get, so a writer sees its batch's own writes before a refresh.
+  three times as much for a few hundred ids. A read of declared fields only
+  takes them from doc values without the source (the 500-category facet read
+  takes 3 ms instead of 5, since no document is parsed); a keyword doc value
+  ends at 256 characters, so declare a field for it only when its values stay
+  short. The product store's `stored()` stays a multi-get, so a writer sees its
+  batch's own writes before a refresh.
   `MetadataDocumentStorage::any()` answers alternatives (an OR of AND-filters)
   over the declared fields in one query.
 - `CatalogStorefront`: the base. Feed delivery and the writers for the
