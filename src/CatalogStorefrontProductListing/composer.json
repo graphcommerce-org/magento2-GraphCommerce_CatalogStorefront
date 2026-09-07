@@ -1,0 +1,23 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-product-listing",
+    "description": "Serves Luma and Hyva product listing pages from the catalog read model documents",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-catalog": "*",
+        "magento/module-configurable-product": "*",
+        "magento/module-store": "*",
+        "graphcommerce/module-catalog-storefront": "self.version",
+        "graphcommerce/module-catalog-storefront-api": "self.version"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontProductListing\\": ""
+        }
+    }
+}
