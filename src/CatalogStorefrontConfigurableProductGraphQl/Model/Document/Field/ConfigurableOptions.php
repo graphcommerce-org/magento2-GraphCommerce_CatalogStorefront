@@ -15,7 +15,9 @@ use Magento\Swatches\Model\Swatch;
  * The feed value id already is the core value uid
  * ("configurable/<attribute id>/<value index>"), so attribute ids come from
  * decoding it, and the id itself is the pre-filled value uid. Swatch data
- * travels pre-filled with the values. Core returns the admin label as both
+ * travels pre-filled with the values as the swatch file; the thumbnail
+ * variation is generated here and its URL is built at read time, so the
+ * document carries no host. Core returns the admin label as both
  * default_label and store_label, with use_default_value always true, and
  * lists the options in an undefined order (no ORDER BY); the merchant's
  * position order is used instead.
@@ -67,11 +69,8 @@ class ConfigurableOptions implements ProductDocumentFieldInterface
                     $swatch = ['type' => Swatch::SWATCH_TYPE_VISUAL_COLOR, 'value' => $optionValue['colorHex']];
                 } elseif (!empty($optionValue['imageUrl'])) {
                     $file = substr((string)$optionValue['imageUrl'], strlen($swatchMediaUrl));
-                    $swatch = [
-                        'type' => Swatch::SWATCH_TYPE_VISUAL_IMAGE,
-                        'value' => $file,
-                        'thumbnail' => $this->swatchMedia->getSwatchAttributeImage(Swatch::SWATCH_THUMBNAIL_NAME, $file),
-                    ];
+                    $this->swatchMedia->getSwatchAttributeImage(Swatch::SWATCH_THUMBNAIL_NAME, $file);
+                    $swatch = ['type' => Swatch::SWATCH_TYPE_VISUAL_IMAGE, 'value' => $file];
                 } elseif (isset($optionValue['textSwatchValue'])) {
                     $swatch = ['type' => Swatch::SWATCH_TYPE_TEXTUAL, 'value' => $optionValue['textSwatchValue']];
                 }

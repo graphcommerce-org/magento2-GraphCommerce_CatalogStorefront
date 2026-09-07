@@ -349,9 +349,8 @@ of the links.
    `configurableOptions` another third: per value the uid, the attribute id, the swatch
    thumbnail and `use_default_value` are derivable from the value index, the option and the
    swatch file. Stored compact and expanded by the resolver, a 200-item page drops from
-   1.8 MB to about 1.2 MB and its multi-search from 22 to about 15 ms. The swatch thumbnail
-   URL built at read time also ends the host difference between two front ends of one
-   store. Needs a products re-export.
+   1.8 MB to about 1.2 MB and its multi-search from 22 to about 15 ms. Needs a products
+   re-export.
 4. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
     hook on the search request and a permission hook on the documents, so an extension
     plugs in without a preference on a class of this package.

@@ -9,16 +9,21 @@ use GraphCommerce\CatalogStorefront\Model\Strict;
 use Magento\ConfigurableProductGraphQl\Model\Resolver\Options;
 use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
+use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
+use Magento\Swatches\Helper\Media as SwatchMedia;
+use Magento\Swatches\Model\Swatch;
 
 /**
- * Serves configurable_options as built at index time by
- * ConfigurableOptionsBuilder. The feed carries no super attribute id or
- * use_default flag, so a selection of those fields keeps the core resolver.
+ * Serves configurable_options as built at index time by the
+ * ConfigurableOptions document field. An image swatch's thumbnail URL is
+ * built here from the swatch file on the document and the store's media base
+ * URL, so it carries the host of the request, as core's does.
  */
 class ConfigurableOptionsFromDocument
 {
     public function __construct(
         private readonly Strict $strict,
+        private readonly SwatchMedia $swatchMedia,
     ) {
     }
 
@@ -42,6 +47,20 @@ class ConfigurableOptionsFromDocument
             return $proceed($field, $context, $info, $value, $args);
         }
 
-        return $document['configurableOptions'];
+        $thumbnailBase = $this->swatchMedia->getSwatchMediaUrl() . '/' . Swatch::SWATCH_THUMBNAIL_NAME . '/'
+            . $this->swatchMedia->getFolderNameSize(Swatch::SWATCH_THUMBNAIL_NAME);
+        $withThumbnail = static function (array $optionValue) use ($thumbnailBase): array {
+            $swatch = $optionValue[PrefillerInterface::KEY]['swatch_data'] ?? null;
+            if (($swatch['type'] ?? null) === Swatch::SWATCH_TYPE_VISUAL_IMAGE) {
+                $optionValue[PrefillerInterface::KEY]['swatch_data']['thumbnail'] = $thumbnailBase . $swatch['value'];
+            }
+
+            return $optionValue;
+        };
+
+        return array_map(
+            static fn(array $option) => ['values' => array_map($withThumbnail, $option['values'])] + $option,
+            $document['configurableOptions']
+        );
     }
 }

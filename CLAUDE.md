@@ -416,8 +416,10 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   between requests. A schema or config change reaches a worker at the next
   cache flush or config cache clean, which the admin config save does.
 - `configurable_options` is built at index time (`Model/Document/Field/ConfigurableOptions` of the configurable GraphQl module,
-  document key `configurableOptions`) and returned as is; its values carry the
-  pre-filled `uid` and `swatch_data`. The field drops the configurable entries
+  document key `configurableOptions`); its values carry the pre-filled `uid`
+  and `swatch_data`, and the plugin that serves them builds an image swatch's
+  thumbnail URL at read time from the stored swatch file, so the document
+  carries no host. The field drops the configurable entries
   of `optionsV2` once it has built them: they were a third of a configurable
   document (13 KB), and every request-time reader of `optionsV2` looks for the
   other option types (custom, downloadable, grouped, bundle).
