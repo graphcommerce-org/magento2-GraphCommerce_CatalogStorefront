@@ -12,6 +12,7 @@
         "magento/module-eav": "*",
         "magento/module-store": "*",
         "graphcommerce/module-catalog-storefront-configurable-product": "self.version",
+        "graphcommerce/module-catalog-storefront-configurable-product-graph-ql": "self.version",
         "graphcommerce/module-catalog-storefront-product-listing": "self.version"
     },
     "autoload": {

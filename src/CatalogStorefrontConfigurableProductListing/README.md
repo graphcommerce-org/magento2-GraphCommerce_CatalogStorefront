@@ -19,3 +19,17 @@ otherwise cost queries per card rather than per page.
   when any listed variant is missing — a short option list is worse than a slow one.
 - Two casts are not cosmetic, because `getJsonConfig()` puts values straight into the rendered JSON:
   a child's `entity_id` and a super attribute's `position` must both be **strings**.
+
+## The GraphQL dependency is a stopgap
+
+This requires `...ConfigurableProductGraphQl`, which a Luma or Hyvä store has no other reason to
+install. It is there only because that module writes the `configurableOptions` document field —
+an index-time field, so by the package's own base/twin rule it belongs in
+`...ConfigurableProduct`, where `variantIds` already sits.
+
+Without it the field is never written, and the failure is silent: a missing `configurableOptions`
+is a legitimate reason to fall back, so the plugin hands over to core with nothing logged. The
+module looks installed and simply does not help.
+
+Drop this dependency once `Model/Document/Field/ConfigurableOptions` and its `fields` di entry move
+to the base module. The resolver plugins stay put.

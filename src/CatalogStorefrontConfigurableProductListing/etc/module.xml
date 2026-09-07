@@ -4,6 +4,8 @@
         <sequence>
             <module name="GraphCommerce_CatalogStorefrontProductListing"/>
             <module name="GraphCommerce_CatalogStorefrontConfigurableProduct"/>
+            <!-- Temporary: it writes the configurableOptions document field. See the README. -->
+            <module name="GraphCommerce_CatalogStorefrontConfigurableProductGraphQl"/>
             <module name="Magento_ConfigurableProduct"/>
         </sequence>
     </module>
