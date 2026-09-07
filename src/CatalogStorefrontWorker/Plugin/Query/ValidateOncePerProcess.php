@@ -17,8 +17,8 @@ use Magento\GraphQl\Model\Query\ContextInterface;
 /**
  * Validates a query document against the schema once per process.
  *
- * The parser already caches the parsed document per query text, so the same
- * document object comes back for a repeated query. A document that produced
+ * KeepParsedDocuments returns the same document object for a repeated query
+ * text across requests, which the memo below keys on. A document that produced
  * an error-free response was valid under the config generation of that
  * moment; later executions under the same generation skip validation by
  * passing an empty rule set, the fast path webonyx provides. Validation is

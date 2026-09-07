@@ -107,7 +107,10 @@ passes.
   class from the session's group, where core loads the customer twice.
 - `CatalogStorefrontWorker`: what a FrankenPHP worker keeps between requests,
   each memo under a generation (`Model/Generation`: a token in the cache with
-  the config tag; `Model/Memo`): the kept schemas per query shape, the validated
+  the config tag; `Model/Memo`): the parsed documents per query text (core's
+  parser drops its cache in its state reset, and the validated set keys on the
+  document object, so without the kept documents every request parsed and
+  validated again, 7 ms), the kept schemas per query shape, the validated
   documents, the deployment config check, the guest cache id tax factor, the
   guest tax rates, the customer group and the currency rate lookups. Nothing
   is keyed by customer: a signed-in customer's request carries its own

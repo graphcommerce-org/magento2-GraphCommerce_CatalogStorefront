@@ -203,8 +203,9 @@ document multi-search of the five requests, 3 ms for the review documents, 10 ms
 aggregations (two attribute queries by option id and the category reads, all under 3 ms),
 4 ms after the response for core's cache id. The core path spends its time in price range
 resolvers and hundreds of SQL statements. On the FrankenPHP worker the same request answers
-in 44 ms: bootstrap and schema build are gone, the search takes 15 ms, the multi-search 7 ms,
-the aggregations 6 ms; the worker then spends 33 ms resetting state before it takes the next
+in 44 ms: bootstrap and schema build are gone, a repeated query is parsed and validated once
+per process (core's parser drops its cache between requests, 7 ms a request without the kept
+documents), the search takes 15 ms, the multi-search 7 ms, the aggregations 6 ms; the worker then spends 33 ms resetting state before it takes the next
 request (14 ms reloading the system config from Redis, gzip and unserialize included, 9 ms in
 the worker module's reload, which reads the EAV attribute tables five times).
 

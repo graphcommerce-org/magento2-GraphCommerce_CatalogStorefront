@@ -5,7 +5,10 @@
         <plugin name="graphcommerce_catalog_storefront_reuse_schema" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Query\ReuseSchema" sortOrder="10"/>
     </type>
     <type name="Magento\Framework\GraphQl\Query\QueryProcessor">
-        <plugin name="graphcommerce_catalog_storefront_validate_once" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Query\ValidateOncePerProcess"/>
+        <plugin name="graphcommerce_catalog_storefront_validate_once" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Query\ValidateOncePerProcess" sortOrder="20"/>
+    </type>
+    <type name="Magento\Framework\GraphQl\Query\QueryParser">
+        <plugin name="graphcommerce_catalog_storefront_keep_parsed_documents" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Query\KeepParsedDocuments"/>
     </type>
     <type name="Magento\CustomerGraphQl\CacheIdFactorProviders\CustomerTaxRateProvider">
         <plugin name="graphcommerce_catalog_storefront_tax_rate_memo" type="GraphCommerce\CatalogStorefrontWorker\Plugin\CacheId\CustomerTaxRateMemo"/>
