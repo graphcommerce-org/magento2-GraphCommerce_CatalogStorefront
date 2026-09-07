@@ -25,6 +25,13 @@ class Generation implements ResetAfterRequestInterface
 
     private const KEY = 'GC_CATALOG_STOREFRONT_GENERATION_';
 
+    /**
+     * Under php-fpm a process serves one request, so a memo never outlives
+     * it and its generation is never read: the name stands in for the token,
+     * and no cache read is made for it.
+     */
+    private static bool $requestOnly = PHP_SAPI === 'fpm-fcgi';
+
     /** @var array<string, string> */
     private array $current = [];
 
@@ -35,6 +42,9 @@ class Generation implements ResetAfterRequestInterface
 
     public function current(string $name): string
     {
+        if (self::$requestOnly) {
+            return $name;
+        }
         if (!isset($this->current[$name])) {
             $token = $this->cache->load(self::KEY . $name);
             if (!$token) {

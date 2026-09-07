@@ -21,6 +21,11 @@ use Magento\Framework\GraphQl\Schema\SchemaGeneratorInterface;
  * not kept. The schemas live under the config generation: a cache flush or a
  * config cache clean drops them.
  */
+/**
+ * Keeps one built schema per query shape in a worker. Under php-fpm the
+ * process serves one request, so the schema is built as core builds it,
+ * without the type map materialized: that walk builds every declared type.
+ */
 class ReuseSchema
 {
     private readonly Memo $schemas;
@@ -35,7 +40,7 @@ class ReuseSchema
     public function aroundGenerate(SchemaGeneratorInterface $subject, \Closure $proceed): Schema
     {
         $names = $this->queryFields->getFieldsUsedInQuery();
-        if (!$names) {
+        if (!$names || PHP_SAPI === 'fpm-fcgi') {
             return $proceed();
         }
         ksort($names);

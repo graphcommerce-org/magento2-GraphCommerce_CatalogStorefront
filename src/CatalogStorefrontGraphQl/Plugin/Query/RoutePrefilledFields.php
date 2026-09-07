@@ -5,49 +5,48 @@ namespace GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query;
 
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
 use GraphQL\Type\Definition\ObjectType;
-use GraphQL\Type\Schema;
-use Magento\Framework\GraphQl\Schema\SchemaGeneratorInterface;
+use Magento\Framework\GraphQl\Schema\Type\TypeRegistry;
 
 /**
- * On a built schema the pre-filled fields (per type or interface name, see
- * di.xml `prefilledFields`) resolve to the value a prefiller put on the
- * parent, and fall back to the core resolver when the parent carries none.
- * A pre-filled field costs the executor a plain array read instead of a
- * resolver call with its ResolveInfo, argument validation and plugin chain.
+ * Routes a prefilled field of an object type to the prefilled value: the
+ * field's resolver reads the value under the prefiller key when the
+ * prefiller put it there, and calls the core resolver otherwise. The
+ * routing happens when the type registry hands a type out, so only the
+ * types a query materializes are touched; a walk of the whole type map
+ * builds every declared type on every php-fpm request.
  */
 class RoutePrefilledFields
 {
-    /**
-     * @param array<string, string[]> $prefilledFields field names per type or interface name
-     */
+    private \WeakMap $routed;
+
     public function __construct(
         private readonly array $prefilledFields = [],
     ) {
+        $this->routed = new \WeakMap();
     }
 
-    public function afterGenerate(SchemaGeneratorInterface $subject, Schema $schema): Schema
+    public function afterGet(TypeRegistry $subject, $type, string $typeName)
     {
-        foreach ($schema->getTypeMap() as $type) {
-            if (!$type instanceof ObjectType) {
+        if (!$type instanceof ObjectType || isset($this->routed[$type])) {
+            return $type;
+        }
+        $this->routed[$type] = true;
+        $names = $this->prefilledFields[$type->name] ?? [];
+        foreach ($type->getInterfaces() as $interface) {
+            $names = array_merge($names, $this->prefilledFields[$interface->name] ?? []);
+        }
+        foreach ($names as $name) {
+            if (!$type->hasField($name)) {
                 continue;
             }
-            $names = $this->prefilledFields[$type->name] ?? [];
-            foreach ($type->getInterfaces() as $interface) {
-                $names = array_merge($names, $this->prefilledFields[$interface->name] ?? []);
-            }
-            foreach ($names as $name) {
-                if (!$type->hasField($name)) {
-                    continue;
-                }
-                $field = $type->getField($name);
-                $original = $field->resolveFn;
-                $field->resolveFn = static fn($value, $args, $context, $info) =>
-                    isset($value[PrefillerInterface::KEY]) && array_key_exists($name, $value[PrefillerInterface::KEY])
-                        ? $value[PrefillerInterface::KEY][$name]
-                        : $original($value, $args, $context, $info);
-            }
+            $field = $type->getField($name);
+            $original = $field->resolveFn;
+            $field->resolveFn = static fn($value, $args, $context, $info) =>
+                isset($value[PrefillerInterface::KEY]) && array_key_exists($name, $value[PrefillerInterface::KEY])
+                    ? $value[PrefillerInterface::KEY][$name]
+                    : $original($value, $args, $context, $info);
         }
 
-        return $schema;
+        return $type;
     }
 }

@@ -83,7 +83,7 @@
     <type name="Magento\Framework\GraphQl\Query\QueryProcessor">
         <plugin name="graphcommerce_catalog_storefront_strict_report" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query\StrictReport"/>
     </type>
-    <type name="Magento\Framework\GraphQl\Schema\SchemaGeneratorInterface">
+    <type name="Magento\Framework\GraphQl\Schema\Type\TypeRegistry">
         <plugin name="graphcommerce_catalog_storefront_route_prefilled_fields" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query\RoutePrefilledFields" sortOrder="20"/>
     </type>
 

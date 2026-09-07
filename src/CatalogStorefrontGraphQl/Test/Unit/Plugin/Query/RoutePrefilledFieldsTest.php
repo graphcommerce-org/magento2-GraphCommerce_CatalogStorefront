@@ -8,8 +8,7 @@ use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
 use GraphQL\Type\Definition\InterfaceType;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
-use GraphQL\Type\Schema;
-use Magento\Framework\GraphQl\Schema\SchemaGeneratorInterface;
+use Magento\Framework\GraphQl\Schema\Type\TypeRegistry;
 use PHPUnit\Framework\TestCase;
 
 class RoutePrefilledFieldsTest extends TestCase
@@ -25,10 +24,10 @@ class RoutePrefilledFieldsTest extends TestCase
                 'name' => ['type' => Type::string(), 'resolve' => static fn($value) => 'resolved-name'],
             ],
         ]);
-        $schema = new Schema(['query' => new ObjectType(['name' => 'Query', 'fields' => ['product' => $product]]), 'types' => [$product]]);
-
-        (new RoutePrefilledFields(['ProductInterface' => ['uid'], 'SimpleProduct' => ['missing']]))
-            ->afterGenerate($this->createMock(SchemaGeneratorInterface::class), $schema);
+        $plugin = new RoutePrefilledFields(['ProductInterface' => ['uid'], 'SimpleProduct' => ['missing']]);
+        $registry = $this->createMock(TypeRegistry::class);
+        $plugin->afterGet($registry, $product, 'SimpleProduct');
+        $plugin->afterGet($registry, $product, 'SimpleProduct');
 
         $uid = $product->getField('uid')->resolveFn;
         self::assertSame('filled', $uid(['id' => 1, PrefillerInterface::KEY => ['uid' => 'filled']], [], null, null));
