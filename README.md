@@ -243,10 +243,13 @@ category documents: 4 ms on the worker with the name and the path read from doc 
 instead of the parsed source; the search by id replaced a multi-get that cost three times as
 much for hundreds of ids.
 A page fetch takes its documents whole. Leaving the unselected keys out through a source
-filter made OpenSearch parse every 13 KB document: 15 ms of server time for 200 documents
-against 10 ms for the whole documents, and the smaller transfer did not pay it back. What
-remains of a 200-item multi-search is the document lookup itself, 5 ms, the price
-aggregations, 5 ms, and the transfer and decode of 2.4 MB. The pure lookup would need the
+filter made OpenSearch parse every document: 15 ms of server time for 200 documents against
+10 ms for the whole documents, and the smaller transfer did not pay it back. The documents
+got smaller instead: a configurable carried its options twice, raw as `optionsV2` and shaped
+as `configurableOptions`, and the raw entries were a third of its 13 KB; the field that
+builds the shape drops them, and a configurable is 9 KB. The 200-item multi-search went from
+18 to 12 ms on the worker for it. What remains is the document lookup itself, 5 ms, the price
+aggregations, 5 ms, and the transfer and decode of 1.7 MB. The pure lookup would need the
 listing slice stored as one field of its own to get lower.
 
 Per row the document store is a quarter of the export; the exporter's own queries and
