@@ -65,7 +65,7 @@ class IndexTest extends TestCase
             ['cs_product_default_write', ['cs_product_default_old', 'cs_product_default_abandoned']],
             ['cs_product_default', ['cs_product_default_old']],
         ]);
-        $client->expects(self::once())->method('createIndex')->with(self::isType('string'), self::MAPPING, []);
+        $client->expects(self::once())->method('createIndex')->with(self::callback(static fn($name): bool => is_string($name)), self::MAPPING, []);
         $client->expects(self::once())->method('moveAlias')->with(
             'cs_product_default_write',
             ['cs_product_default_old', 'cs_product_default_abandoned'],

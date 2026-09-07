@@ -97,10 +97,12 @@ passes.
   unfiltered listing over 300 000 products against 0.2 s as one query; off
   (0), the engine's own limit of 10 000 stands.
 - `CatalogStorefrontGraphQl`: `DocumentHydration`
-  with the prefiller list (a page over `PAGE_CEILING`, 2 000 items, loads from
-  core: a full document decodes to about 65 KB, 10 000 of them hold 650 MB; a
-  source filter built from the selected fields would lift the ceiling, since
-  a sitemap page needs one key per document), the product prefiller, the listing data
+  with the prefiller list, `Model/Query/PageSizeLimit` (a page over 2 000
+  items is refused on both paths, in the argument validator every resolver
+  passes: a full document decodes to about 65 KB, 10 000 of them hold 650 MB,
+  and core's own GraphQL page size limit is not wired in Mage-OS; a source
+  filter built from the selected fields would lift the limit, since a
+  sitemap page needs one key per document), the product prefiller, the listing data
   provider plugins, the resolver plugins for categories, media gallery, URL
   rewrites, custom attributes and linked products, the layered navigation
   plugins, the prefilled field routing and the fallback report on the query

@@ -120,4 +120,12 @@
             </argument>
         </arguments>
     </type>
+    <!-- A page of at most 2 000 items, on both paths; core's own page size limit is not wired for GraphQL. -->
+    <type name="Magento\Framework\GraphQl\Query\Resolver\Argument\Validator\CompositeValidator">
+        <arguments>
+            <argument name="validators" xsi:type="array">
+                <item name="graphcommerce_catalog_storefront_page_size_limit" xsi:type="object">GraphCommerce\CatalogStorefrontGraphQl\Model\Query\PageSizeLimit</item>
+            </argument>
+        </arguments>
+    </type>
 </config>
