@@ -15,16 +15,16 @@ class ProductPriceTest extends TestCase
         $this->price = new ProductPrice();
     }
 
-    public function testRowPrefersTheGroupAndFallsBackToGroupZero(): void
+    public function testRowPrefersTheGroupAndFallsBackToTheAllGroupsRow(): void
     {
         $prices = [
-            ['group' => '0', 'regular' => 10.0],
+            ['group' => 'all', 'regular' => 10.0],
             ['group' => '2', 'regular' => 8.0],
         ];
         self::assertSame(8.0, $this->price->row($prices, '2')['regular']);
         self::assertSame(10.0, $this->price->row($prices, '1')['regular']);
         self::assertNull($this->price->row([['group' => '2', 'regular' => 8.0]], '1'));
-        self::assertNull($this->price->row([['group' => '0']], '0'));
+        self::assertNull($this->price->row([['group' => 'all']], '0'));
     }
 
     public function testIndexEntryByGroup(): void

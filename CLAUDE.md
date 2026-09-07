@@ -256,7 +256,11 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   documents; together they build one document per store view
   (products = base, prices = the feed rows under `prices` with their customer
   `group` id (the feed names a group by the hash of its id; the writer maps it
-  back, rows of an unknown group are dropped) plus `priceIndex`, a nested list
+  back, rows of an unknown group are dropped; the feed's all-groups row comes
+  with code `0`, the id of the NOT LOGGED IN group, and is keyed `all` on the
+  document so the two stay apart; a deleted feed row, a group price or catalog
+  rule price that stopped applying, names the product by sku only and drops
+  that group's stored row) plus `priceIndex`, a nested list
   with one entry per customer group holding the regular and final price with
   the fallback row resolved, in base currency before tax, inventory = `stock`,
   variants = `variantIds` on the configurable parent). Reviews are documents of their own (entity `review`, one per

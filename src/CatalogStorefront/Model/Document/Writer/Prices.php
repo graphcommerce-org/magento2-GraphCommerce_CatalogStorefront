@@ -18,11 +18,16 @@ use Magento\Store\Model\StoreManagerInterface;
  * read. The feed names a group by the hash of its id and a batch holds a
  * product's rows one group at a time, so both are recomputed over the rows
  * already stored plus the batch; a stored row of a group that no longer
- * exists is dropped. A group created or deleted after a row was exported is
- * reflected when the row exports again.
+ * exists is dropped. A deleted row (a group price that stopped applying, a
+ * catalog rule that no longer matches) names the product by sku only and
+ * removes that group's stored row. A group created or deleted after a row
+ * was exported is reflected when the row exports again.
  */
 class Prices implements FeedWriterInterface
 {
+    /** The feed's customer group code of the row that applies to every group. */
+    private const FALLBACK_CODE = '0';
+
     public function __construct(
         private readonly ProductDocumentStorageInterface $storage,
         private readonly StoreManagerInterface $storeManager,
@@ -41,11 +46,12 @@ class Prices implements FeedWriterInterface
             [Group::NOT_LOGGED_IN_ID],
             array_map(static fn($group) => (int)$group->getId(), $this->groupManagement->getLoggedInGroups())
         ));
-        $groupByCode = [ProductPrice::FALLBACK_GROUP => ProductPrice::FALLBACK_GROUP];
+        $groupByCode = [self::FALLBACK_CODE => ProductPrice::FALLBACK_GROUP];
         foreach ($groupIds as $groupId) {
             $groupByCode[sha1((string)$groupId)] = $this->productPrice->groupKey($groupId);
         }
         $rowsByStore = [];
+        $dropsByStore = [];
         foreach ($rows as $row) {
             $group = $groupByCode[$row['customerGroupCode'] ?? ''] ?? null;
             if ($group === null) {
@@ -53,15 +59,27 @@ class Prices implements FeedWriterInterface
             }
             unset($row['customerGroupCode']);
             foreach ($storesByWebsite[$row['websiteCode']] ?? [] as $store) {
-                $rowsByStore[$store][(int)$row['productId']][$group] = ['group' => $group] + $row;
+                if (!empty($row['deleted'])) {
+                    $dropsByStore[$store][(string)$row['sku']][] = $group;
+                } else {
+                    $rowsByStore[$store][(int)$row['productId']][$group] = ['group' => $group] + $row;
+                }
             }
         }
 
-        foreach ($rowsByStore as $store => $products) {
+        foreach (array_unique(array_merge(array_keys($rowsByStore), array_keys($dropsByStore))) as $store) {
+            $products = $rowsByStore[$store] ?? [];
+            $drops = [];
+            if (!empty($dropsByStore[$store])) {
+                foreach ($this->storage->storedBySku($store, array_keys($dropsByStore[$store])) as $id => $document) {
+                    $drops[$id] = $dropsByStore[$store][(string)$document['sku']];
+                    $products[$id] ??= [];
+                }
+            }
             $stored = [];
             foreach ($this->storage->stored($store, array_keys($products), ['prices']) as $id => $document) {
                 foreach ((array)($document['prices'] ?? []) as $row) {
-                    if (in_array((string)$row['group'], $groupByCode, true)) {
+                    if (in_array((string)$row['group'], $groupByCode, true) && !in_array((string)$row['group'], $drops[$id] ?? [], true)) {
                         $stored[$id][(string)$row['group']] = $row;
                     }
                 }
