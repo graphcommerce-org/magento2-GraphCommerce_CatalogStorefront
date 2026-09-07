@@ -43,7 +43,11 @@ passes.
   behind the write alias, `promote` moves the read alias to it and deletes the
   old one) and the two stores. A request-path read by id (`get`) is a search
   with an ids query: a multi-get reads every document on its own and costs
-  three times as much for a few hundred ids. A read of declared fields only
+  three times as much for a few hundred ids; a read of more ids than the
+  engine's result window (10 000) is a multi-search with one search per
+  window, so a 50 000 item sitemap page reads its documents in five. An
+  engine error inside a multi-search is an exception, which the strict report
+  shows; only a missing index is an empty answer. A read of declared fields only
   takes them from doc values without the source (the 500-category facet read
   takes 3 ms instead of 5, since no document is parsed); a keyword doc value
   ends at 256 characters, so declare a field for it only when its values stay
@@ -93,7 +97,10 @@ passes.
   unfiltered listing over 300 000 products against 0.2 s as one query; off
   (0), the engine's own limit of 10 000 stands.
 - `CatalogStorefrontGraphQl`: `DocumentHydration`
-  with the prefiller list, the product prefiller, the listing data
+  with the prefiller list (a page over `PAGE_CEILING`, 2 000 items, loads from
+  core: a full document decodes to about 65 KB, 10 000 of them hold 650 MB; a
+  source filter built from the selected fields would lift the ceiling, since
+  a sitemap page needs one key per document), the product prefiller, the listing data
   provider plugins, the resolver plugins for categories, media gallery, URL
   rewrites, custom attributes and linked products, the layered navigation
   plugins, the prefilled field routing and the fallback report on the query

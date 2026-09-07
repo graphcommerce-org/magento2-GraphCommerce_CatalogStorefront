@@ -15,6 +15,9 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
 {
     private const ENTITY = 'product';
 
+    /** The engine's result window: a read of more ids is a multi-search of this many ids per search. */
+    private const WINDOW = 10000;
+
     public function __construct(
         private readonly Client $client,
         private readonly Index $index,
@@ -67,17 +70,10 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
         if (!$ids) {
             return [];
         }
-        $response = $this->client->search($this->indexName($storeViewCode), [
-            'size' => count($ids),
-            'query' => ['ids' => ['values' => array_values(array_map('strval', $ids))]],
-            '_source' => $fields ?: true,
-        ]);
-        $documents = [];
-        foreach ($response['hits']['hits'] ?? [] as $hit) {
-            $documents[(int)$hit['_id']] = $hit['_source'];
-        }
+        $index = $this->indexName($storeViewCode);
+        $searches = $this->idSearches($ids, ['_source' => $fields ?: true]);
 
-        return $documents;
+        return $this->hits($this->client->multiSearch(array_map(static fn(array $search) => [$index, $search], $searches)));
     }
 
     public function findBySku(string $storeViewCode, array $skus): array
@@ -127,21 +123,46 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
      */
     public function listing(string $storeViewCode, array $ids, ?string $groupKey): array
     {
-        $searches = [[
-            'size' => count($ids),
-            'query' => ['ids' => ['values' => array_values(array_map('strval', $ids))]],
-        ]];
+        $searches = $this->idSearches($ids);
+        $reads = count($searches);
         if ($groupKey !== null) {
             $searches = array_merge($searches, $this->priceSearches($ids, $groupKey));
         }
         $index = $this->indexName($storeViewCode);
         $responses = $this->client->multiSearch(array_map(static fn(array $search) => [$index, $search], $searches));
+
+        return [
+            $this->hits(array_slice($responses, 0, $reads)),
+            $groupKey === null ? [] : $this->parsePriceData(array_slice($responses, $reads)),
+        ];
+    }
+
+    /**
+     * The documents of the ids, one search per window of ids.
+     *
+     * @return array[] search bodies
+     */
+    private function idSearches(array $ids, array $extra = []): array
+    {
+        return array_map(
+            static fn(array $chunk) => ['size' => count($chunk), 'query' => ['ids' => ['values' => $chunk]]] + $extra,
+            array_chunk(array_values(array_map('strval', $ids)), self::WINDOW)
+        );
+    }
+
+    /**
+     * @return array<int, array> the documents of the responses' hits by id
+     */
+    private function hits(array $responses): array
+    {
         $documents = [];
-        foreach ($responses[0]['hits']['hits'] ?? [] as $hit) {
-            $documents[(int)$hit['_id']] = $hit['_source'];
+        foreach ($responses as $response) {
+            foreach ($response['hits']['hits'] ?? [] as $hit) {
+                $documents[(int)$hit['_id']] = $hit['_source'];
+            }
         }
 
-        return [$documents, $groupKey === null ? [] : $this->parsePriceData(array_slice($responses, 1))];
+        return $documents;
     }
 
     public function priceData(string $storeViewCode, array $ids, string $groupKey): array
@@ -158,26 +179,31 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
     {
         $parentIds = array_values(array_map('strval', $parentIds));
 
-        return [
-            $this->rangeAggregation('parentIds', $parentIds, $groupKey),
-            $this->rangeAggregation('groupedParentIds', $parentIds, $groupKey),
+        return array_merge(
             [
-                'size' => 1000,
-                'query' => ['bool' => ['filter' => [
-                    ['terms' => ['bundleParentIds' => $parentIds]],
-                    ['term' => ['status' => 'Enabled']],
-                ]]],
-                '_source' => ['sku', 'bundleParentIds', 'stock.isSalable', 'priceIndex', 'taxClassId'],
+                $this->rangeAggregation('parentIds', $parentIds, $groupKey),
+                $this->rangeAggregation('groupedParentIds', $parentIds, $groupKey),
+                [
+                    'size' => 1000,
+                    'query' => ['bool' => ['filter' => [
+                        ['terms' => ['bundleParentIds' => $parentIds]],
+                        ['term' => ['status' => 'Enabled']],
+                    ]]],
+                    '_source' => ['sku', 'bundleParentIds', 'stock.isSalable', 'priceIndex', 'taxClassId'],
+                ],
             ],
-            [
-                'size' => count($parentIds),
-                'query' => ['bool' => ['filter' => [
-                    ['ids' => ['values' => $parentIds]],
-                    ['terms' => ['type' => ['bundle', 'bundle_fixed']]],
-                ]]],
-                '_source' => ['optionsV2', 'shopperInputOptions'],
-            ],
-        ];
+            array_map(
+                static fn(array $search) => [
+                    'size' => $search['size'],
+                    'query' => ['bool' => ['filter' => [
+                        $search['query'],
+                        ['terms' => ['type' => ['bundle', 'bundle_fixed']]],
+                    ]]],
+                    '_source' => ['optionsV2', 'shopperInputOptions'],
+                ],
+                $this->idSearches($parentIds)
+            )
+        );
     }
 
     /**
@@ -227,16 +253,12 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
                 $selections[(int)$parentId][$hit['_source']['sku']] = $hit['_source'];
             }
         }
-        $bundleOptions = [];
-        foreach ($responses[3]['hits']['hits'] ?? [] as $hit) {
-            $bundleOptions[(int)$hit['_id']] = $hit['_source'];
-        }
 
         return [
             'configurable' => $this->parseRanges($responses[0] ?? []),
             'grouped' => $this->parseRanges($responses[1] ?? []),
             'bundle' => $selections,
-            'bundleOptions' => $bundleOptions,
+            'bundleOptions' => $this->hits(array_slice($responses, 3)),
         ];
     }
 

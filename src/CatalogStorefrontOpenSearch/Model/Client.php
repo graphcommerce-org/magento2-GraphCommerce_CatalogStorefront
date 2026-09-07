@@ -159,6 +159,8 @@ class Client
     /**
      * @param array<int, array{0: string, 1: array}> $searches index and search body per search
      * @return array[] one response per search, an empty one for a missing index
+     * @throws \RuntimeException when the engine refuses a search, so the reader reports it
+     *   instead of taking the empty answer for a missing document
      */
     public function multiSearch(array $searches): array
     {
@@ -169,7 +171,15 @@ class Client
         }
         $responses = $this->client()->msearch(['body' => $body])['responses'] ?? [];
 
-        return array_map(static fn(array $response) => isset($response['error']) ? [] : $response, $responses);
+        return array_map(static function (array $response): array {
+            if (!isset($response['error'])) {
+                return $response;
+            }
+            if (($response['error']['type'] ?? '') === 'index_not_found_exception') {
+                return [];
+            }
+            throw new \RuntimeException((string)($response['error']['reason'] ?? json_encode($response['error'])));
+        }, $responses);
     }
 
     /**

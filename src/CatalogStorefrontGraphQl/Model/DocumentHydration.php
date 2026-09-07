@@ -27,6 +27,13 @@ use GraphCommerce\CatalogStorefront\Model\Strict;
 class DocumentHydration implements HydrationInterface
 {
     /**
+     * The most items a page reads from documents. A full document decodes to
+     * about 65 KB: 10 000 of them hold 650 MB and 50 000 exhausted a 2 GB
+     * worker. A larger page loads from core, which streams its rows.
+     */
+    public const PAGE_CEILING = 2000;
+
+    /**
      * @param PrefillerInterface[] $prefillers
      * @param string[] $priceFields product fields whose value needs the composite price data
      */
@@ -58,9 +65,8 @@ class DocumentHydration implements HydrationInterface
     }
 
     /**
-     * A listing page as one multi-search: the documents by id with the keys
-     * the query does not need left out, and the composite price data when a
-     * price field is selected.
+     * A listing page as one multi-search: the documents by id, and the
+     * composite price data when a price field is selected.
      */
     public function rebuildFromIds(
         array $ids,
@@ -72,6 +78,11 @@ class DocumentHydration implements HydrationInterface
         try {
             $store = $context?->getExtensionAttributes()->getStore() ?? $this->storeManager->getStore();
             if (!$ids) {
+                return null;
+            }
+            if (count($ids) > self::PAGE_CEILING) {
+                $this->strict->fallback(self::class, count($ids) . ' items on one page, over the ' . self::PAGE_CEILING . ' of a document read');
+
                 return null;
             }
             $groupKey = $this->groupKey($context);
