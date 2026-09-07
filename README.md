@@ -219,9 +219,10 @@ question of their own), 4 ms after the response for core's cache id. The core pa
 resolvers and hundreds of SQL statements. On the FrankenPHP worker the same request answers
 in 41 ms: bootstrap and schema build are gone, a repeated query is parsed and validated once
 per process (core's parser drops its cache between requests, 7 ms a request without the kept
-documents), the search takes 7 ms, the multi-search 3 ms, the aggregations 5 ms; the worker then spends 33 ms resetting state before it takes the next
-request (14 ms reloading the system config from Redis, gzip and unserialize included, 9 ms in
-the worker module's reload, which reads the EAV attribute tables five times).
+documents), the search takes 7 ms, the multi-search 3 ms, the aggregations 5 ms; the worker then spends 6 to 12 ms resetting state before it takes the
+next request: the reload processors (system config, stores, search request config) run once per
+config generation, so what is left is the object manager's own reset with its three garbage
+collection runs.
 
 Core's search sorted every listing by score and then by a painless script that parses the
 document id as a tie-break, which runs for every matching document: 41 ms of an unfiltered

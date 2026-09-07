@@ -133,6 +133,12 @@ passes.
   guest tax rates, the customer group and the currency rate lookups. Nothing
   is keyed by customer: a signed-in customer's request carries its own
   address and stays with core's per-request caches.
+  The reload processors that run after a response (system config, stores,
+  search request config, 30 to 40 ms) run once per config generation
+  (`Plugin/State/ReloadPerGeneration`); between generations only
+  `Model/State/RequestReload` runs, which closes the sessions and empties the
+  EAV runtime cache. A reset of the search request config (an attribute's
+  search settings) bumps the config generation, so a worker reloads it.
   A cache flush or config cache clean lifts every memo; a save through the tax
   rule, rate and class repositories, the group repository, or the currency
   rate resource bumps the tax or currency
@@ -237,6 +243,40 @@ registers all modules through composer autoload.
   `fallback(self::class, reason)` where the document cannot answer,
   `exception(self::class, $e)` where the plugin failed (it logs a warning).
   The keyed report is what makes a silent fallback visible outside the gate.
+- Code and configuration for one search engine or one front end live in a
+  module with that name as suffix (`CatalogStorefrontElasticsuite`,
+  `CatalogStorefrontProductListing`). No other module names an ElasticSuite
+  class or config path. Such a module MUST stay inert where its engine or
+  front end is absent: the ElasticSuite module registers an engine core never
+  selects without ElasticSuite, and the listing modules act only on a
+  collection or product that carries a document, under a setting that is off
+  by default.
+
+## Writing rules
+
+- Text a person reads (documentation, comments, commit messages, pull request
+  descriptions, text in code) is written in ASD-STE100 Simplified Technical
+  English, for a senior developer. No em-dash: use a colon or omit it.
+- Comments describe the final state of the code, in the present tense, as if
+  the code was always written that way. No history, no transition language,
+  no future, no TODO or FIXME, no common world knowledge. A comment is
+  written only where the code is not clear on its own; comments near changed
+  code are compacted or deleted.
+- A commit message states the higher goal the commit reaches, in at most a
+  paragraph. It does not restate the diff and does not use conventional
+  commit prefixes. Changes are committed and pushed when they are verified.
+- Migrate a system instead of keeping backwards compatibility when we control
+  all sides; keep compatibility only for a fully public API with sides we do
+  not control.
+- No function or method that has one call site; no method that transforms one
+  object shape into another without changing behaviour; inline filter and map
+  closures over named functions. Types are derived (`Pick`, `Omit`, inference,
+  generated from an API) instead of written by hand. Existing code that
+  breaks these rules is cleaned up when touched.
+- A pull request or issue description on an external repository starts with
+  the literal line `_Written by Claude Code:_`, is minimal, and expects the
+  maintainer to know their repository. An issue is only opened with a pull
+  request, after the problem is reproduced and their CI has validated it.
 
 ## Boundary note
 
@@ -548,8 +588,9 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   resolver calls), and the webonyx walk over about 22000 fields 25ms; the
   plugins around the controller 1ms, response build 3ms (JSON render 0.7ms);
   no SQL. The state reset after the
-  response takes 22ms per request on the thread, which is throughput, not
-  latency. PHP JIT (tracing and function mode) makes this workload 10 to 20%
+  response takes 6 to 12 ms per request on the thread (the object manager
+  reset with its garbage collection runs; the reload processors run once per
+  config generation), which is throughput, not latency. PHP JIT (tracing and function mode) makes this workload 10 to 20%
   slower in the worker and, combined with the kept schema, produced erratic
   "Unknown type Query" errors: keep it off.
 - If every `bin/magento` command fails with a missing `Interceptor` class, the
