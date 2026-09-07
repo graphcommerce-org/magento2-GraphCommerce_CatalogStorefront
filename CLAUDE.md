@@ -8,9 +8,10 @@ One composer package, one git repository, one Magento module per directory
 under `src/`, named as the module. The cut follows core: a base module holds
 what any frontend can use (feed patch-ups, document writers, model builder,
 price ranges, metadata readers), its `GraphQl` twin holds the resolver
-plugins, the prefillers and the schema plugins. A Hyvä or Luma integration
-adds `*Frontend` modules next to the `*GraphQl` ones and reuses the base
-modules. Each module depends only on the core modules it plugs into, so a
+plugins, the prefillers and the schema plugins. A rendered listing
+integration adds `*ProductListing` modules next to the `*GraphQl` ones and
+reuses the base modules; a theme's own needs sit in a module with the theme
+as suffix. Each module depends only on the core modules it plugs into, so a
 shop without one of them leaves that module disabled and the DI compile still
 passes.
 
@@ -201,10 +202,13 @@ passes.
   ids logged: all of them points at the store code or the cluster, a few at
   the feeds. `catalog-storefront:parity:listing <base url>` renders
   `dev/parity/listing-pages.txt` on both paths and compares the lines with
-  form keys, Hyvä's uniqid element ids and the private content stamps
-  normalised (`--pages`, `--dump`, `--warm`, `--host`, `--header`). Hyvä
-  caches each rendered card for an hour, so the gain is on misses: measure
-  warm and cold apart.
+  the form key, the uniqid element id suffixes and the private content
+  stamps normalised, plus what a theme module adds to the command's
+  `perRender` argument (`--pages`, `--dump`, `--warm`, `--host`, `--header`).
+  A theme that caches its rendered cards (Hyvä does, for an hour) pays off on
+  misses only: measure warm and cold apart. The module names no theme class;
+  a theme's own classes, templates or config would go to a module with the
+  theme as suffix.
 - `CatalogStorefrontConfigurableProductListing`: the configurable card of that
   page. `getUsedProducts()` builds the children from the parent document's
   `variantIds` in one read and sets each child's catalog rule price and empty
@@ -302,14 +306,17 @@ registers all modules through composer autoload.
   `fallback(self::class, reason)` where the document cannot answer,
   `exception(self::class, $e)` where the plugin failed (it logs a warning).
   The keyed report is what makes a silent fallback visible outside the gate.
-- Code and configuration for one search engine or one front end live in a
-  module with that name as suffix (`CatalogStorefrontElasticsuite`,
-  `CatalogStorefrontProductListing`). No other module names an ElasticSuite
-  class or config path. Such a module MUST stay inert where its engine or
-  front end is absent: the ElasticSuite module registers an engine core never
-  selects without ElasticSuite, and the listing modules act only on a
-  collection or product that carries a document, under a setting that is off
-  by default.
+- Code and configuration for one search engine, one theme or one front end
+  live in a module with that name as suffix (`CatalogStorefrontElasticsuite`;
+  a `...ProductListingHyva` the day a Hyvä class, template or config path is
+  needed). No other module names such a class or path: a theme specific need
+  is an extension point in the base module (a di.xml array argument) that
+  the suffixed module fills. A theme that differs in no class, only in what
+  its renders change per request, needs no module of its own.
+  Such a module MUST stay inert where its engine or theme is absent: the
+  ElasticSuite module registers an engine core never selects without
+  ElasticSuite, and the listing modules act only on a collection or product
+  that carries a document, under a setting that is off by default.
 
 ## Writing rules
 

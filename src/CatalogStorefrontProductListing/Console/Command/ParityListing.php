@@ -31,16 +31,22 @@ class ParityListing extends Command
     private const HEADER = 'header';
 
     /**
-     * What changes on every render and says nothing about the page: Hyva's uniqid
-     * element ids, and the timestamp Magento stamps on each private content section.
+     * What changes on every render and says nothing about the page: the uniqid suffix a
+     * theme gives its element ids, and the timestamp Magento stamps on each private
+     * content section.
      */
     private const PER_RENDER = [
         '/_[0-9a-f]{13}\b/' => '_UID',
         '/"data_id":\d+/' => '"data_id":TIME',
     ];
 
+    /**
+     * @param array<string, string> $perRender more of the same, pattern to replacement, from
+     *   the di.xml of a theme module
+     */
     public function __construct(
         private readonly Config $config,
+        private readonly array $perRender = [],
         ?string $name = null,
     ) {
         parent::__construct($name);
@@ -202,7 +208,8 @@ class ParityListing extends Command
         if (preg_match('/name="form_key"[^>]*value="([^"]+)"/', $body, $matches) === 1) {
             $body = str_replace($matches[1], 'FORMKEY', $body);
         }
-        $body = preg_replace(array_keys(self::PER_RENDER), array_values(self::PER_RENDER), $body) ?? $body;
+        $perRender = self::PER_RENDER + $this->perRender;
+        $body = preg_replace(array_keys($perRender), array_values($perRender), $body) ?? $body;
 
         return preg_split('/\R/', $body) ?: [];
     }

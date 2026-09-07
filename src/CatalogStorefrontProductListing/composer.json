@@ -1,6 +1,6 @@
 {
     "name": "graphcommerce/module-catalog-storefront-product-listing",
-    "description": "Serves Luma and Hyva product listing pages from the catalog read model documents",
+    "description": "Serves rendered product listing pages from the catalog read model documents",
     "type": "magento2-module",
     "license": "MIT",
     "require": {
