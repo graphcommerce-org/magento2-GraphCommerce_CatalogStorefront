@@ -50,7 +50,8 @@ passes.
   short. The product store's `stored()` stays a multi-get, so a writer sees its
   batch's own writes before a refresh.
   `MetadataDocumentStorage::any()` answers alternatives (an OR of AND-filters)
-  over the declared fields in one query.
+  over the declared fields in one query, `batch()` runs several reads in one
+  multi-search.
 - `CatalogStorefront`: the base. Feed delivery and the writers for the
   products, prices, categories and attributes feeds, the composite links, the
   image URL field, the exporter patch-ups the core feeds need, the model
@@ -70,7 +71,13 @@ passes.
   exists for a product outside its websites), `Plugin/Customer/PricesFeedOnNewGroup` (a new or
   deleted group truncates the prices feed table and invalidates its indexer) and the
   plugins on non-GraphQL core: product links, the layer price step, the single
-  price range mode, the search field name memo, salable.
+  price range mode, the search field name memo, salable, and the fulltext
+  index's entity id tie-break (`Plugin/Search/EntityIdField` writes the product
+  id as an integer field of the fulltext document, `EntityIdSort` sorts on it
+  where core runs a painless script over every matching document: 40 ms of a
+  listing over 300 000 visible products against 6 ms; the data patch
+  `ReindexFulltextForEntityId` invalidates the fulltext indexer so the field
+  lands, and a document indexed before it sorts last among its ties).
 - `CatalogStorefrontGraphQl`: `DocumentHydration`
   with the prefiller list, the product prefiller, the listing data
   provider plugins, the resolver plugins for categories, media gallery, URL

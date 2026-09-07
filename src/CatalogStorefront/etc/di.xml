@@ -149,6 +149,13 @@
     <type name="Magento\Elasticsearch\SearchAdapter\Aggregation\Builder\Dynamic">
         <plugin name="graphcommerce_catalog_storefront_single_price_range" type="GraphCommerce\CatalogStorefront\Plugin\Layer\SingleRangeFromResponse"/>
     </type>
+    <!-- The listing's entity id tie-break sorts on a field of the fulltext document instead of a script over every match. -->
+    <type name="Magento\Elasticsearch\Model\Adapter\BatchDataMapper\ProductDataMapper">
+        <plugin name="graphcommerce_catalog_storefront_entity_id_field" type="GraphCommerce\CatalogStorefront\Plugin\Search\EntityIdField"/>
+    </type>
+    <type name="Magento\Elasticsearch\SearchAdapter\Query\Builder\Sort\EntityId">
+        <plugin name="graphcommerce_catalog_storefront_entity_id_sort" type="GraphCommerce\CatalogStorefront\Plugin\Search\EntityIdSort"/>
+    </type>
     <type name="Magento\Elasticsearch\Model\Adapter\FieldMapper\FieldMapperResolver">
         <plugin name="graphcommerce_catalog_storefront_field_name_memo" type="GraphCommerce\CatalogStorefront\Plugin\Search\FieldNameMemo"/>
     </type>

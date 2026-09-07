@@ -32,6 +32,9 @@ through the Api modules, never through a preference on a class of this package.
   2026; its modules are not on repo.mage-os.org yet, so an install without Adobe keys
   clones the fork and adds its module directories as composer `path` repositories,
   as the CI workflow does.
+- A fulltext reindex after the install. The module writes the product id into the fulltext
+  document as an integer field and sorts every listing's tie-break on it, where core runs a
+  script over every matching document; the install invalidates the fulltext indexer for it.
 
 ## Settings
 
@@ -184,31 +187,42 @@ Desktop at 6 GB for MariaDB, OpenSearch and the worker together:
 | Exporter feed tables | 24 GB for 1.8 million products rows with `PERSIST_EXPORTED_FEED` set, 174 bytes a row without it; the document store never reads them, so leave it unset |
 
 Read side, the GraphCommerce product list query, median over the wire, guest, excluding
-tax, no page cache, php-fpm and the FrankenPHP worker (four threads next to OpenSearch in
-the same 6 GB):
+tax, no page cache, php-fpm on the host and the FrankenPHP worker in the Docker network next
+to OpenSearch and MariaDB (a round trip from the host to a container costs 0.3 ms against
+0.04 ms inside it, which core's hundreds of statements per listing pay and the document path
+does not):
 
 | Listing | fpm core | fpm documents | worker core | worker documents |
 | --- | --- | --- | --- | --- |
-| 24 items of a 12 463-product category | 174 ms | 91 ms | 128 ms | 60 ms |
-| 200 items of that category | 762 ms | 149 ms | 615 ms | 112 ms |
-| 200 items of a search over 308 000 visible products | 783 ms | 267 ms | 566 ms | 164 ms |
-| 200 items unfiltered | 925 ms | 261 ms | 683 ms | 163 ms |
-| 24 items unfiltered | 295 ms | 202 ms | 177 ms | 112 ms |
+| 24 items of a 12 463-product category | 238 ms | 93 ms | 133 ms | 41 ms |
+| 200 items of that category | 1 433 ms | 145 ms | 624 ms | 98 ms |
+| 200 items of a search over 308 000 visible products | 1 549 ms | 210 ms | 519 ms | 148 ms |
+| 200 items unfiltered | 1 661 ms | 194 ms | 629 ms | 130 ms |
+| 24 items unfiltered | 271 ms | 132 ms | 172 ms | 79 ms |
 
 The unfiltered listings pay for core's facet aggregations over every visible product in the
 search index, on both paths. A trace of the 24-item category listing on the document path,
-php-fpm, 108 ms in all: 24 ms of bootstrap, 18 ms in which core builds the GraphQL schema
-from its stitched config, 22 ms for core's search (12 ms in OpenSearch), 10 ms for the
+php-fpm, 93 ms in all: 24 ms of bootstrap, 18 ms in which core builds the GraphQL schema
+from its stitched config, 17 ms for core's search (5 ms in OpenSearch), 10 ms for the
 document multi-search of the five requests, 3 ms for the review documents, 8 ms for the
 aggregations (one multi-search primes the attribute documents of the option ids and the names
 of the aggregated categories before core's layer builders run; the builders then ask no
 question of their own), 4 ms after the response for core's cache id. The core path spends its time in price range
 resolvers and hundreds of SQL statements. On the FrankenPHP worker the same request answers
-in 44 ms: bootstrap and schema build are gone, a repeated query is parsed and validated once
+in 41 ms: bootstrap and schema build are gone, a repeated query is parsed and validated once
 per process (core's parser drops its cache between requests, 7 ms a request without the kept
-documents), the search takes 15 ms, the multi-search 7 ms, the aggregations 5 ms; the worker then spends 33 ms resetting state before it takes the next
+documents), the search takes 7 ms, the multi-search 3 ms, the aggregations 5 ms; the worker then spends 33 ms resetting state before it takes the next
 request (14 ms reloading the system config from Redis, gzip and unserialize included, 9 ms in
 the worker module's reload, which reads the EAV attribute tables five times).
+
+Core's search sorted every listing by score and then by a painless script that parses the
+document id as a tie-break, which runs for every matching document: 41 ms of an unfiltered
+listing over 308 000 visible products, 8 ms of a 12 000-product category. The fulltext
+document now carries the product id as an integer field and the tie-break sorts on it: 6 ms
+and 1 ms, the same order. What remains of the unfiltered search is its 30 aggregations,
+28 ms, of which the category terms aggregation over an integer field takes 10; the same
+aggregation over a keyword field takes 2, which core's category builder cannot take yet
+because it compares the bucket keys strictly as integers.
 
 Two reads used to load whole indices per request. The facet labels loaded every attribute
 document of the store view (1.3 MB at 1 095 attributes, 40 ms on php-fpm) before the
