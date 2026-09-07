@@ -217,8 +217,8 @@ class Parity extends Command
                 $node[$key] = $child;
             }
             // Core lists an option's values and a category's children among equal positions in database order.
-            if ($key === 'values' && is_array($child) && isset($child[0]['value_index'])) {
-                usort($child, static fn($a, $b) => ($a['value_index'] ?? 0) <=> ($b['value_index'] ?? 0));
+            if ($key === 'values' && is_array($child) && (isset($child[0]['value_index']) || isset($child[0]['uid']))) {
+                usort($child, static fn($a, $b) => [$a['value_index'] ?? 0, $a['uid'] ?? ''] <=> [$b['value_index'] ?? 0, $b['uid'] ?? '']);
                 $node[$key] = $child;
             }
             if ($key === 'children' && is_array($child) && isset($child[0]['uid'])) {

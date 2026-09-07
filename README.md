@@ -180,8 +180,9 @@ Desktop at 6 GB for MariaDB, OpenSearch and the worker together:
 | Prices feed | 2.5 million rows in 9 minutes, 0.21 ms a row in the store |
 | Stock feed | 494 000 rows in 7 minutes, 0.75 ms a row in the store |
 | Variants feed | 194 000 rows in 4 minutes, 0.86 ms a row in the store |
+| Rebuild | `catalog-storefront:rebuild product` into staged indices: 109 minutes (products feed 71, prices 15, variants 5, stock 18); `rebuild attribute` 5 seconds for 1 095 attributes per store view; a feed run over unchanged rows writes nothing |
 | Documents | 502 050 product documents per store view, 1 to 3 GB per store view on disk, 12 GB in all; categories and attributes below 1 MB per store view |
-| OpenSearch heap | 2 GB trips the parent circuit breaker while the fulltext indexer and the feeds write at once; 3 GB carries the load |
+| OpenSearch heap | 2 GB trips the parent circuit breaker while the fulltext indexer and the feeds write at once; 3 GB carries the load, next to the worker in a 10 GB Docker VM |
 | Exporter feed tables | 24 GB for 1.8 million products rows with `PERSIST_EXPORTED_FEED` set, 174 bytes a row without it; the document store never reads them, so leave it unset |
 
 Read side, the GraphCommerce product list query, median over the wire, guest, excluding
@@ -197,12 +198,19 @@ the same 6 GB):
 | 24 items unfiltered | 295 ms | 202 ms | 177 ms | 112 ms |
 
 The unfiltered listings pay for core's facet aggregations over every visible product in the
-search index, on both paths. A trace of the 200-item document path on php-fpm: 45 ms for the
-document multi-search of the five requests, 47 ms for the GraphQL walk, 40 ms of bootstrap,
-16 ms for the two attribute document searches of 1 095 attributes, 13 ms for core's search.
-The core path spends its time in 74 price range resolvers and 629 SQL statements. On the
-worker the same document request is 112 ms: 34 ms multi-search, 36 ms GraphQL walk, 13 ms
-attribute documents, 20 ms state reset after the response.
+search index, on both paths. A trace of the 24-item category listing on the document path,
+php-fpm, 108 ms in all: 24 ms of bootstrap, 18 ms in which core builds the GraphQL schema
+from its stitched config, 22 ms for core's search (12 ms in OpenSearch), 10 ms for the
+document multi-search of the five requests, 3 ms for the review documents, 10 ms for the
+aggregations (two attribute queries by option id and three category multi-gets, all under
+3 ms), 4 ms after the response for core's cache id. The core path spends its time in price
+range resolvers and hundreds of SQL statements. On the FrankenPHP worker the same request
+answers in 44 ms: bootstrap and schema build are gone, the search takes 15 ms, the
+multi-search 7 ms, the aggregations 6 ms; the worker then spends 33 ms resetting state
+before it takes the next request (14 ms reloading the system config from Redis, 9 ms in the
+worker module's reload, which reads the EAV attribute tables five times). A facet label
+lookup that loaded every attribute document cost 40 ms on php-fpm and 25 ms on the worker
+before the attribute index got mappings for the option id, the filterable mode and the code.
 
 Per row the document store is a quarter of the export; the exporter's own queries and
 hashing are the rest. A full `indexer:reindex` of a feed re-sends every row whose hash or
@@ -291,10 +299,10 @@ of the links.
 
 ## Ideas and to do
 
-1. **Facet labels by option id.** The facet label plugin fetches every attribute document
-   of the store view to find the attributes of the aggregated option ids: 13 ms per listing
-   at 1 095 attributes. A search on the attribute index by option id, filterable mode and
-   code, with those fields mapped, fetches the few it needs.
+1. **custom_attributesV2 by the page's codes.** The resolver loads every attribute
+   document of the store view (1.3 MB at 1 095 attributes) to list the visible ones by
+   attribute id. A query on the mapped flags, or a multi-get of the codes the page's
+   documents carry, fetches the few it needs.
 2. **Integration tests.** Magento integration tests for the writers and the model
     builder next to the unit tests, which is what a Mage-OS review asks for.
 3. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking

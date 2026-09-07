@@ -355,9 +355,11 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
 - Nothing derived from catalog data is held across requests. What a request
   needs beyond the documents it fetches per request:
   `Model/Read/AttributeDocuments` and `RatingDocuments` (the store view's
-  attribute and rating documents; the facet labels come from them through
-  `Plugin/Layer/AttributeOptionsFromDocuments` (GraphQl), the rating scale for the
-  review percents), `Plugin/Search/FieldNameMemo` (search index field name
+  attribute documents for custom_attributesV2, the rating scale for the
+  review percents; the facet labels come from one `any()` query on the attribute
+  index by option id, filterable mode and code through
+  `Plugin/Layer/AttributeOptionsFromDocuments` (GraphQl), so a listing never loads
+  every attribute), `Plugin/Search/FieldNameMemo` (search index field name
   per attribute code and context, the core mapper asks several times per
   attribute), `Model/Mode` and `Model/Strict` are request-scoped. Derivations
   that used to be memos are made by the writer instead:
@@ -435,6 +437,14 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   stock query (`18-*.graphql`) needs `24-WG01` at quantity 1 (source item and
   legacy stock item, then reindex `inventory`, `cataloginventory_stock` and
   the stock feed), so only_x_left_in_stock has a number to compare.
+- A mapping added under `EntityMappings` reaches an index only through
+  `setup:di:compile` (the generated metadata holds the arguments, in developer
+  mode too) and then `catalog-storefront:rebuild <entity>`; a rebuild before the
+  compile stages an index with the old mapping. In the dev stack an OpenSearch
+  container that restarts under memory pressure can come back without a network
+  address: the host reaches it through the published port, the worker gets "No
+  alive nodes" and answers listings with zero items. `docker compose up -d
+  --force-recreate opensearch`, then restart the worker for its connection pool.
 - After di.xml changes: `setup:di:compile`, `cache:flush` on the host and in
   the worker container, then restart the worker (new classes; a flush alone
   lifts the memos but not the loaded code). After a module link in

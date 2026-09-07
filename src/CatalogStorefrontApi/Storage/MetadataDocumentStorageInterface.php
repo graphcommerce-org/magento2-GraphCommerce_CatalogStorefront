@@ -58,6 +58,14 @@ interface MetadataDocumentStorageInterface
     public function find(string $entity, string $storeViewCode, array $filter, array $sort, int $from, int $size): array;
 
     /**
+     * The documents matching one of the alternatives, each a filter as find() takes it, up to the result window.
+     *
+     * @param array<int, array<string, scalar|scalar[]>> $alternatives
+     * @return array<int|string, array> keyed by id
+     */
+    public function any(string $entity, string $storeViewCode, array $alternatives): array;
+
+    /**
      * The document count and the average of a declared field per group.
      *
      * @param scalar[] $groups the group values to answer for

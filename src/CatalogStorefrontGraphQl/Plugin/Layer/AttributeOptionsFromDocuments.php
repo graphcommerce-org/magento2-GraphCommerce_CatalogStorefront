@@ -3,17 +3,17 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontGraphQl\Plugin\Layer;
 
-use GraphCommerce\CatalogStorefront\Model\Read\AttributeDocuments;
+use GraphCommerce\CatalogStorefront\Model\Strict;
+use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
 use Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\AttributeOptionProvider;
 use Magento\Store\Model\StoreManagerInterface;
-use GraphCommerce\CatalogStorefront\Model\Strict;
 
 /**
  * Serves the facet attribute and option labels from the attribute documents,
- * shaped as core's provider returns them: an attribute is listed when one of
- * the requested option ids is its own, when it is filterable without results
- * (then with every option), or when it is a requested boolean or price
- * attribute. Falls back to core while the store view has no attribute
+ * shaped as core's provider returns them. One query fetches the attributes
+ * that own a requested option id, the attributes filterable without results
+ * (listed with every option), and the requested boolean and price
+ * attributes. Falls back to core while the store view has no attribute
  * documents.
  */
 class AttributeOptionsFromDocuments
@@ -21,7 +21,7 @@ class AttributeOptionsFromDocuments
     private const FILTERABLE_WITHOUT_RESULTS = 2;
 
     public function __construct(
-        private readonly AttributeDocuments $attributeDocuments,
+        private readonly MetadataDocumentStorageInterface $storage,
         private readonly StoreManagerInterface $storeManager,
         private readonly Strict $strict,
     ) {
@@ -37,9 +37,22 @@ class AttributeOptionsFromDocuments
         if (!$optionIds) {
             return [];
         }
-        $attributes = $this->attributeDocuments->all($this->storeManager->getStore($storeId)->getCode());
-        if (!$attributes) {
-            $this->strict->fallback(self::class, 'no attribute documents for the store view');
+        $alternatives = [
+            ['options.id' => $optionIds],
+            ['filterableMode' => self::FILTERABLE_WITHOUT_RESULTS],
+        ];
+        if ($attributeCodes) {
+            $alternatives[] = ['id' => $attributeCodes, 'frontendInput' => ['boolean', 'price']];
+        }
+        try {
+            $storeCode = $this->storeManager->getStore($storeId)->getCode();
+            $attributes = $this->storage->any('attribute', $storeCode, $alternatives);
+            if (!$attributes && $this->storage->count('attribute', $storeCode) === 0) {
+                $this->strict->fallback(self::class, 'no attribute documents for the store view');
+                return $proceed($optionIds, $storeId, $attributeCodes);
+            }
+        } catch (\Throwable $e) {
+            $this->strict->exception(self::class, $e);
             return $proceed($optionIds, $storeId, $attributeCodes);
         }
         $requested = array_fill_keys(array_map('strval', $optionIds), true);
@@ -52,13 +65,8 @@ class AttributeOptionsFromDocuments
                     $options[(string)$option['id']] = $option['label'];
                 }
             }
-            $listed = $options || $withoutResults
-                || (in_array($code, $attributeCodes, true) && in_array($attribute['frontendInput'] ?? '', ['boolean', 'price'], true));
-            if (!$listed) {
-                continue;
-            }
             $result[$code] = [
-                'attribute_id' => (string)$attribute['id'],
+                'attribute_id' => (string)$attribute['attributeId'],
                 'attribute_code' => $code,
                 'attribute_label' => $attribute['label'] ?? $code,
                 'attribute_type' => $attribute['frontendInput'] ?? null,
