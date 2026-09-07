@@ -44,6 +44,7 @@
         "graphcommerce/module-catalog-storefront-search": "self.version"
     },
     "suggest": {
+        "ext-simdjson_plus": "GraphCommerce_CatalogStorefrontOpenSearch decodes document store responses about twice as fast",
         "magento/module-catalog-graph-ql": "GraphCommerce_CatalogStorefrontGraphQl serves catalog GraphQL from documents",
         "mage-os/module-worker-mode": "GraphCommerce_CatalogStorefrontWorker keeps the process memos of a FrankenPHP worker",
         "magento/module-inventory-data-exporter": "GraphCommerce_CatalogStorefrontInventory serves the stock fields",

@@ -4,4 +4,7 @@
                 type="GraphCommerce\CatalogStorefrontOpenSearch\Model\ProductDocumentStorage"/>
     <preference for="GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface"
                 type="GraphCommerce\CatalogStorefrontOpenSearch\Model\MetadataDocumentStorage"/>
+    <type name="Magento\AdvancedSearch\Model\Client\ClientOptionsInterface">
+        <plugin name="graphcommerce_catalog_storefront_client_serializer" type="GraphCommerce\CatalogStorefrontOpenSearch\Plugin\ClientSerializer"/>
+    </type>
 </config>
