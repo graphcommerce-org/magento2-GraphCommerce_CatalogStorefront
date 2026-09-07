@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- The `elasticsuite` engine, on core's own client factory. Only the options are ours. -->
+    <type name="Magento\AdvancedSearch\Model\Client\ClientResolver">
+        <arguments>
+            <argument name="clientFactories" xsi:type="array">
+                <item name="elasticsuite" xsi:type="string">\Magento\OpenSearch\Model\Client\OpenSearchFactory</item>
+            </argument>
+            <argument name="clientOptions" xsi:type="array">
+                <item name="elasticsuite" xsi:type="string">GraphCommerce\CatalogStorefrontElasticsuite\Model\Client\Options</item>
+            </argument>
+        </arguments>
+    </type>
+</config>

@@ -1,0 +1,24 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-elasticsuite",
+    "description": "The catalog read model document store on the connection Smile ElasticSuite is configured with",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-advanced-search": "*",
+        "magento/module-open-search": "*",
+        "graphcommerce/module-catalog-storefront-open-search": "self.version"
+    },
+    "suggest": {
+        "smile/elasticsuite": "The connection settings this module maps. Without it the search engine is never `elasticsuite` and the module stays inert."
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontElasticsuite\\": ""
+        }
+    }
+}
