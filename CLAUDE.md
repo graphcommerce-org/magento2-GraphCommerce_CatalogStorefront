@@ -153,9 +153,13 @@ passes.
   The reload processors that run after a response (system config, stores,
   search request config, 30 to 40 ms) run once per config generation
   (`Plugin/State/ReloadPerGeneration`); between generations only
-  `Model/State/RequestReload` runs, which closes the sessions and empties the
-  EAV runtime cache. A reset of the search request config (an attribute's
-  search settings) bumps the config generation, so a worker reloads it.
+  `Model/State/RequestReload` runs, which closes the sessions. The EAV
+  attribute objects stay between requests as core's own reset keeps them
+  (store labels, options and source state reset per attribute); Opengento's
+  processor emptied them, which cost a load per attribute on the next
+  request, 32 of them on a listing with every filter. A reset of the search
+  request config (an attribute's search settings) bumps the config
+  generation, so a worker reloads it.
   A cache flush or config cache clean lifts every memo; a save through the tax
   rule, rate and class repositories, the group repository, or the currency
   rate resource bumps the tax or currency
