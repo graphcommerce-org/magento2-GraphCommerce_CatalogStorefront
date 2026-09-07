@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="catalog">
+            <group id="storefront_search" translate="label comment" sortOrder="511" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Catalog Storefront Search</label>
+                <comment><![CDATA[Changes to how the storefront uses the catalog search engine. Part of the <a href="https://github.com/graphcommerce-org/magento2-GraphCommerce_CatalogStorefront" target="_blank">GraphCommerce_CatalogStorefront</a> modules.]]></comment>
+                <field id="entity_id_sort" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Sort Ties On The Product Id Field</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Every product listing sorts equal products by product id. On, the search engine reads the id from a field of the product; off, it computes it for every product in the result, which costs tens of milliseconds on large catalogs. Needs a full reindex of the catalog search after the module install.</comment>
+                </field>
+                <field id="record_search_terms" translate="label comment" type="select" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Record Search Terms</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Magento saves every search term and how often it is used. Off keeps the database free of this work on each search, but the search terms report and the search suggestions no longer update.</comment>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

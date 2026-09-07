@@ -20,11 +20,6 @@
                     <backend_model>GraphCommerce\CatalogStorefront\Model\Config\Backend\Key</backend_model>
                     <comment>Generated when this page is saved with the field empty. A request that sends it in the X-Catalog-Storefront-Key header may pick its path with the X-Catalog-Storefront header ("documents" or "core") and gets every fallback to the database reported in the response extensions. The API explorer and the parity gate send it.</comment>
                 </field>
-                <field id="record_search_terms" translate="label comment" type="select" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>Record Search Terms</label>
-                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                    <comment>Magento saves every search term and how often it is used. Off keeps the database free of this work on each search, but the search terms report and the search suggestions no longer update.</comment>
-                </field>
             </group>
         </section>
     </system>

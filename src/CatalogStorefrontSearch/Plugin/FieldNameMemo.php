@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefront\Plugin\Search;
+namespace GraphCommerce\CatalogStorefrontSearch\Plugin;
 
 use Magento\Elasticsearch\Model\Adapter\FieldMapper\FieldMapperResolver;
 use Magento\Framework\ObjectManager\ResetAfterRequestInterface;

@@ -57,7 +57,7 @@ passes.
   image URL field, the exporter patch-ups the core feeds need, the model
   builder, `ProductDocuments`, `AttributeDocuments`, the
   configuration (`Model/Config`: storefront indexing, serve GraphQL, the
-  storefront key, search term recording; the group sits under Catalog >
+  storefront key; the group sits under Catalog >
   Catalog in the admin; `Model/Config/Backend/Key` generates the key on a
   save with the field empty), `Model/StorefrontKey` (whether the request
   carries the key in `X-Catalog-Storefront-Key`), `Model/Mode` (the request's
@@ -71,13 +71,20 @@ passes.
   exists for a product outside its websites), `Plugin/Customer/PricesFeedOnNewGroup` (a new or
   deleted group truncates the prices feed table and invalidates its indexer) and the
   plugins on non-GraphQL core: product links, the layer price step, the single
-  price range mode, the search field name memo, salable, and the fulltext
-  index's entity id tie-break (`Plugin/Search/EntityIdField` writes the product
-  id as an integer field of the fulltext document, `EntityIdSort` sorts on it
-  where core runs a painless script over every matching document: 40 ms of a
-  listing over 300 000 visible products against 6 ms; the data patch
+  price range mode, salable.
+- `CatalogStorefrontSearch`: what the package changes about core's fulltext
+  search, each behind a setting (Catalog > Catalog > Catalog Storefront Search,
+  `Model/Config`), with no dependency on the document store so it runs alone:
+  `Plugin/EntityIdField` writes the product id as an integer field of the
+  fulltext document and `EntityIdSort` sorts the listing tie-break on it where
+  core runs a painless script over every matching document (40 ms of a listing
+  over 300 000 visible products against 6 ms; the data patch
   `ReindexFulltextForEntityId` invalidates the fulltext indexer so the field
-  lands, and a document indexed before it sorts last among its ties).
+  lands, and a document indexed before it sorts last among its ties; off, the
+  script sort stands), `Plugin/FieldNameMemo` (one search index field name
+  lookup per attribute code and context per request, the core mapper asks
+  several times), `Plugin/SearchTermRecording` (the search term writes, off by
+  default).
 - `CatalogStorefrontGraphQl`: `DocumentHydration`
   with the prefiller list, the product prefiller, the listing data
   provider plugins, the resolver plugins for categories, media gallery, URL
@@ -385,7 +392,7 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   review percents; the facet labels come from one `any()` query on the attribute
   index by option id, filterable mode and code through
   `Plugin/Layer/AttributeOptionsFromDocuments` (GraphQl), so a listing never loads
-  every attribute), `Plugin/Search/FieldNameMemo` (search index field name
+  every attribute), `CatalogStorefrontSearch/Plugin/FieldNameMemo` (search index field name
   per attribute code and context, the core mapper asks several times per
   attribute), `Model/Mode` and `Model/Strict` are request-scoped. Derivations
   that used to be memos are made by the writer instead:

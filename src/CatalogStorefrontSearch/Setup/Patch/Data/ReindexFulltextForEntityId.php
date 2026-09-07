@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefront\Setup\Patch\Data;
+namespace GraphCommerce\CatalogStorefrontSearch\Setup\Patch\Data;
 
 use Magento\CatalogSearch\Model\Indexer\Fulltext;
 use Magento\Framework\Indexer\IndexerRegistry;

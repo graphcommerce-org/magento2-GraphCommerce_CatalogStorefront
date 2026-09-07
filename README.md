@@ -32,9 +32,9 @@ through the Api modules, never through a preference on a class of this package.
   2026; its modules are not on repo.mage-os.org yet, so an install without Adobe keys
   clones the fork and adds its module directories as composer `path` repositories,
   as the CI workflow does.
-- A fulltext reindex after the install. The module writes the product id into the fulltext
-  document as an integer field and sorts every listing's tie-break on it, where core runs a
-  script over every matching document; the install invalidates the fulltext indexer for it.
+- A fulltext reindex after the install. The Search module writes the product id into the
+  fulltext document as an integer field and sorts every listing's tie-break on it, where core
+  runs a script over every matching document; the install invalidates the fulltext indexer.
 
 ## Settings
 
@@ -45,8 +45,15 @@ Stores > Configuration > Catalog > Catalog > Catalog Storefront Document Store:
 | Enable Storefront Indexing | The feeds are written into the document store as they export. |
 | Serve GraphQL From Documents | Per store view: catalog GraphQL reads come from documents. |
 | Storefront Key | Generated when the page is saved with the field empty. A request that sends it in the `X-Catalog-Storefront-Key` header picks its own path with the `X-Catalog-Storefront` header (`documents` or `core`) and gets its path and every fallback to core with its reason under `extensions.catalogStorefront` of the response. The admin API explorer and the parity gate send it. The path is a factor of the response cache id and of the resolver result cache keys. |
-| Record Search Terms | Off by default: the search terms report and the suggestions stop updating, the request path stops writing. |
 | Index Prefix | The indices are named prefix, entity and store view code, for example `catalog_storefront_product_default`. |
+
+Stores > Configuration > Catalog > Catalog > Catalog Storefront Search, from the
+`GraphCommerce_CatalogStorefrontSearch` module, which also runs without the document store:
+
+| Setting | Effect |
+| --- | --- |
+| Sort Ties On The Product Id Field | On by default. Every listing sorts equal products by product id; core computes the id with a script for every matching product (41 ms of an unfiltered listing over 308 000 products), the module reads it from a field it writes into the fulltext document (6 ms). Needs a fulltext reindex after the install, which the install schedules. |
+| Record Search Terms | Off by default: the search terms report and the suggestions stop updating, the request path stops writing. |
 
 Stores > Configuration > Catalog > Catalog > Layered Navigation > Price Navigation Step
 Calculation gets a fourth option, Single range: the `price` aggregation is one option from
@@ -74,6 +81,7 @@ modules next to the `*GraphQl` ones.
 | `GraphCommerce_CatalogStorefrontWorker` | What a persistent PHP worker keeps between requests: kept schemas, validated documents, the guest tax, customer group and currency rate memos, each lifted by a cache generation. Nothing is keyed by customer. Only for FrankenPHP worker mode. |
 | `GraphCommerce_CatalogStorefrontExplorer` | The path switcher in the MageOS_GraphQLAdminHtml API explorer |
 | `GraphCommerce_CatalogStorefrontProfiler` | Times the document store client in a MageOS_Profiler trace, request bodies included |
+| `GraphCommerce_CatalogStorefrontSearch` | Cheaper core fulltext listings, each behind a setting: the entity id tie-break on a field instead of a script, one field name lookup per attribute per request, optional search term recording. Stands alone, without the document store |
 | `GraphCommerce_CatalogStorefrontInventory` / `...InventoryGraphQl` | The stock slice / stock status, only_x_left_in_stock, quantity, min and max sale qty |
 | `GraphCommerce_CatalogStorefrontConfigurableProduct` / `...ConfigurableProductGraphQl` | Variants and the configurable range / configurable options, variants, options selection |
 | `GraphCommerce_CatalogStorefrontBundleProduct` / `...BundleProductGraphQl` | Bundle feed fields and the bundle range / bundle items, price details |
