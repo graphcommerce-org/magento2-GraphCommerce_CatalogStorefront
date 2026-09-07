@@ -41,7 +41,12 @@ passes.
   its `_write` twin for the writes, created on first write with the entity's
   `EntityMappings` fields and nothing else mapped; `stage` puts a fresh index
   behind the write alias, `promote` moves the read alias to it and deletes the
-  old one) and the two stores.
+  old one) and the two stores. A request-path read by id (`get`) is a search
+  with an ids query: a multi-get reads every document on its own and costs
+  three times as much for a few hundred ids. The product store's `stored()`
+  stays a multi-get, so a writer sees its batch's own writes before a refresh.
+  `MetadataDocumentStorage::any()` answers alternatives (an OR of AND-filters)
+  over the declared fields in one query.
 - `CatalogStorefront`: the base. Feed delivery and the writers for the
   products, prices, categories and attributes feeds, the composite links, the
   image URL field, the exporter patch-ups the core feeds need, the model
@@ -50,7 +55,10 @@ passes.
   storefront key, search term recording; the group sits under Catalog >
   Catalog in the admin; `Model/Config/Backend/Key` generates the key on a
   save with the field empty), `Model/StorefrontKey` (whether the request
-  carries the key in `X-Catalog-Storefront-Key`), `Model/Strict` (the fallback
+  carries the key in `X-Catalog-Storefront-Key`), `Model/Mode` (the request's
+  path: `X-Catalog-Storefront` under the key, else the serve setting; every
+  plugin that reads documents at request time gates on it, so the core path
+  is core alone), `Model/Strict` (the fallback
   report of a keyed request), `Model/Feeds` (the feeds per entity, for the
   rebuild and status commands), `Model/Document/StoreAssignments` (the store
   views a product is assigned to, for the slice writers whose rows name no
@@ -59,7 +67,7 @@ passes.
   deleted group truncates the prices feed table and invalidates its indexer) and the
   plugins on non-GraphQL core: product links, the layer price step, the single
   price range mode, the search field name memo, salable.
-- `CatalogStorefrontGraphQl`: `Model/Mode` (the request's path), `DocumentHydration`
+- `CatalogStorefrontGraphQl`: `DocumentHydration`
   with the prefiller list, the product prefiller, the listing data
   provider plugins, the resolver plugins for categories, media gallery, URL
   rewrites, custom attributes and linked products, the layered navigation

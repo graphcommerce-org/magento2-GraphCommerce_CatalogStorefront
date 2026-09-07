@@ -6,7 +6,7 @@ namespace GraphCommerce\CatalogStorefrontGraphQl\Console\Command;
 use GraphCommerce\CatalogStorefront\Model\Config;
 use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Parity\JudgeInterface;
-use GraphCommerce\CatalogStorefrontGraphQl\Model\Mode;
+use GraphCommerce\CatalogStorefront\Model\Mode;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;

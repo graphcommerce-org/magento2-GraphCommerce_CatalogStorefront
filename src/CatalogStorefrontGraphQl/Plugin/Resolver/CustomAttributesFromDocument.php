@@ -11,22 +11,18 @@ use Magento\CatalogGraphQl\Model\Resolver\Product\ProductCustomAttributes;
 use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Query\Resolver\ContextInterface;
 use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
-use Magento\Framework\ObjectManager\ResetAfterRequestInterface;
 use GraphCommerce\CatalogStorefront\Model\Strict;
 
 /**
  * Serves custom_attributesV2 from the document's raw attribute values and the
- * store view's attribute documents: the visible, non-static attributes the
- * product has a value for, by attribute id as core's attribute list comes
- * back, a select or multiselect as its selected options in option order.
- * A filter on a property the attribute documents do not carry falls back to
- * core, which also reports a filter that is not an attribute property.
+ * attribute documents of the codes the product has a value for: the visible,
+ * non-static ones, by attribute id as core's attribute list comes back, a
+ * select or multiselect as its selected options in option order. A filter on
+ * a property the attribute documents do not carry falls back to core, which
+ * also reports a filter that is not an attribute property.
  */
-class CustomAttributesFromDocument implements ResetAfterRequestInterface
+class CustomAttributesFromDocument
 {
-    /** @var array<string, array[]> the attribute list per store view and filter set, computed once per request */
-    private array $lists = [];
-
     private const SELECT_INPUTS = ['select', 'multiselect'];
 
     /** GraphQL filter field to attribute document key; is_filterable filters on the mode core stores. */
@@ -75,23 +71,34 @@ class CustomAttributesFromDocument implements ResetAfterRequestInterface
         }
 
         try {
-            $store = $context->getExtensionAttributes()->getStore();
-            $attributes = $this->lists[$store->getCode() . json_encode($filters)] ??= $this->attributes($store->getCode(), $filters);
-            if (!$attributes) {
-                $this->strict->fallback(self::class, 'no attribute documents for the store view');
-                return $proceed($field, $context, $info, $value, $args);
-            }
-
+            $storeCode = $context->getExtensionAttributes()->getStore()->getCode();
             $values = [];
             foreach ((array)$document['customAttributes'] as $entry) {
                 $values[$entry['attributeCode']] = (string)($entry['value'] ?? '');
             }
+            $attributes = array_filter(
+                $this->attributeDocuments->byCodes($storeCode, array_keys($values)),
+                static function (array $attribute) use ($filters): bool {
+                    if (empty($attribute['visible']) || ($attribute['dataType'] ?? '') === 'static') {
+                        return false;
+                    }
+                    foreach ($filters as $key => $expected) {
+                        if ((int)($attribute[$key] ?? 0) !== $expected) {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }
+            );
+            if (!$attributes && $values && !$this->attributeDocuments->available($storeCode)) {
+                $this->strict->fallback(self::class, 'no attribute documents for the store view');
+                return $proceed($field, $context, $info, $value, $args);
+            }
+            uasort($attributes, static fn(array $a, array $b) => (int)($a['attributeId'] ?? 0) <=> (int)($b['attributeId'] ?? 0));
 
             $items = [];
-            foreach ($attributes as $code => $attribute) {
-                if (!array_key_exists($code, $values)) {
-                    continue;
-                }
+            foreach ($this->filterCustomAttribute->execute($attributes) as $code => $attribute) {
                 $item = ['entity_type' => ProductAttributeInterface::ENTITY_TYPE_CODE, 'code' => $code, 'sort_order' => ''];
                 if (in_array($attribute['frontendInput'] ?? '', self::SELECT_INPUTS, true)) {
                     $selected = explode(',', $values[$code]);
@@ -115,35 +122,5 @@ class CustomAttributesFromDocument implements ResetAfterRequestInterface
         }
 
         return ['items' => $items, 'errors' => []];
-    }
-
-    /**
-     * @return array[] attribute documents keyed by code, in the order core's attribute list has them
-     */
-    private function attributes(string $storeViewCode, array $filters): array
-    {
-        $attributes = array_filter(
-            $this->attributeDocuments->all($storeViewCode),
-            static function (array $attribute) use ($filters): bool {
-                if (empty($attribute['visible']) || ($attribute['dataType'] ?? '') === 'static') {
-                    return false;
-                }
-                foreach ($filters as $key => $expected) {
-                    if ((int)($attribute[$key] ?? 0) !== $expected) {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-        );
-        uasort($attributes, static fn(array $a, array $b) => (int)($a['attributeId'] ?? 0) <=> (int)($b['attributeId'] ?? 0));
-
-        return $this->filterCustomAttribute->execute($attributes);
-    }
-
-    public function _resetState(): void
-    {
-        $this->lists = [];
     }
 }

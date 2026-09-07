@@ -3,18 +3,19 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontGraphQl\Plugin\Layer;
 
+use GraphCommerce\CatalogStorefront\Model\Mode;
 use GraphCommerce\CatalogStorefront\Model\Strict;
 use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
 use Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\AttributeOptionProvider;
 use Magento\Store\Model\StoreManagerInterface;
 
 /**
- * Serves the facet attribute and option labels from the attribute documents,
- * shaped as core's provider returns them. One query fetches the attributes
- * that own a requested option id, the attributes filterable without results
- * (listed with every option), and the requested boolean and price
- * attributes. Falls back to core while the store view has no attribute
- * documents.
+ * Serves the facet attribute and option labels from the attribute documents
+ * on the document path, shaped as core's provider returns them. One query
+ * fetches the attributes that own a requested option id, the attributes
+ * filterable without results (listed with every option), and the requested
+ * boolean and price attributes. Falls back to core while the store view has
+ * no attribute documents.
  */
 class AttributeOptionsFromDocuments
 {
@@ -23,6 +24,7 @@ class AttributeOptionsFromDocuments
     public function __construct(
         private readonly MetadataDocumentStorageInterface $storage,
         private readonly StoreManagerInterface $storeManager,
+        private readonly Mode $mode,
         private readonly Strict $strict,
     ) {
     }
@@ -34,6 +36,9 @@ class AttributeOptionsFromDocuments
         ?int $storeId,
         array $attributeCodes = []
     ): array {
+        if (!$this->mode->documents()) {
+            return $proceed($optionIds, $storeId, $attributeCodes);
+        }
         if (!$optionIds) {
             return [];
         }

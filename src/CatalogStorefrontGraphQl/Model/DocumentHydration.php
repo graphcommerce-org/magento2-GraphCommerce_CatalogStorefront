@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontGraphQl\Model;
 
+use GraphCommerce\CatalogStorefront\Model\Mode;
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
 use GraphCommerce\CatalogStorefrontApi\Storage\ProductDocumentStorageInterface;

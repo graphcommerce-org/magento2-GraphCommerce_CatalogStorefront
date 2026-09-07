@@ -202,15 +202,23 @@ search index, on both paths. A trace of the 24-item category listing on the docu
 php-fpm, 108 ms in all: 24 ms of bootstrap, 18 ms in which core builds the GraphQL schema
 from its stitched config, 22 ms for core's search (12 ms in OpenSearch), 10 ms for the
 document multi-search of the five requests, 3 ms for the review documents, 10 ms for the
-aggregations (two attribute queries by option id and three category multi-gets, all under
-3 ms), 4 ms after the response for core's cache id. The core path spends its time in price
-range resolvers and hundreds of SQL statements. On the FrankenPHP worker the same request
-answers in 44 ms: bootstrap and schema build are gone, the search takes 15 ms, the
-multi-search 7 ms, the aggregations 6 ms; the worker then spends 33 ms resetting state
-before it takes the next request (14 ms reloading the system config from Redis, 9 ms in the
-worker module's reload, which reads the EAV attribute tables five times). A facet label
-lookup that loaded every attribute document cost 40 ms on php-fpm and 25 ms on the worker
-before the attribute index got mappings for the option id, the filterable mode and the code.
+aggregations (two attribute queries by option id and the category reads, all under 3 ms),
+4 ms after the response for core's cache id. The core path spends its time in price range
+resolvers and hundreds of SQL statements. On the FrankenPHP worker the same request answers
+in 44 ms: bootstrap and schema build are gone, the search takes 15 ms, the multi-search 7 ms,
+the aggregations 6 ms; the worker then spends 33 ms resetting state before it takes the next
+request (14 ms reloading the system config from Redis, gzip and unserialize included, 9 ms in
+the worker module's reload, which reads the EAV attribute tables five times).
+
+Two reads used to load whole indices per request. The facet labels loaded every attribute
+document of the store view (1.3 MB at 1 095 attributes, 40 ms on php-fpm) before the
+attribute index got mappings for the option id, the filterable mode and the code; one query
+now fetches the few attributes a facet needs. `custom_attributesV2` loaded the same set once
+per request; a prefiller now fetches the codes the page's documents carry in one search (15 ms
+for a 100-product page with hundreds of codes, the option labels being the payload). An
+unfiltered listing's category facet labels the 500 categories of core's bucket from the
+category documents: 8 ms on the worker, 18 ms on php-fpm, where the search by id replaced a
+multi-get that cost three times as much for hundreds of ids.
 
 Per row the document store is a quarter of the export; the exporter's own queries and
 hashing are the rest. A full `indexer:reindex` of a feed re-sends every row whose hash or
@@ -299,32 +307,28 @@ of the links.
 
 ## Ideas and to do
 
-1. **custom_attributesV2 by the page's codes.** The resolver loads every attribute
-   document of the store view (1.3 MB at 1 095 attributes) to list the visible ones by
-   attribute id. A query on the mapped flags, or a multi-get of the codes the page's
-   documents carry, fetches the few it needs.
-2. **Integration tests.** Magento integration tests for the writers and the model
+1. **Integration tests.** Magento integration tests for the writers and the model
     builder next to the unit tests, which is what a Mage-OS review asks for.
-3. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
+2. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
     hook on the search request and a permission hook on the documents, so an extension
     plugs in without a preference on a class of this package.
-4. **Fixed product taxes.** The last price display setup that falls back to core.
+3. **Fixed product taxes.** The last price display setup that falls back to core.
     The weee amounts per product travel on the document; the read side adds them the
     way the weee adjustment does.
-5. **Package publishing.** A subtree split of the module directories to their own
+4. **Package publishing.** A subtree split of the module directories to their own
     repositories and a release on packagist, so the modules install separately while
     the repository stays one.
 
-6. **Cart, wishlist and order products.** A cart item's product still loads from the
+5. **Cart, wishlist and order products.** A cart item's product still loads from the
    database. A plugin on the cart items data swaps in the document model by product
    id; the quote keeps what it owns, the row price, the options and the quantity checks.
-7. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
+6. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
    product listing collection, the product page and the layered navigation read from the
    base modules. The price rendering goes through the pricing system, so it needs its
    own document-backed price providers.
-8. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
-9. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
+7. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
+8. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
    listing needs a gate of its own: the rendered listing and product page on both
    paths, so an integrator proves an extension on every surface it touches.
-10. **REST integration.** The product repository and the search API behind the same
+9. **REST integration.** The product repository and the search API behind the same
    document models, for headless setups that read the catalog over REST.

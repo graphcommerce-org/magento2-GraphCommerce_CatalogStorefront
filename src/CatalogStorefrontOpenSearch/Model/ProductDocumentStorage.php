@@ -57,9 +57,27 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
         return $this->client->count($this->indexName($storeViewCode));
     }
 
+    /**
+     * A search by id: a multi-get reads every document on its own and costs three times as
+     * much for a few hundred ids. The writers read through stored(), which stays a multi-get
+     * because it must see the batch's own writes.
+     */
     public function get(string $storeViewCode, array $ids, array $fields = []): array
     {
-        return $this->byId($this->indexName($storeViewCode), $ids, $fields);
+        if (!$ids) {
+            return [];
+        }
+        $response = $this->client->search($this->indexName($storeViewCode), [
+            'size' => count($ids),
+            'query' => ['ids' => ['values' => array_values(array_map('strval', $ids))]],
+            '_source' => $fields ?: true,
+        ]);
+        $documents = [];
+        foreach ($response['hits']['hits'] ?? [] as $hit) {
+            $documents[(int)$hit['_id']] = $hit['_source'];
+        }
+
+        return $documents;
     }
 
     public function findBySku(string $storeViewCode, array $skus): array

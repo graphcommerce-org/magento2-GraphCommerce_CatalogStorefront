@@ -113,6 +113,7 @@
         <arguments>
             <argument name="prefillers" xsi:type="array">
                 <item name="productFields" xsi:type="object">GraphCommerce\CatalogStorefrontGraphQl\Model\Prefill\ProductFields</item>
+                <item name="customAttributeDocuments" xsi:type="object">GraphCommerce\CatalogStorefrontGraphQl\Model\Prefill\CustomAttributeDocuments</item>
             </argument>
             <argument name="fieldDocumentKeys" xsi:type="array">
                 <item name="description" xsi:type="array"><item name="0" xsi:type="string">description</item></item>

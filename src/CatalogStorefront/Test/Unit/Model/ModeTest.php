@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontGraphQl\Test\Unit\Model;
+namespace GraphCommerce\CatalogStorefront\Test\Unit\Model;
 
 use GraphCommerce\CatalogStorefront\Model\Config;
 use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
-use GraphCommerce\CatalogStorefrontGraphQl\Model\Mode;
+use GraphCommerce\CatalogStorefront\Model\Mode;
 use Magento\Framework\App\Request\Http;
 use PHPUnit\Framework\TestCase;
 

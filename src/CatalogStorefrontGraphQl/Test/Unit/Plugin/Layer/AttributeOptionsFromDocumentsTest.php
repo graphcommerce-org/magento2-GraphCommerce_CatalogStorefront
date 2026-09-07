@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontGraphQl\Test\Unit\Plugin\Layer;
 
+use GraphCommerce\CatalogStorefront\Model\Mode;
 use GraphCommerce\CatalogStorefront\Model\Strict;
 use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
 use GraphCommerce\CatalogStorefrontGraphQl\Plugin\Layer\AttributeOptionsFromDocuments;
@@ -25,7 +26,19 @@ class AttributeOptionsFromDocumentsTest extends TestCase
         $store->method('getCode')->willReturn('default');
         $storeManager = $this->createMock(StoreManagerInterface::class);
         $storeManager->method('getStore')->with(1)->willReturn($store);
-        $this->plugin = new AttributeOptionsFromDocuments($this->storage, $storeManager, $this->strict);
+        $mode = $this->createMock(Mode::class);
+        $mode->method('documents')->willReturn(true);
+        $this->plugin = new AttributeOptionsFromDocuments($this->storage, $storeManager, $mode, $this->strict);
+    }
+
+    public function testTheCorePathRunsCore(): void
+    {
+        $mode = $this->createMock(Mode::class);
+        $mode->method('documents')->willReturn(false);
+        $this->storage->expects(self::never())->method('any');
+        $plugin = new AttributeOptionsFromDocuments($this->storage, $this->createMock(StoreManagerInterface::class), $mode, $this->strict);
+
+        self::assertSame(['core'], $plugin->aroundGetOptions($this->createMock(AttributeOptionProvider::class), static fn() => ['core'], [5], 1));
     }
 
     public function testOneQueryFetchesTheOwnersTheUnfilteredAndTheRequestedBooleanAttributes(): void

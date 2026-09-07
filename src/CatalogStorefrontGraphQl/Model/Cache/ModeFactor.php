@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontGraphQl\Model\Cache;
 
-use GraphCommerce\CatalogStorefrontGraphQl\Model\Mode;
+use GraphCommerce\CatalogStorefront\Model\Mode;
 use Magento\GraphQl\Model\Query\ContextInterface;
 use Magento\GraphQlCache\Model\CacheId\CacheIdFactorProviderInterface;
 use Magento\GraphQlResolverCache\Model\Resolver\Result\CacheKey\GenericFactorProviderInterface;
