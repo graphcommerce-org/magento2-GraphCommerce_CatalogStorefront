@@ -265,7 +265,12 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   indexer the generic serializer). The reviews slice keeps each review's votes
   as rating id to value; the read side turns them into percents with the
   rating's value scale for the store view.
-- Facet layer: `Plugin/Layer/CategoryFacetFromDocuments` builds the category
+- Facet layer: `Plugin/Layer/PrimeFacetDocuments` fetches, in one request
+  before core's layer builders run, the attribute documents of the aggregated
+  option ids and the names and paths of the aggregated categories into
+  `Model/Read/FacetDocuments` (request-scoped), which the two plugins below
+  read when the prime covered their request; core's builders ask one after
+  the other, a round trip each. `Plugin/Layer/CategoryFacetFromDocuments` builds the category
   bucket from the category documents (store tree membership by path, store
   view names, direct children and their activity for a category-filtered
   query); `RootCategoryFromStore` takes the root category id from the store

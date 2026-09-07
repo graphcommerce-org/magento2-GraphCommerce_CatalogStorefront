@@ -134,7 +134,8 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
         if ($groupKey !== null) {
             $searches = array_merge($searches, $this->priceSearches($ids, $groupKey));
         }
-        $responses = $this->client->multiSearch($this->indexName($storeViewCode), $searches);
+        $index = $this->indexName($storeViewCode);
+        $responses = $this->client->multiSearch(array_map(static fn(array $search) => [$index, $search], $searches));
         $documents = [];
         foreach ($responses[0]['hits']['hits'] ?? [] as $hit) {
             $documents[(int)$hit['_id']] = $hit['_source'];
@@ -146,7 +147,10 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
     public function priceData(string $storeViewCode, array $ids, string $groupKey): array
     {
         return $this->parsePriceData(
-            $this->client->multiSearch($this->indexName($storeViewCode), $this->priceSearches($ids, $groupKey))
+            $this->client->multiSearch(array_map(
+                fn(array $search) => [$this->indexName($storeViewCode), $search],
+                $this->priceSearches($ids, $groupKey)
+            ))
         );
     }
 

@@ -67,6 +67,15 @@ interface MetadataDocumentStorageInterface
     public function any(string $entity, string $storeViewCode, array $alternatives): array;
 
     /**
+     * Several reads in one request: a get() as `entity`, `ids` and `fields`, or an any() as
+     * `entity` and `any`; the documents of each read come back in the same order.
+     *
+     * @param array<int, array{entity: string, ids?: array<int|string>, fields?: string[], any?: array}> $reads
+     * @return array<int, array<int|string, array>>
+     */
+    public function batch(string $storeViewCode, array $reads): array;
+
+    /**
      * The document count and the average of a declared field per group.
      *
      * @param scalar[] $groups the group values to answer for

@@ -58,6 +58,9 @@
     <type name="Magento\EavGraphQl\Model\TypeResolver\AttributeValue">
         <plugin name="graphcommerce_catalog_storefront_attribute_value_type" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Resolver\AttributeValueTypeFromDocument"/>
     </type>
+    <type name="Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\LayerBuilder">
+        <plugin name="graphcommerce_catalog_storefront_prime_facet_documents" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Layer\PrimeFacetDocuments"/>
+    </type>
     <type name="Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\AttributeOptionProvider">
         <plugin name="graphcommerce_catalog_storefront_attribute_options" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Layer\AttributeOptionsFromDocuments"/>
     </type>

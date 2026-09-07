@@ -18,6 +18,7 @@ use Magento\Framework\Search\Response\BucketFactory;
 use Magento\Store\Model\StoreManagerInterface;
 use GraphCommerce\CatalogStorefront\Model\Mode;
 use GraphCommerce\CatalogStorefront\Model\Strict;
+use GraphCommerce\CatalogStorefrontGraphQl\Model\Read\FacetDocuments;
 
 /**
  * Serves the category facet from the category documents on the document path: the store's tree
@@ -34,6 +35,7 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
     private array $filter = [];
 
     public function __construct(
+        private readonly FacetDocuments $facets,
         private readonly MetadataDocumentStorageInterface $storage,
         private readonly StoreManagerInterface $storeManager,
         private readonly LayerFormatter $layerFormatter,
@@ -113,7 +115,8 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
                 return [];
             }
             $ids = array_map(static fn(AggregationValueInterface $value) => (int)$value->getValue(), $bucket->getValues());
-            $documents = $this->storage->get('category', $store->getCode(), $ids, ['name', 'path']);
+            $documents = $this->facets->categories($store->getCode(), $ids)
+                ?? $this->storage->get('category', $store->getCode(), $ids, ['name', 'path']);
         } catch (\Throwable $e) {
             $this->strict->exception(self::class, $e);
 

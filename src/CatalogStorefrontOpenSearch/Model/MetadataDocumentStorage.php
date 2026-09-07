@@ -51,30 +51,9 @@ class MetadataDocumentStorage implements MetadataDocumentStorageInterface
         return $this->client->count($this->client->indexName($entity, $storeViewCode));
     }
 
-    /**
-     * A search by id: a multi-get reads every document on its own and costs three times as
-     * much for a few hundred ids. Declared fields come from doc values without the source,
-     * which spares the parse of every document; any other field filters the source.
-     */
     public function get(string $entity, string $storeViewCode, array $ids, array $fields = []): array
     {
-        if (!$ids) {
-            return [];
-        }
-        $declared = $fields && !array_diff($fields, array_keys($this->mappings->fields($entity)));
-        $response = $this->client->search($this->client->indexName($entity, $storeViewCode), [
-            'size' => count($ids),
-            'query' => ['bool' => ['filter' => [['ids' => ['values' => array_values(array_map('strval', $ids))]]]]],
-            'track_total_hits' => false,
-        ] + ($declared ? ['_source' => false, 'docvalue_fields' => $fields] : ['_source' => $fields ?: true]));
-        $documents = [];
-        foreach ($response['hits']['hits'] ?? [] as $hit) {
-            $documents[$hit['_id']] = $declared
-                ? array_map(static fn(array $values) => count($values) === 1 ? $values[0] : $values, $hit['fields'] ?? [])
-                : $hit['_source'];
-        }
-
-        return $documents;
+        return $ids ? $this->batch($storeViewCode, [['entity' => $entity, 'ids' => $ids, 'fields' => $fields]])[0] : [];
     }
 
     /**
@@ -117,19 +96,47 @@ class MetadataDocumentStorage implements MetadataDocumentStorageInterface
 
     public function any(string $entity, string $storeViewCode, array $alternatives): array
     {
-        $response = $this->client->search($this->client->indexName($entity, $storeViewCode), [
-            'size' => self::WINDOW,
-            'query' => ['bool' => [
-                'should' => array_map(fn(array $filter) => ['bool' => ['filter' => $this->terms($filter)]], $alternatives),
-                'minimum_should_match' => 1,
-            ]],
-        ]);
-        $documents = [];
-        foreach ($response['hits']['hits'] ?? [] as $hit) {
-            $documents[$hit['_id']] = $hit['_source'];
+        return $this->batch($storeViewCode, [['entity' => $entity, 'any' => $alternatives]])[0];
+    }
+
+    /**
+     * Every read is a search: a multi-get reads every document on its own and costs three
+     * times as much for a few hundred ids. Declared fields come from doc values without the
+     * source, which spares the parse of every document; any other field filters the source.
+     */
+    public function batch(string $storeViewCode, array $reads): array
+    {
+        $searches = [];
+        $fromDocValues = [];
+        foreach ($reads as $i => $read) {
+            $index = $this->client->indexName($read['entity'], $storeViewCode);
+            if (isset($read['any'])) {
+                $searches[$i] = [$index, ['size' => self::WINDOW, 'query' => ['bool' => [
+                    'should' => array_map(fn(array $filter) => ['bool' => ['filter' => $this->terms($filter)]], $read['any']),
+                    'minimum_should_match' => 1,
+                ]]]];
+                continue;
+            }
+            $fields = $read['fields'] ?? [];
+            $fromDocValues[$i] = $fields && !array_diff($fields, array_keys($this->mappings->fields($read['entity'])));
+            $searches[$i] = [$index, [
+                'size' => count($read['ids']),
+                'query' => ['bool' => ['filter' => [['ids' => ['values' => array_values(array_map('strval', $read['ids']))]]]]],
+                'track_total_hits' => false,
+            ] + ($fromDocValues[$i] ? ['_source' => false, 'docvalue_fields' => $fields] : ['_source' => $fields ?: true])];
+        }
+        $results = [];
+        foreach ($this->client->multiSearch(array_values($searches)) as $i => $response) {
+            $documents = [];
+            foreach ($response['hits']['hits'] ?? [] as $hit) {
+                $documents[$hit['_id']] = ($fromDocValues[$i] ?? false)
+                    ? array_map(static fn(array $values) => count($values) === 1 ? $values[0] : $values, $hit['fields'] ?? [])
+                    : $hit['_source'];
+            }
+            $results[$i] = $documents;
         }
 
-        return $documents;
+        return $results;
     }
 
     public function stats(string $entity, string $storeViewCode, string $groupField, array $groups, string $valueField): array

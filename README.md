@@ -199,13 +199,14 @@ The unfiltered listings pay for core's facet aggregations over every visible pro
 search index, on both paths. A trace of the 24-item category listing on the document path,
 php-fpm, 108 ms in all: 24 ms of bootstrap, 18 ms in which core builds the GraphQL schema
 from its stitched config, 22 ms for core's search (12 ms in OpenSearch), 10 ms for the
-document multi-search of the five requests, 3 ms for the review documents, 10 ms for the
-aggregations (two attribute queries by option id and the category reads, all under 3 ms),
-4 ms after the response for core's cache id. The core path spends its time in price range
+document multi-search of the five requests, 3 ms for the review documents, 8 ms for the
+aggregations (one multi-search primes the attribute documents of the option ids and the names
+of the aggregated categories before core's layer builders run; the builders then ask no
+question of their own), 4 ms after the response for core's cache id. The core path spends its time in price range
 resolvers and hundreds of SQL statements. On the FrankenPHP worker the same request answers
 in 44 ms: bootstrap and schema build are gone, a repeated query is parsed and validated once
 per process (core's parser drops its cache between requests, 7 ms a request without the kept
-documents), the search takes 15 ms, the multi-search 7 ms, the aggregations 6 ms; the worker then spends 33 ms resetting state before it takes the next
+documents), the search takes 15 ms, the multi-search 7 ms, the aggregations 5 ms; the worker then spends 33 ms resetting state before it takes the next
 request (14 ms reloading the system config from Redis, gzip and unserialize included, 9 ms in
 the worker module's reload, which reads the EAV attribute tables five times).
 
