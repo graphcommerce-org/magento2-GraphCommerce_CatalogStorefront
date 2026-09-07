@@ -345,26 +345,33 @@ of the links.
    headers, stores, currencies, customer groups and filters varied per query, so a memo
    that keeps what it must not shows up as a diff, and the worker's memory per process
    sampled over a long run, so a memo that grows per request shows up as a slope.
-3. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
+3. **A leaner configurable document.** JSON key names are a third of a listing page and
+   `configurableOptions` another third: per value the uid, the attribute id, the swatch
+   thumbnail and `use_default_value` are derivable from the value index, the option and the
+   swatch file. Stored compact and expanded by the resolver, a 200-item page drops from
+   1.8 MB to about 1.2 MB and its multi-search from 22 to about 15 ms. The swatch thumbnail
+   URL built at read time also ends the host difference between two front ends of one
+   store. Needs a products re-export.
+4. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
     hook on the search request and a permission hook on the documents, so an extension
     plugs in without a preference on a class of this package.
-4. **Fixed product taxes.** The last price display setup that falls back to core.
+5. **Fixed product taxes.** The last price display setup that falls back to core.
     The weee amounts per product travel on the document; the read side adds them the
     way the weee adjustment does.
-5. **Package publishing.** A subtree split of the module directories to their own
+6. **Package publishing.** A subtree split of the module directories to their own
     repositories and a release on packagist, so the modules install separately while
     the repository stays one.
 
-6. **Cart, wishlist and order products.** A cart item's product still loads from the
+7. **Cart, wishlist and order products.** A cart item's product still loads from the
    database. A plugin on the cart items data swaps in the document model by product
    id; the quote keeps what it owns, the row price, the options and the quantity checks.
-7. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
+8. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
    product listing collection, the product page and the layered navigation read from the
    base modules. The price rendering goes through the pricing system, so it needs its
    own document-backed price providers.
-8. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
-9. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
+9. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
+10. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
    listing needs a gate of its own: the rendered listing and product page on both
    paths, so an integrator proves an extension on every surface it touches.
-10. **REST integration.** The product repository and the search API behind the same
+11. **REST integration.** The product repository and the search API behind the same
    document models, for headless setups that read the catalog over REST.
