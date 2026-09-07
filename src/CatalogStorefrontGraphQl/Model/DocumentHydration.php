@@ -28,8 +28,6 @@ class DocumentHydration implements HydrationInterface
 {
     /**
      * @param PrefillerInterface[] $prefillers
-     * @param string[][] $fieldDocumentKeys document keys a listing fetch leaves out unless the query selects the field
-     * @param string[] $baseFields product fields the model answers without the custom attributes slice
      * @param string[] $priceFields product fields whose value needs the composite price data
      */
     public function __construct(
@@ -42,8 +40,6 @@ class DocumentHydration implements HydrationInterface
         private readonly ProductPrice $productPrice,
         private readonly Strict $strict,
         private readonly array $prefillers = [],
-        private readonly array $fieldDocumentKeys = [],
-        private readonly array $baseFields = [],
         private readonly array $priceFields = [],
     ) {
     }
@@ -83,7 +79,6 @@ class DocumentHydration implements HydrationInterface
             [$documents, $priceData] = $this->storage->listing(
                 $store->getCode(),
                 $ids,
-                $this->sourceExcludes($requestedFields),
                 $withPrices ? $groupKey : null,
             );
             $models = $this->products->build($store, $documents);
@@ -160,21 +155,5 @@ class DocumentHydration implements HydrationInterface
                 );
             }
         }
-    }
-
-    private function sourceExcludes(array $requestedFields): array
-    {
-        $needed = [];
-        foreach ($requestedFields as $field) {
-            if (isset($this->fieldDocumentKeys[$field])) {
-                $needed = array_merge($needed, $this->fieldDocumentKeys[$field]);
-            } elseif (!in_array($field, $this->baseFields, true)) {
-                $needed[] = 'customAttributes';
-            }
-        }
-        // The labelled attributes slice serves nothing on read: the model takes the raw values.
-        $excludable = array_merge(['attributes', 'customAttributes'], ...array_values($this->fieldDocumentKeys));
-
-        return array_values(array_diff(array_unique($excludable), $needed));
     }
 }

@@ -138,8 +138,6 @@ A module registers its parts through di.xml:
   without a resolver call. List the fields under `prefilledFields` on
   `Plugin\Query\RoutePrefilledFields`.
 - `ranges` on `Model\Read\PriceRanges`: a `PriceRangeInterface` per product type id.
-- `fieldDocumentKeys` and `baseFields` on the hydration tell a listing fetch which
-  document keys a field needs.
 - `mappings` on `EntityMappings`: the fields of an entity that filter, sort or aggregate.
 - `judges` on the parity command: a `JudgeInterface` adds a verdict per query next to the
   response diff, with both responses in hand.
@@ -219,6 +217,12 @@ for a 100-product page with hundreds of codes, the option labels being the paylo
 unfiltered listing's category facet labels the 500 categories of core's bucket from the
 category documents: 8 ms on the worker, 18 ms on php-fpm, where the search by id replaced a
 multi-get that cost three times as much for hundreds of ids.
+A page fetch takes its documents whole. Leaving the unselected keys out through a source
+filter made OpenSearch parse every 13 KB document: 15 ms of server time for 200 documents
+against 10 ms for the whole documents, and the smaller transfer did not pay it back. What
+remains of a 200-item multi-search is the document lookup itself, 5 ms, the price
+aggregations, 5 ms, and the transfer and decode of 2.4 MB. The pure lookup would need the
+listing slice stored as one field of its own to get lower.
 
 Per row the document store is a quarter of the export; the exporter's own queries and
 hashing are the rest. A full `indexer:reindex` of a feed re-sends every row whose hash or

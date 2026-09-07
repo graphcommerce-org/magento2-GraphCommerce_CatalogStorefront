@@ -5,13 +5,6 @@
             <argument name="prefillers" xsi:type="array">
                 <item name="stock" xsi:type="object">GraphCommerce\CatalogStorefrontInventoryGraphQl\Model\Prefill\Stock</item>
             </argument>
-            <argument name="baseFields" xsi:type="array">
-                <item name="stock_status" xsi:type="string">stock_status</item>
-                <item name="only_x_left_in_stock" xsi:type="string">only_x_left_in_stock</item>
-                <item name="quantity" xsi:type="string">quantity</item>
-                <item name="min_sale_qty" xsi:type="string">min_sale_qty</item>
-                <item name="max_sale_qty" xsi:type="string">max_sale_qty</item>
-            </argument>
         </arguments>
     </type>
     <type name="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query\RoutePrefilledFields">

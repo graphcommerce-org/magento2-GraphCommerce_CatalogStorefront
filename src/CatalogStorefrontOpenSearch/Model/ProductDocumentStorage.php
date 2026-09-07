@@ -122,12 +122,14 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
         return $documents;
     }
 
-    public function listing(string $storeViewCode, array $ids, array $sourceExcludes, ?string $groupKey): array
+    /**
+     * The page's documents whole: filtering the source costs OpenSearch more than the bytes it saves.
+     */
+    public function listing(string $storeViewCode, array $ids, ?string $groupKey): array
     {
         $searches = [[
             'size' => count($ids),
             'query' => ['ids' => ['values' => array_values(array_map('strval', $ids))]],
-            '_source' => $sourceExcludes ? ['excludes' => $sourceExcludes] : true,
         ]];
         if ($groupKey !== null) {
             $searches = array_merge($searches, $this->priceSearches($ids, $groupKey));

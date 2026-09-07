@@ -170,7 +170,7 @@ Inside a GraphQl module: `Model/DocumentHydration`, `Model/Prefill/`,
 A module registers its parts in its own `etc/di.xml`: `writers` (by feed
 name) on `Delivery`, `fields` on the products writer, `ranges` (by product
 type id) on `PriceRanges`, and on the GraphQL side `prefillers`,
-`priceFields`, `fieldDocumentKeys` and `baseFields` on `DocumentHydration`,
+`priceFields` on `DocumentHydration`,
 `prefilledFields` on `RoutePrefilledFields`. Prefillers run in di.xml order, so a later
 one may rewrite what an earlier one filled. The composite price searches
 (`ProductDocumentStorageInterface::priceData`, by `parentIds`,
@@ -284,10 +284,9 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   columns to the exporter's own `catalog_data_exporter_product_reviews`).
 - Read: `ServeSearchFromDocuments` / `ServeFilterFromDocuments` rebuild product
   models from documents through `DocumentHydration`. A listing page is one
-  multi-search request: the documents by id with the heavy keys the query does
-  not select left out (di.xml `fieldDocumentKeys`; `customAttributes` only
-  when a non-base field is selected, the labelled `attributes` slice never),
-  and, when a price field is selected, the composite price data:
+  multi-search request: the documents by id, whole (filtering the source costs
+  OpenSearch more than the bytes it saves: 15 ms against 10 ms for 200
+  documents of 13 KB), and, when a price field is selected, the composite price data:
   the configurable and the grouped price aggregation (terms on `parentIds`
   and on `groupedParentIds`, then nested into `priceIndex` filtered on the
   group, min and max of regular and final over salable and over all enabled

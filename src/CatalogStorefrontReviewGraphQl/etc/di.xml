@@ -8,11 +8,6 @@
             <argument name="prefillers" xsi:type="array">
                 <item name="reviews" xsi:type="object">GraphCommerce\CatalogStorefrontReviewGraphQl\Model\Prefill\Reviews</item>
             </argument>
-            <argument name="baseFields" xsi:type="array">
-                <item name="rating_summary" xsi:type="string">rating_summary</item>
-                <item name="review_count" xsi:type="string">review_count</item>
-                <item name="reviews" xsi:type="string">reviews</item>
-            </argument>
         </arguments>
     </type>
     <type name="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query\RoutePrefilledFields">
