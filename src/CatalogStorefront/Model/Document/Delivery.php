@@ -22,7 +22,8 @@ use Psr\Log\LoggerInterface;
  * off. A storage failure reports status 500, so the feed machinery retries the
  * batch by cron.
  *
- * After a write, the cache tags of the entities the batch touched (di.xml
+ * Every write is logged at debug level with its row count and duration, so
+ * an export's time splits between the exporter and the store. After a write, the cache tags of the entities the batch touched (di.xml
  * `identities`: feed name to cache tag to row keys) are purged the way an
  * indexer purges them: the response and resolver caches and the page cache
  * hold nothing built from the documents the batch replaced. The product
@@ -55,12 +56,21 @@ class Delivery implements ExportFeedInterface
             return $this->feedExportStatusBuilder->build(self::STATUS_ACCEPTED, 'Storefront indexing is off');
         }
         $feed = $metadata->getFeedName();
+        $started = microtime(true);
         try {
             ($this->writers[$feed] ?? null)?->write($data);
         } catch (\Throwable $e) {
             $this->logger->error(sprintf('catalog-storefront: storing feed "%s" failed: %s', $feed, $e->getMessage()));
 
             return $this->feedExportStatusBuilder->build(self::STATUS_RETRY, $e->getMessage());
+        }
+        if (isset($this->writers[$feed])) {
+            $this->logger->debug(sprintf(
+                'catalog-storefront: feed "%s": %d rows written in %d ms',
+                $feed,
+                count($data),
+                (int)round((microtime(true) - $started) * 1000)
+            ));
         }
         if (isset($this->writers[$feed], $this->identities[$feed])) {
             $context = $this->cacheContextFactory->create();

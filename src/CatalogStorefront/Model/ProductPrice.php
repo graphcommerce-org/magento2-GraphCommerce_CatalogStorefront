@@ -11,9 +11,11 @@ namespace GraphCommerce\CatalogStorefront\Model;
  * tier prices), else the fallback row every product carries under group 0.
  * The final price is the regular price lowered by the best discount or
  * single-quantity tier price, which is the minimum the core BasePrice takes
- * over its providers. The price index holds, per customer group, the regular
- * and final price with the fallback resolved, as base currency floats before
- * tax; the composite price aggregations run over it.
+ * over its providers; core rounds a special or tier price to two decimals
+ * and a catalog rule price to four, so the precision of the winning source
+ * travels with the final. The price index holds, per customer group, the
+ * regular and final price with the fallback resolved, as base currency
+ * floats before tax; the composite price aggregations run over it.
  */
 class ProductPrice
 {
@@ -45,13 +47,17 @@ class ProductPrice
 
     /**
      * @param array[] $index the document's price index entries
-     * @return array{regular: float, final: float}|null
+     * @return array{regular: float, final: float, precision: int}|null
      */
     public function indexEntry(array $index, string $groupKey): ?array
     {
         foreach ($index as $entry) {
             if ((string)($entry['group'] ?? '') === $groupKey && isset($entry['regular'], $entry['final'])) {
-                return ['regular' => (float)$entry['regular'], 'final' => (float)$entry['final']];
+                return [
+                    'regular' => (float)$entry['regular'],
+                    'final' => (float)$entry['final'],
+                    'precision' => (int)($entry['precision'] ?? 2),
+                ];
             }
         }
 
@@ -82,18 +88,44 @@ class ProductPrice
 
     public function finalPrice(array $row): float
     {
+        return $this->lowest($row)[0];
+    }
+
+    /**
+     * The decimals core rounds the final price to: four for a catalog rule
+     * price, two for a special or tier price and for the regular price.
+     */
+    public function finalPrecision(array $row): int
+    {
+        return $this->lowest($row)[1] === 'catalog_rule' ? 4 : 2;
+    }
+
+    /**
+     * @return array{0: float, 1: string|null} the lowest price and the code of the discount that set it
+     */
+    private function lowest(array $row): array
+    {
         $regular = (float)$row['regular'];
         $final = $regular;
+        $source = null;
         foreach ((array)($row['discounts'] ?? []) as $discount) {
-            $final = min($final, $this->discountedPrice($regular, $discount));
+            $price = $this->discountedPrice($regular, $discount);
+            if ($price < $final) {
+                $final = $price;
+                $source = $discount['code'] ?? null;
+            }
         }
         foreach ((array)($row['tierPrices'] ?? []) as $tier) {
             if ((float)($tier['qty'] ?? 1) <= 1) {
-                $final = min($final, $this->discountedPrice($regular, $tier));
+                $price = $this->discountedPrice($regular, $tier);
+                if ($price < $final) {
+                    $final = $price;
+                    $source = 'tier_price';
+                }
             }
         }
 
-        return max(0.0, $final);
+        return [max(0.0, $final), $source];
     }
 
     /**

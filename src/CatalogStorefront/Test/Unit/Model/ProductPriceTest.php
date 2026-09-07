@@ -30,7 +30,7 @@ class ProductPriceTest extends TestCase
     public function testIndexEntryByGroup(): void
     {
         $index = [['group' => '0', 'regular' => 10, 'final' => 9], ['group' => '3', 'regular' => 7, 'final' => 6.5]];
-        self::assertSame(['regular' => 7.0, 'final' => 6.5], $this->price->indexEntry($index, '3'));
+        self::assertSame(['regular' => 7.0, 'final' => 6.5, 'precision' => 2], $this->price->indexEntry($index, '3'));
         self::assertNull($this->price->indexEntry($index, '1'));
     }
 
@@ -44,6 +44,19 @@ class ProductPriceTest extends TestCase
         self::assertSame(75.0, $this->price->finalPrice($row));
         self::assertSame(90.0, $this->price->finalPrice(['regular' => 100.0, 'discounts' => [['percentage' => 10.0]]]));
         self::assertSame(0.0, $this->price->finalPrice(['regular' => 10.0, 'discounts' => [['price' => -1.0]]]));
+    }
+
+    public function testFinalPrecisionFollowsTheWinningSource(): void
+    {
+        $price = new ProductPrice();
+        self::assertSame(2, $price->finalPrecision(['regular' => 10.0]));
+        self::assertSame(4, $price->finalPrecision(['regular' => 10.0, 'discounts' => [['code' => 'catalog_rule', 'percentage' => 20]]]));
+        self::assertSame(2, $price->finalPrecision(['regular' => 10.0, 'discounts' => [['code' => 'special_price', 'price' => 9.0]]]));
+        self::assertSame(2, $price->finalPrecision([
+            'regular' => 10.0,
+            'discounts' => [['code' => 'catalog_rule', 'price' => 9.0]],
+            'tierPrices' => [['qty' => 1, 'price' => 7.0]],
+        ]));
     }
 
     public function testBundlePayPercent(): void

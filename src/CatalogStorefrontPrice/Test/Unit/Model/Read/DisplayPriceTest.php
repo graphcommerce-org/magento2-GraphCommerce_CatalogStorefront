@@ -19,7 +19,9 @@ class DisplayPriceTest extends TestCase
     {
         $priceCurrency = $this->createMock(PriceCurrencyInterface::class);
         $priceCurrency->method('convert')->willReturnCallback(static fn($amount) => $amount * $rate);
-        $priceCurrency->method('convertAndRound')->willReturnCallback(static fn($amount) => round($amount * $rate, 2));
+        $priceCurrency->method('convertAndRound')->willReturnCallback(
+            static fn($amount, $scope = null, $currency = null, $precision = 2) => round($amount * $rate, $precision)
+        );
         $taxHelper = $this->createMock(TaxHelper::class);
         $taxHelper->method('priceIncludesTax')->willReturn($priceIncludesTax);
         $taxHelper->method('displayPriceIncludingTax')->willReturn($displayIncludingTax);
@@ -59,8 +61,9 @@ class DisplayPriceTest extends TestCase
         $regular = $display->regular(10.0, $product, $store);
         self::assertEqualsWithDelta(10.0 * 0.5 * 1.21, $regular->value, 1e-9);
         self::assertEqualsWithDelta(10.0 * 0.5 * 0.21, $regular->tax, 1e-9);
-        // A discounted price is rounded after conversion, the regular price is not.
-        self::assertEqualsWithDelta(round(7.777 * 0.5, 2) * 1.21, $display->final(7.777, 10.0, $product, $store)->value, 1e-9);
+        // A discounted price is rounded after conversion to the decimals of its source, the regular price is not.
+        self::assertEqualsWithDelta(round(7.777 * 0.5, 2) * 1.21, $display->final(7.777, 10.0, $product, $store, 2)->value, 1e-9);
+        self::assertEqualsWithDelta(round(7.777 * 0.5, 4) * 1.21, $display->final(7.777, 10.0, $product, $store)->value, 1e-9);
         self::assertTrue($display->taxIncluded($store));
     }
 

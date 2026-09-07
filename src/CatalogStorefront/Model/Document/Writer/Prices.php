@@ -78,6 +78,7 @@ class Prices implements FeedWriterInterface
                             'group' => $groupKey,
                             'regular' => (float)$row['regular'],
                             'final' => $this->productPrice->finalPrice($row),
+                            'precision' => $this->productPrice->finalPrecision($row),
                         ];
                     }
                 }

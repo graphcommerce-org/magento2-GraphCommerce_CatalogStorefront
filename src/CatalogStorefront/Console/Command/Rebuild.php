@@ -15,6 +15,7 @@ use Magento\Store\Model\StoreManagerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
@@ -24,11 +25,14 @@ use Symfony\Component\Console\Output\OutputInterface;
  * (`Model\Feeds`), so the exporter re-exports every row instead of skipping
  * the unchanged ones, runs those feed indexers, and promotes the fresh
  * indices when they are through. A rebuild that fails leaves the reads where
- * they were; the next rebuild replaces the staged index.
+ * they were; the next rebuild replaces the staged index, or `--promote`
+ * promotes what the feeds filled since, when the export finished by another
+ * road (a reindex that pulled the feeds along as dependencies).
  */
 class Rebuild extends Command
 {
     private const ENTITIES = 'entities';
+    private const PROMOTE = 'promote';
     private const PRODUCT = 'product';
 
     public function __construct(
@@ -47,7 +51,8 @@ class Rebuild extends Command
     {
         $this->setName('catalog-storefront:rebuild')
             ->setDescription('Rebuilds the document store of the given entities (' . implode(', ', array_keys($this->feeds->byEntity())) . '), all by default')
-            ->addArgument(self::ENTITIES, InputArgument::IS_ARRAY, 'Entity names');
+            ->addArgument(self::ENTITIES, InputArgument::IS_ARRAY, 'Entity names')
+            ->addOption(self::PROMOTE, null, InputOption::VALUE_NONE, 'Only promote the staged indices the feeds filled since an interrupted rebuild');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -64,6 +69,11 @@ class Rebuild extends Command
         try {
             $this->appState->setAreaCode(FrontNameResolver::AREA_CODE);
         } catch (LocalizedException) {
+        }
+        if ($input->getOption(self::PROMOTE)) {
+            $this->promote($entities, $output);
+
+            return Command::SUCCESS;
         }
         $connection = $this->resourceConnection->getConnection();
         $indexers = [];
@@ -84,6 +94,16 @@ class Rebuild extends Command
             $this->indexerRegistry->get($indexerId)->reindexAll();
             $output->writeln(sprintf('Exported the %s feed in %.1fs', $feedName, microtime(true) - $started));
         }
+        $this->promote($entities, $output);
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * @param string[] $entities
+     */
+    private function promote(array $entities, OutputInterface $output): void
+    {
         foreach ($entities as $entity) {
             foreach ($this->storeManager->getStores() as $store) {
                 $entity === self::PRODUCT
@@ -92,7 +112,5 @@ class Rebuild extends Command
             }
             $output->writeln(sprintf('The fresh %s documents serve the reads', $entity));
         }
-
-        return Command::SUCCESS;
     }
 }

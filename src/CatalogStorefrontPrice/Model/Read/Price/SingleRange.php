@@ -29,7 +29,13 @@ class SingleRange implements PriceRangeInterface
         }
         $regularBase = (float)$row['regular'];
         $regular = $this->displayPrice->regular($regularBase, $product, $context->store);
-        $final = $this->displayPrice->final($this->productPrice->finalPrice($row), $regularBase, $product, $context->store);
+        $final = $this->displayPrice->final(
+            $this->productPrice->finalPrice($row),
+            $regularBase,
+            $product,
+            $context->store,
+            $this->productPrice->finalPrecision($row)
+        );
 
         return [$regular, $final, $regular, $final];
     }

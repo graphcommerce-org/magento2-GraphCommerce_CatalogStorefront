@@ -105,7 +105,9 @@ The price feed rows are stored per customer group id, next to a nested price ind
 with one entry per customer group (regular and final price, base currency, before tax)
 that the composite price aggregations run over: the mapping holds three fields
 whatever the number of customer groups. The display currency and the taxes are applied
-at request time the way core's price classes and tax adjustment apply them, through
+at request time the way core's price classes and tax adjustment apply them, a final price
+rounded to the decimals of its source (two for a special or tier price, four for a catalog
+rule price), through
 core's own tax service with the product's tax class (a dynamic bundle's selections
 with their own); the Worker module keeps its rate lookups between requests.
 Fixed product taxes are not answered. A new or deleted customer group changes the index
@@ -162,6 +164,52 @@ of fifteen requests after three warm ones, guest, prices excluding tax:
 
 The document path carries most of the gain on php-fpm already; the worker adds the kept
 schema and the memos. Both runtimes read the same database and OpenSearch.
+
+## Measured at scale
+
+The large performance profile of `setup:performance:generate-fixtures` without its orders
+(`setup/performance-toolkit/profiles/ce/large-catalog.xml`), on a laptop with Docker
+Desktop at 6 GB for MariaDB, OpenSearch and the worker together:
+
+| | |
+| --- | --- |
+| Catalog | 300 000 simple and 8 000 configurable products with 192 000 variants, 502 050 products in all, every one in 5 websites; 3 000 categories; 4 customer groups; 20 catalog price rules |
+| Generation | 25 minutes |
+| Core indexers | stock 28 minutes (core's legacy stock indexer runs an attribute query per product under MSI), category products 2, price 2, EAV 1, fulltext about 5 per store view of 308 000 visible products |
+| Products feed | 2.5 million rows in 64 minutes, 570 rows a second; the document store takes 0.41 ms a row, 15 of the 64 minutes; the rest is the exporter |
+| Prices feed | 2.5 million rows in 9 minutes, 0.21 ms a row in the store |
+| Stock feed | 494 000 rows in 7 minutes, 0.75 ms a row in the store |
+| Variants feed | 194 000 rows in 4 minutes, 0.86 ms a row in the store |
+| Documents | 502 050 product documents per store view, 1 to 3 GB per store view on disk, 12 GB in all; categories and attributes below 1 MB per store view |
+| OpenSearch heap | 2 GB trips the parent circuit breaker while the fulltext indexer and the feeds write at once; 3 GB carries the load |
+| Exporter feed tables | 24 GB for 1.8 million products rows with `PERSIST_EXPORTED_FEED` set, 174 bytes a row without it; the document store never reads them, so leave it unset |
+
+Read side, the GraphCommerce product list query, median over the wire, guest, excluding
+tax, no page cache, php-fpm and the FrankenPHP worker (four threads next to OpenSearch in
+the same 6 GB):
+
+| Listing | fpm core | fpm documents | worker core | worker documents |
+| --- | --- | --- | --- | --- |
+| 24 items of a 12 463-product category | 174 ms | 91 ms | 128 ms | 60 ms |
+| 200 items of that category | 762 ms | 149 ms | 615 ms | 112 ms |
+| 200 items of a search over 308 000 visible products | 783 ms | 267 ms | 566 ms | 164 ms |
+| 200 items unfiltered | 925 ms | 261 ms | 683 ms | 163 ms |
+| 24 items unfiltered | 295 ms | 202 ms | 177 ms | 112 ms |
+
+The unfiltered listings pay for core's facet aggregations over every visible product in the
+search index, on both paths. A trace of the 200-item document path on php-fpm: 45 ms for the
+document multi-search of the five requests, 47 ms for the GraphQL walk, 40 ms of bootstrap,
+16 ms for the two attribute document searches of 1 095 attributes, 13 ms for core's search.
+The core path spends its time in 74 price range resolvers and 629 SQL statements. On the
+worker the same document request is 112 ms: 34 ms multi-search, 36 ms GraphQL walk, 13 ms
+attribute documents, 20 ms state reset after the response.
+
+Per row the document store is a quarter of the export; the exporter's own queries and
+hashing are the rest. A full `indexer:reindex` of a feed re-sends every row whose hash or
+status changed, and a core reindex that runs before the category and price indexes are
+complete changes every products row, so the feeds run after the core indexers, in one call
+each (`indexer:reindex <core ids>` then `indexer:reindex <feed ids>`), or the products feed
+exports twice.
 
 ## Parity gate
 
@@ -243,28 +291,32 @@ of the links.
 
 ## Ideas and to do
 
-1. **Integration tests.** Magento integration tests for the writers and the model
+1. **Facet labels by option id.** The facet label plugin fetches every attribute document
+   of the store view to find the attributes of the aggregated option ids: 13 ms per listing
+   at 1 095 attributes. A search on the attribute index by option id, filterable mode and
+   code, with those fields mapped, fetches the few it needs.
+2. **Integration tests.** Magento integration tests for the writers and the model
     builder next to the unit tests, which is what a Mage-OS review asks for.
-2. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
+3. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
     hook on the search request and a permission hook on the documents, so an extension
     plugs in without a preference on a class of this package.
-3. **Fixed product taxes.** The last price display setup that falls back to core.
+4. **Fixed product taxes.** The last price display setup that falls back to core.
     The weee amounts per product travel on the document; the read side adds them the
     way the weee adjustment does.
-4. **Package publishing.** A subtree split of the module directories to their own
+5. **Package publishing.** A subtree split of the module directories to their own
     repositories and a release on packagist, so the modules install separately while
     the repository stays one.
 
-5. **Cart, wishlist and order products.** A cart item's product still loads from the
+6. **Cart, wishlist and order products.** A cart item's product still loads from the
    database. A plugin on the cart items data swaps in the document model by product
    id; the quote keeps what it owns, the row price, the options and the quantity checks.
-6. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
+7. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
    product listing collection, the product page and the layered navigation read from the
    base modules. The price rendering goes through the pricing system, so it needs its
    own document-backed price providers.
-7. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
-8. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
+8. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
+9. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
    listing needs a gate of its own: the rendered listing and product page on both
    paths, so an integrator proves an extension on every surface it touches.
-9. **REST integration.** The product repository and the search API behind the same
+10. **REST integration.** The product repository and the search API behind the same
    document models, for headless setups that read the catalog over REST.

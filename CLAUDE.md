@@ -52,7 +52,10 @@ passes.
   save with the field empty), `Model/StorefrontKey` (whether the request
   carries the key in `X-Catalog-Storefront-Key`), `Model/Strict` (the fallback
   report of a keyed request), `Model/Feeds` (the feeds per entity, for the
-  rebuild and status commands), `Plugin/Customer/PricesFeedOnNewGroup` (a new or
+  rebuild and status commands), `Model/Document/StoreAssignments` (the store
+  views a product is assigned to, for the slice writers whose rows name no
+  website: stock and variants write those store views only, so no document
+  exists for a product outside its websites), `Plugin/Customer/PricesFeedOnNewGroup` (a new or
   deleted group truncates the prices feed table and invalidates its indexer) and the
   plugins on non-GraphQL core: product links, the layer price step, the single
   price range mode, the search field name memo, salable.
@@ -456,6 +459,25 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   runs them, in the Dev Tools syntax the VS Code OpenSearch extension runs: a
   comment line above each request and `{}` under a request without a body,
   or the parser reads the next comment as the body.
+- `dev/fixture-generator/Module` is a dev module for
+  `setup:performance:generate-fixtures`: the exporter marks a saved product in
+  its changelog tables from PHP, the generator replays that insert for every
+  generated product and stops on the missing foreign key; the module maps
+  every `_cl` table to write nothing (the exporter's own filter plugin on the
+  SQL collector gets no interceptor from the compile). Link it as
+  `app/code/GraphCommerce/CatalogStorefrontFixtureGenerator`, enable, compile.
+  The shipped profiles need `admin_users` at 0 (their password is too short
+  for the policy) and the tax rates step removed when a rate is in a rule;
+  `setup/performance-toolkit/profiles/ce/large-catalog.xml` is the large
+  profile without orders. `indexer:reindex <one id>` runs the dependent
+  indexers too, the exporter feeds among them: run the core indexers in one
+  call and the feeds in one call, or the feeds export several times. A feed
+  run that fills staged indices outside the rebuild command is finished with
+  `catalog-storefront:rebuild --promote`. The exporter persists the full feed
+  payload only with `PERSIST_EXPORTED_FEED` set (this project's env.php had
+  it); without it the feed tables hold the minimal payload, which the document
+  store never needs: the products feed table was 24 GB for 1.8 million rows
+  with it.
 - `dev/attribution` prints the full latency stack of one query: wire, proxy
   chain, FrankenPHP, PHP launch, dispatch, parse, schema, execution, every
   resolver class by self time with the plugin chain around it, the search
@@ -498,7 +520,14 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   too; the product document carries `taxClassId` for all of it. A composite range in a
   non-base currency converts the aggregated base prices; core converts and
   rounds each child, so a cent may differ where children mix discounted and
-  regular prices. The tier price discounts are computed against the regular
+  regular prices. A final price is rounded after conversion to the decimals of
+  the source that set it, as core rounds them: two for a special or tier
+  price, four for a catalog rule price (`ProductPrice::finalPrecision`, kept
+  on the price index entry as `precision`); an aggregated composite final
+  carries no source and takes four. The price index maps its prices as
+  `double`: a `float` field returns 10.115 as 10.11499977 to an aggregation,
+  which a display rounding then turns into 10.11 where core says 10.12. The
+  tier price discounts are computed against the regular
   price before tax, as core's tier collection loads no tax class.
 - Grouped children with required customizable options are not excluded from
   the grouped range as core's associated products collection does. A fixed
@@ -541,5 +570,7 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   on the model, so its answer depends on the query; the document path always
   includes them. Core lists configurable options in an undefined order (no
   ORDER BY, it changes with the query plan); the document path lists them by
-  position. Core cannot resolve an inline fragment inside a linked products
-  selection; the document path can.
+  position, and lists an option's values and a category's children of equal
+  position in database order where the document path sorts by value id and
+  by id; the gate sorts both before the diff. Core cannot resolve an inline
+  fragment inside a linked products selection; the document path can.

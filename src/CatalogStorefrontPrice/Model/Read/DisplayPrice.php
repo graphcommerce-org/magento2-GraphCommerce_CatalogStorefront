@@ -45,12 +45,13 @@ class DisplayPrice
 
     /**
      * The display amount of a base price: rounded after conversion when it is
-     * a discounted price, as the special, tier and rule prices are.
+     * a discounted price, to the decimals of its source, as core rounds a
+     * special or tier price to two and a catalog rule price to four.
      */
-    public function amount(float $base, bool $discounted, Product $product, StoreInterface $store): Amount
+    public function amount(float $base, bool $discounted, Product $product, StoreInterface $store, int $precision = 2): Amount
     {
         $converted = $discounted
-            ? (float)$this->priceCurrency->convertAndRound($base, $store)
+            ? (float)$this->priceCurrency->convertAndRound($base, $store, null, $precision)
             : (float)$this->priceCurrency->convert($base, $store);
         if ($this->taxHelper->priceIncludesTax($store)) {
             $value = $this->taxPrice($converted, true, $product, $store);
@@ -72,13 +73,15 @@ class DisplayPrice
     }
 
     /**
-     * A final price below the regular price is a discounted price; one equal
-     * to it is the regular amount.
+     * A final price below the regular price is a discounted price, rounded to
+     * the decimals of its source; one equal to it is the regular amount. An
+     * aggregated final carries no source and takes four decimals, which
+     * leaves a two-decimal special price as it is.
      */
-    public function final(float $base, float $regularBase, Product $product, StoreInterface $store): Amount
+    public function final(float $base, float $regularBase, Product $product, StoreInterface $store, int $precision = 4): Amount
     {
         return $base < $regularBase
-            ? $this->amount($base, true, $product, $store)
+            ? $this->amount($base, true, $product, $store, $precision)
             : $this->amount($regularBase, false, $product, $store);
     }
 

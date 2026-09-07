@@ -105,8 +105,8 @@
                         <item name="type" xsi:type="string">nested</item>
                         <item name="fields" xsi:type="array">
                             <item name="group" xsi:type="string">keyword</item>
-                            <item name="regular" xsi:type="string">float</item>
-                            <item name="final" xsi:type="string">float</item>
+                            <item name="regular" xsi:type="string">double</item>
+                            <item name="final" xsi:type="string">double</item>
                         </item>
                     </item>
                 </item>

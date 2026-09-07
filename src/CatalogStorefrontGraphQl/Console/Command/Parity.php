@@ -187,7 +187,8 @@ class Parity extends Command
     /**
      * Orders that core leaves undefined are not document differences: aggregation
      * options tie-break in the search engine, and configurable_options come from a
-     * collection without ORDER BY. Both are sorted so the diff sees the set, not the
+     * collection without ORDER BY, and so do an option's values and a category's
+     * children of equal position. All are sorted so the diff sees the set, not the
      * order. Zero-count aggregation options are dropped: core's option provider joins
      * attributes by code across entity types, so an option of a same-named attribute
      * of another entity shows up on some runs.
@@ -213,6 +214,15 @@ class Parity extends Command
         foreach ($node as $key => $child) {
             if (is_string($key) && str_ends_with($key, 'configurable_options') && is_array($child)) {
                 usort($child, static fn($a, $b) => ($a['attribute_code'] ?? '') <=> ($b['attribute_code'] ?? ''));
+                $node[$key] = $child;
+            }
+            // Core lists an option's values and a category's children among equal positions in database order.
+            if ($key === 'values' && is_array($child) && isset($child[0]['value_index'])) {
+                usort($child, static fn($a, $b) => ($a['value_index'] ?? 0) <=> ($b['value_index'] ?? 0));
+                $node[$key] = $child;
+            }
+            if ($key === 'children' && is_array($child) && isset($child[0]['uid'])) {
+                usort($child, static fn($a, $b) => [(int)($a['position'] ?? 0), $a['uid'] ?? ''] <=> [(int)($b['position'] ?? 0), $b['uid'] ?? '']);
                 $node[$key] = $child;
             }
         }
