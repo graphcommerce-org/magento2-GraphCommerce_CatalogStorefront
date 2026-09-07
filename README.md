@@ -224,6 +224,13 @@ next request: the reload processors (system config, stores, search request confi
 config generation, so what is left is the object manager's own reset with its three garbage
 collection runs.
 
+A page beyond hit 10 000 of a listing is where OpenSearch's result window ends. Core's adapter
+opens a point in time and walks the result in windows of 10 000 hits until it reaches the page,
+with the layered navigation counts computed again in every window: page 2000 of an unfiltered
+listing over 300 000 products takes 32 windows and 2.4 seconds. The search module's Result Window
+setting puts a window that covers the catalog on the index and tells the adapter, so the same page
+is one query of about 0.2 seconds.
+
 Core's search sorted every listing by score and then by a painless script that parses the
 document id as a tie-break, which runs for every matching document: 41 ms of an unfiltered
 listing over 308 000 visible products, 8 ms of a 12 000-product category. The fulltext

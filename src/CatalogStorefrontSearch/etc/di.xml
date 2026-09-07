@@ -10,6 +10,12 @@
     <type name="Magento\Elasticsearch\Model\Adapter\FieldMapper\FieldMapperResolver">
         <plugin name="graphcommerce_catalog_storefront_field_name_memo" type="GraphCommerce\CatalogStorefrontSearch\Plugin\FieldNameMemo"/>
     </type>
+    <type name="Magento\Elasticsearch\Model\Adapter\Index\Builder">
+        <plugin name="graphcommerce_catalog_storefront_result_window_setting" type="GraphCommerce\CatalogStorefrontSearch\Plugin\ResultWindowSetting"/>
+    </type>
+    <type name="Magento\Search\Model\Search\PageSizeProvider">
+        <plugin name="graphcommerce_catalog_storefront_result_window_page_size" type="GraphCommerce\CatalogStorefrontSearch\Plugin\ResultWindowPageSize"/>
+    </type>
     <type name="Magento\Search\Model\Query">
         <plugin name="graphcommerce_catalog_storefront_search_term_recording" type="GraphCommerce\CatalogStorefrontSearch\Plugin\SearchTermRecording"/>
     </type>

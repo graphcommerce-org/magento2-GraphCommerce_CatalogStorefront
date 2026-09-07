@@ -84,7 +84,14 @@ passes.
   script sort stands), `Plugin/FieldNameMemo` (one search index field name
   lookup per attribute code and context per request, the core mapper asks
   several times), `Plugin/SearchTermRecording` (the search term writes, off by
-  default).
+  default), and the result window (`Plugin/ResultWindowSetting` puts the
+  configured `max_result_window` on a new product search index,
+  `ResultWindowPageSize` gives core's adapter the same number, the setting's
+  backend model puts it on the indices that exist): beyond the window core
+  opens a point in time and walks the result in windows of 10 000 hits with
+  the aggregations in every window, 32 windows and 2.4 s for page 2000 of an
+  unfiltered listing over 300 000 products against 0.2 s as one query; off
+  (0), the engine's own limit of 10 000 stands.
 - `CatalogStorefrontGraphQl`: `DocumentHydration`
   with the prefiller list, the product prefiller, the listing data
   provider plugins, the resolver plugins for categories, media gallery, URL

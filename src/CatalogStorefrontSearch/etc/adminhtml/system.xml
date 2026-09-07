@@ -15,6 +15,12 @@
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                     <comment>Magento saves every search term and how often it is used. Off keeps the database free of this work on each search, but the search terms report and the search suggestions no longer update.</comment>
                 </field>
+                <field id="result_window" translate="label comment" type="text" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Result Window</label>
+                    <validate>validate-digits validate-zero-or-greater</validate>
+                    <backend_model>GraphCommerce\CatalogStorefrontSearch\Model\Config\Backend\ResultWindow</backend_model>
+                    <comment>The number of hits of a listing the search engine serves with one query. Beyond it the engine walks the result in windows of 10 000 hits with a point in time, and repeats the layered navigation counts in every window: page 2000 of an unfiltered listing over 300 000 products takes 32 windows and 2.4 seconds against 0.2 seconds with a window that covers the catalog. A save applies the window to the product search index of every store view; 0 leaves the engine's own limit of 10 000. A deep page holds a sorted heap of that many hits in the engine's memory while it runs.</comment>
+                </field>
             </group>
         </section>
     </system>
