@@ -12,6 +12,7 @@ use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
 class MetadataDocumentStorage implements MetadataDocumentStorageInterface
 {
     private const PAGE = 1000;
+    private const WINDOW = 10000;
 
     public function __construct(
         private readonly Client $client,
@@ -33,9 +34,19 @@ class MetadataDocumentStorage implements MetadataDocumentStorageInterface
         }
     }
 
-    public function drop(string $entity, string $storeViewCode): void
+    public function stage(string $entity, string $storeViewCode): void
     {
-        $this->index->drop($entity, $storeViewCode);
+        $this->index->stage($entity, $storeViewCode);
+    }
+
+    public function promote(string $entity, string $storeViewCode): void
+    {
+        $this->index->promote($entity, $storeViewCode);
+    }
+
+    public function count(string $entity, string $storeViewCode): int
+    {
+        return $this->client->count($this->client->indexName($entity, $storeViewCode));
     }
 
     public function get(string $entity, string $storeViewCode, array $ids, array $fields = []): array
@@ -79,6 +90,23 @@ class MetadataDocumentStorage implements MetadataDocumentStorageInterface
         }
 
         return ['documents' => $documents, 'total' => (int)($response['hits']['total']['value'] ?? 0)];
+    }
+
+    public function any(string $entity, string $storeViewCode, array $alternatives): array
+    {
+        $response = $this->client->search($this->client->indexName($entity, $storeViewCode), [
+            'size' => self::WINDOW,
+            'query' => ['bool' => [
+                'should' => array_map(fn(array $filter) => ['bool' => ['filter' => $this->terms($filter)]], $alternatives),
+                'minimum_should_match' => 1,
+            ]],
+        ]);
+        $documents = [];
+        foreach ($response['hits']['hits'] ?? [] as $hit) {
+            $documents[$hit['_id']] = $hit['_source'];
+        }
+
+        return $documents;
     }
 
     public function stats(string $entity, string $storeViewCode, string $groupField, array $groups, string $valueField): array

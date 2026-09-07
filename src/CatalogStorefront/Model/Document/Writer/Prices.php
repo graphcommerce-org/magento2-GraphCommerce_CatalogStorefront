@@ -17,8 +17,9 @@ use Magento\Store\Model\StoreManagerInterface;
  * row already resolved, the nested list the composite price aggregations
  * read. The feed names a group by the hash of its id and a batch holds a
  * product's rows one group at a time, so both are recomputed over the rows
- * already stored plus the batch. A group created after a row was exported
- * gets its entry when the row exports again.
+ * already stored plus the batch; a stored row of a group that no longer
+ * exists is dropped. A group created or deleted after a row was exported is
+ * reflected when the row exports again.
  */
 class Prices implements FeedWriterInterface
 {
@@ -58,9 +59,11 @@ class Prices implements FeedWriterInterface
 
         foreach ($rowsByStore as $store => $products) {
             $stored = [];
-            foreach ($this->storage->get($store, array_keys($products), ['prices']) as $id => $document) {
+            foreach ($this->storage->stored($store, array_keys($products), ['prices']) as $id => $document) {
                 foreach ((array)($document['prices'] ?? []) as $row) {
-                    $stored[$id][(string)$row['group']] = $row;
+                    if (in_array((string)$row['group'], $groupByCode, true)) {
+                        $stored[$id][(string)$row['group']] = $row;
+                    }
                 }
             }
             $upserts = [];
@@ -75,6 +78,7 @@ class Prices implements FeedWriterInterface
                             'group' => $groupKey,
                             'regular' => (float)$row['regular'],
                             'final' => $this->productPrice->finalPrice($row),
+                            'precision' => $this->productPrice->finalPrecision($row),
                         ];
                     }
                 }

@@ -35,27 +35,64 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
         }
     }
 
-    public function drop(string $storeViewCode): void
+    public function stage(string $storeViewCode): void
     {
-        $this->index->drop(self::ENTITY, $storeViewCode);
+        $this->index->stage(self::ENTITY, $storeViewCode);
+    }
+
+    public function promote(string $storeViewCode): void
+    {
+        $this->index->promote(self::ENTITY, $storeViewCode);
+    }
+
+    public function updateLists(string $storeViewCode, array $changes): void
+    {
+        if ($changes) {
+            $this->client->updateLists($this->index->ensure(self::ENTITY, $storeViewCode), $changes);
+        }
+    }
+
+    public function count(string $storeViewCode): int
+    {
+        return $this->client->count($this->indexName($storeViewCode));
     }
 
     public function get(string $storeViewCode, array $ids, array $fields = []): array
     {
+        return $this->byId($this->indexName($storeViewCode), $ids, $fields);
+    }
+
+    public function findBySku(string $storeViewCode, array $skus): array
+    {
+        return $this->bySku($this->indexName($storeViewCode), $skus);
+    }
+
+    public function stored(string $storeViewCode, array $ids, array $fields = []): array
+    {
+        return $this->byId($this->index->ensure(self::ENTITY, $storeViewCode), $ids, $fields);
+    }
+
+    public function storedBySku(string $storeViewCode, array $skus): array
+    {
+        return $this->bySku($this->index->ensure(self::ENTITY, $storeViewCode), $skus);
+    }
+
+    private function byId(string $index, array $ids, array $fields): array
+    {
         $documents = [];
-        foreach ($ids ? $this->client->get($this->indexName($storeViewCode), $ids, $fields) : [] as $id => $document) {
+        foreach ($ids ? $this->client->get($index, $ids, $fields) : [] as $id => $document) {
             $documents[(int)$id] = $document;
         }
 
         return $documents;
     }
 
-    public function findBySku(string $storeViewCode, array $skus): array
+    private function bySku(string $index, array $skus): array
     {
         if (!$skus) {
             return [];
         }
-        $response = $this->client->search($this->indexName($storeViewCode), [
+        $response = $this->client->search($index, [
             'size' => count($skus),
             'query' => ['terms' => ['sku' => array_values($skus)]],
         ]);
@@ -122,7 +159,9 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
     /**
      * Per parent, the minimum and maximum regular and final price of the
      * children's price index entries for the group, over the salable children
-     * and over all enabled children.
+     * and over all enabled children, and the same bounds per child tax class,
+     * since core taxes each child's amounts with the child's own class before
+     * it picks the bounds.
      */
     private function rangeAggregation(string $parentField, array $parentIds, string $groupKey): array
     {
@@ -135,6 +174,10 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
                 'maxFinal' => ['max' => ['field' => 'priceIndex.final']],
             ],
         ]]];
+        $prices = ['prices' => $group, 'taxClasses' => [
+            'terms' => ['field' => 'taxClassId', 'size' => 100, 'missing' => '0'],
+            'aggs' => ['prices' => $group],
+        ]];
 
         return [
             'size' => 0,
@@ -145,8 +188,8 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
             'aggs' => ['parents' => [
                 'terms' => ['field' => $parentField, 'size' => count($parentIds), 'include' => $parentIds],
                 'aggs' => [
-                    'salable' => ['filter' => ['term' => ['stock.isSalable' => true]], 'aggs' => ['prices' => $group]],
-                    'all' => ['filter' => ['match_all' => new \stdClass()], 'aggs' => ['prices' => $group]],
+                    'salable' => ['filter' => ['term' => ['stock.isSalable' => true]], 'aggs' => $prices],
+                    'all' => ['filter' => ['match_all' => new \stdClass()], 'aggs' => $prices],
                 ],
             ]],
         ];
@@ -173,20 +216,39 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
         ];
     }
 
+    /**
+     * @return array<int, array<string, array|null>> per parent and mode: minimum regular, minimum
+     *   final, maximum regular, maximum final, and the same four per child tax class id
+     */
     private function parseRanges(array $response): array
     {
         $ranges = [];
         foreach ($response['aggregations']['parents']['buckets'] ?? [] as $bucket) {
             foreach (['salable', 'all'] as $mode) {
                 $stats = $bucket[$mode]['prices']['group'];
-                $ranges[(int)$bucket['key']][$mode] = isset($stats['minFinal']['value'])
-                    ? [
-                        (float)$stats['minRegular']['value'],
-                        (float)$stats['minFinal']['value'],
-                        (float)$stats['maxRegular']['value'],
-                        (float)$stats['maxFinal']['value'],
-                    ]
-                    : null;
+                if (!isset($stats['minFinal']['value'])) {
+                    $ranges[(int)$bucket['key']][$mode] = null;
+                    continue;
+                }
+                $byTaxClass = [];
+                foreach ($bucket[$mode]['taxClasses']['buckets'] ?? [] as $class) {
+                    $classStats = $class['prices']['group'];
+                    if (isset($classStats['minFinal']['value'])) {
+                        $byTaxClass[(int)$class['key']] = [
+                            (float)$classStats['minRegular']['value'],
+                            (float)$classStats['minFinal']['value'],
+                            (float)$classStats['maxRegular']['value'],
+                            (float)$classStats['maxFinal']['value'],
+                        ];
+                    }
+                }
+                $ranges[(int)$bucket['key']][$mode] = [
+                    (float)$stats['minRegular']['value'],
+                    (float)$stats['minFinal']['value'],
+                    (float)$stats['maxRegular']['value'],
+                    (float)$stats['maxFinal']['value'],
+                    $byTaxClass,
+                ];
             }
         }
 

@@ -4,6 +4,7 @@
         <sequence>
             <module name="GraphCommerce_CatalogStorefrontGroupedProduct"/>
             <module name="GraphCommerce_CatalogStorefrontGraphQl"/>
+            <module name="GraphCommerce_CatalogStorefrontPriceGraphQl"/>
             <module name="Magento_GroupedProductGraphQl"/>
         </sequence>
     </module>

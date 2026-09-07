@@ -23,6 +23,8 @@
         "graphcommerce/module-catalog-storefront": "self.version",
         "graphcommerce/module-catalog-storefront-graph-ql": "self.version",
         "graphcommerce/module-catalog-storefront-product-listing": "self.version",
+        "graphcommerce/module-catalog-storefront-price": "self.version",
+        "graphcommerce/module-catalog-storefront-price-graph-ql": "self.version",
         "graphcommerce/module-catalog-storefront-worker": "self.version",
         "graphcommerce/module-catalog-storefront-explorer": "self.version",
         "graphcommerce/module-catalog-storefront-inventory": "self.version",
@@ -37,7 +39,8 @@
         "graphcommerce/module-catalog-storefront-downloadable": "self.version",
         "graphcommerce/module-catalog-storefront-downloadable-graph-ql": "self.version",
         "graphcommerce/module-catalog-storefront-review": "self.version",
-        "graphcommerce/module-catalog-storefront-review-graph-ql": "self.version"
+        "graphcommerce/module-catalog-storefront-review-graph-ql": "self.version",
+        "graphcommerce/module-catalog-storefront-profiler": "self.version"
     },
     "suggest": {
         "magento/module-catalog-graph-ql": "GraphCommerce_CatalogStorefrontGraphQl serves catalog GraphQL from documents",
@@ -48,7 +51,8 @@
         "magento/module-grouped-product-graph-ql": "GraphCommerce_CatalogStorefrontGroupedProduct serves grouped items and the grouped price range",
         "magento/module-downloadable-graph-ql": "GraphCommerce_CatalogStorefrontDownloadable serves downloadable links and samples",
         "magento/module-product-review-data-exporter": "GraphCommerce_CatalogStorefrontReview serves reviews and rating summaries",
-        "smile/elasticsuite": "GraphCommerce_CatalogStorefrontElasticsuite points the document store at the cluster ElasticSuite is configured with"
+        "smile/elasticsuite": "GraphCommerce_CatalogStorefrontElasticsuite points the document store at the cluster ElasticSuite is configured with",
+        "mage-os/module-profiler": "GraphCommerce_CatalogStorefrontProfiler times the document store client in a trace"
     },
     "autoload": {
         "files": [
@@ -59,8 +63,11 @@
             "src/CatalogStorefront/registration.php",
             "src/CatalogStorefrontGraphQl/registration.php",
             "src/CatalogStorefrontProductListing/registration.php",
+            "src/CatalogStorefrontPrice/registration.php",
+            "src/CatalogStorefrontPriceGraphQl/registration.php",
             "src/CatalogStorefrontWorker/registration.php",
             "src/CatalogStorefrontExplorer/registration.php",
+            "src/CatalogStorefrontProfiler/registration.php",
             "src/CatalogStorefrontInventory/registration.php",
             "src/CatalogStorefrontInventoryGraphQl/registration.php",
             "src/CatalogStorefrontConfigurableProduct/registration.php",
@@ -83,8 +90,11 @@
             "GraphCommerce\\CatalogStorefront\\": "src/CatalogStorefront/",
             "GraphCommerce\\CatalogStorefrontGraphQl\\": "src/CatalogStorefrontGraphQl/",
             "GraphCommerce\\CatalogStorefrontProductListing\\": "src/CatalogStorefrontProductListing/",
+            "GraphCommerce\\CatalogStorefrontPrice\\": "src/CatalogStorefrontPrice/",
+            "GraphCommerce\\CatalogStorefrontPriceGraphQl\\": "src/CatalogStorefrontPriceGraphQl/",
             "GraphCommerce\\CatalogStorefrontWorker\\": "src/CatalogStorefrontWorker/",
             "GraphCommerce\\CatalogStorefrontExplorer\\": "src/CatalogStorefrontExplorer/",
+            "GraphCommerce\\CatalogStorefrontProfiler\\": "src/CatalogStorefrontProfiler/",
             "GraphCommerce\\CatalogStorefrontInventory\\": "src/CatalogStorefrontInventory/",
             "GraphCommerce\\CatalogStorefrontInventoryGraphQl\\": "src/CatalogStorefrontInventoryGraphQl/",
             "GraphCommerce\\CatalogStorefrontConfigurableProduct\\": "src/CatalogStorefrontConfigurableProduct/",

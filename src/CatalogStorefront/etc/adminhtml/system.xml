@@ -15,15 +15,10 @@
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                     <comment>The storefront API reads products and categories from the copy. A product that is not in the copy yet is read from the database.</comment>
                 </field>
-                <field id="request_override" translate="label comment" type="select" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>Allow Request Override</label>
-                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                    <comment>A request picks its own path with the X-Catalog-Storefront header: "documents" or "core". For test environments, the API explorer and the parity gate.</comment>
-                </field>
-                <field id="strict" translate="label comment" type="select" sortOrder="50" showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>Strict Mode</label>
-                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                    <comment>A request served from documents reports every fallback to the database and every SQL statement in the response extensions. For test environments only: the report exposes SQL statements.</comment>
+                <field id="key" translate="label comment" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Storefront Key</label>
+                    <backend_model>GraphCommerce\CatalogStorefront\Model\Config\Backend\Key</backend_model>
+                    <comment>Generated when this page is saved with the field empty. A request that sends it in the X-Catalog-Storefront-Key header may pick its path with the X-Catalog-Storefront header ("documents" or "core") and gets every fallback to the database reported in the response extensions. The API explorer and the parity gate send it.</comment>
                 </field>
                 <field id="record_search_terms" translate="label comment" type="select" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Record Search Terms</label>

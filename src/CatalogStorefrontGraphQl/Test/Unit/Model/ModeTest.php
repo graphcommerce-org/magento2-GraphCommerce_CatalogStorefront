@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontGraphQl\Test\Unit\Model;
 
 use GraphCommerce\CatalogStorefront\Model\Config;
+use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
 use GraphCommerce\CatalogStorefrontGraphQl\Model\Mode;
 use Magento\Framework\App\Request\Http;
 use PHPUnit\Framework\TestCase;
@@ -14,14 +15,15 @@ class ModeTest extends TestCase
     {
         $config = $this->createMock(Config::class);
         $config->method('serveGraphQl')->willReturn($serve);
-        $config->method('requestOverride')->willReturn($override);
+        $key = $this->createMock(StorefrontKey::class);
+        $key->method('granted')->willReturn($override);
         $request = $this->createMock(Http::class);
         $request->method('getHeader')->with(Mode::HEADER)->willReturn($header ?? false);
 
-        return new Mode($config, $request);
+        return new Mode($config, $key, $request);
     }
 
-    public function testTheHeaderCountsOnlyWithOverridesAllowed(): void
+    public function testTheHeaderCountsOnlyWithTheKey(): void
     {
         self::assertTrue($this->mode(true, false, 'core')->documents());
         self::assertFalse($this->mode(true, true, 'core')->documents());

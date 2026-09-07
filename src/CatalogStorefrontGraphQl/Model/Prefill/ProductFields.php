@@ -48,16 +48,19 @@ class ProductFields implements PrefillerInterface
                     $filled[$field] = $product->getData($attribute) ?: null;
                 }
             }
-            if ($request->selects('websites') && isset($document['websiteCode'])) {
-                $website = $this->storeManager->getWebsite($document['websiteCode']);
-                $filled['websites'] = [[
-                    'id' => (int)$website->getId(),
-                    'name' => $website->getName(),
-                    'code' => $website->getCode(),
-                    'sort_order' => $website->getSortOrder(),
-                    'default_group_id' => $website->getDefaultGroupId(),
-                    'is_default' => $website->getIsDefault(),
-                ]];
+            if ($request->selects('websites') && isset($document['websiteIds'])) {
+                $filled['websites'] = [];
+                foreach ($document['websiteIds'] as $websiteId) {
+                    $website = $this->storeManager->getWebsite($websiteId);
+                    $filled['websites'][] = [
+                        'id' => (int)$website->getId(),
+                        'name' => $website->getName(),
+                        'code' => $website->getCode(),
+                        'sort_order' => $website->getSortOrder(),
+                        'default_group_id' => $website->getDefaultGroupId(),
+                        'is_default' => $website->getIsDefault(),
+                    ];
+                }
             }
             if ($request->selects('media_gallery_entries')) {
                 // The entries as the model holds them, plus the uid core encodes from the id.

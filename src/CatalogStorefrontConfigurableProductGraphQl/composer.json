@@ -9,7 +9,8 @@
         "magento/module-configurable-product-graph-ql": "*",
         "magento/module-swatches": "*",
         "graphcommerce/module-catalog-storefront-configurable-product": "self.version",
-        "graphcommerce/module-catalog-storefront-graph-ql": "self.version"
+        "graphcommerce/module-catalog-storefront-graph-ql": "self.version",
+        "graphcommerce/module-catalog-storefront-price-graph-ql": "self.version"
     },
     "autoload": {
         "files": [

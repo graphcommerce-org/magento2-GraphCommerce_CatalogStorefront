@@ -2,6 +2,32 @@
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
     <preference for="GraphCommerce\CatalogStorefrontGraphQlApi\Read\HydrationInterface" type="GraphCommerce\CatalogStorefrontGraphQl\Model\DocumentHydration"/>
 
+    <!-- One bearer token read per request; the JWT reader first, so the storefront's token skips the opaque token lookup. -->
+    <type name="Magento\Integration\Model\CompositeTokenReader">
+        <plugin name="graphcommerce_catalog_storefront_user_token_memo" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Request\UserTokenMemo"/>
+        <arguments>
+            <argument name="readers" xsi:type="array">
+                <item name="5" xsi:type="object">Magento\JwtUserToken\Model\Reader</item>
+                <item name="10" xsi:type="object">Magento\Integration\Model\OpaqueToken\Reader</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="Magento\Integration\Model\CompositeUserTokenValidator">
+        <plugin name="graphcommerce_catalog_storefront_user_token_validate_memo" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Request\UserTokenValidateMemo"/>
+    </type>
+    <!-- A customer JWT carries the group and the website; the request context reads them from the token. -->
+    <type name="Magento\Customer\Model\ResourceModel\Customer">
+        <plugin name="graphcommerce_catalog_storefront_revoke_on_group_change" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Token\RevokeOnGroupChange"/>
+    </type>
+    <type name="Magento\JwtUserToken\Model\Issuer">
+        <plugin name="graphcommerce_catalog_storefront_customer_claims_into_token" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Token\CustomerClaimsIntoToken"/>
+    </type>
+    <type name="Magento\CustomerGraphQl\Model\Context\AddUserInfoToContext">
+        <plugin name="graphcommerce_catalog_storefront_customer_context_from_token" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Request\CustomerContextFromToken"/>
+    </type>
+    <type name="Magento\CustomerGraphQl\Model\Context\AddCustomerGroupToContext">
+        <plugin name="graphcommerce_catalog_storefront_customer_group_from_token" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Request\CustomerGroupFromToken"/>
+    </type>
     <type name="Magento\CatalogGraphQl\Model\Resolver\Products\DataProvider\ProductSearch">
         <plugin name="graphcommerce_catalog_storefront_serve_search" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\DataProvider\ServeSearchFromDocuments"/>
     </type>
@@ -70,10 +96,6 @@
                     <item name="image" xsi:type="string">image</item>
                     <item name="small_image" xsi:type="string">small_image</item>
                     <item name="thumbnail" xsi:type="string">thumbnail</item>
-                    <item name="price_range" xsi:type="string">price_range</item>
-                    <item name="price" xsi:type="string">price</item>
-                    <item name="price_tiers" xsi:type="string">price_tiers</item>
-                    <item name="tier_prices" xsi:type="string">tier_prices</item>
                     <item name="websites" xsi:type="string">websites</item>
                     <item name="media_gallery_entries" xsi:type="string">media_gallery_entries</item>
                 </item>
@@ -91,13 +113,6 @@
         <arguments>
             <argument name="prefillers" xsi:type="array">
                 <item name="productFields" xsi:type="object">GraphCommerce\CatalogStorefrontGraphQl\Model\Prefill\ProductFields</item>
-                <item name="prices" xsi:type="object">GraphCommerce\CatalogStorefrontGraphQl\Model\Prefill\Prices</item>
-            </argument>
-            <argument name="priceFields" xsi:type="array">
-                <item name="price_range" xsi:type="string">price_range</item>
-                <item name="price" xsi:type="string">price</item>
-                <item name="price_tiers" xsi:type="string">price_tiers</item>
-                <item name="tier_prices" xsi:type="string">tier_prices</item>
             </argument>
             <argument name="fieldDocumentKeys" xsi:type="array">
                 <item name="description" xsi:type="array"><item name="0" xsi:type="string">description</item></item>

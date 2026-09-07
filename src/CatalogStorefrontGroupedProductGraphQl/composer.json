@@ -8,7 +8,8 @@
         "magento/framework": "*",
         "magento/module-grouped-product-graph-ql": "*",
         "graphcommerce/module-catalog-storefront-grouped-product": "self.version",
-        "graphcommerce/module-catalog-storefront-graph-ql": "self.version"
+        "graphcommerce/module-catalog-storefront-graph-ql": "self.version",
+        "graphcommerce/module-catalog-storefront-price-graph-ql": "self.version"
     },
     "autoload": {
         "files": [

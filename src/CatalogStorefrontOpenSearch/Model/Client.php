@@ -19,6 +19,33 @@ class Client
 {
     private const INDEX_PREFIX = 'catalog/storefront_documents/index_prefix';
 
+    // Per list key: the stored ids minus the removed ones, plus the added ones once, compared as numbers.
+    private const LIST_SCRIPT = <<<'PAINLESS'
+        for (entry in params.changes.entrySet()) {
+            def key = entry.getKey();
+            List result = new ArrayList();
+            if (ctx._source[key] != null) {
+                for (v in ctx._source[key]) {
+                    long id = ((Number) v).longValue();
+                    boolean removed = false;
+                    for (r in entry.getValue().remove) {
+                        if (((Number) r).longValue() == id) { removed = true; }
+                    }
+                    if (!removed) { result.add((int) id); }
+                }
+            }
+            for (a in entry.getValue().add) {
+                long id = ((Number) a).longValue();
+                boolean present = false;
+                for (v in result) {
+                    if (((Number) v).longValue() == id) { present = true; }
+                }
+                if (!present) { result.add((int) id); }
+            }
+            ctx._source[key] = result;
+        }
+        PAINLESS;
+
     private ?OpenSearchClient $client = null;
 
     public function __construct(
@@ -32,6 +59,9 @@ class Client
         return $this->scopeConfig->getValue(self::INDEX_PREFIX) . '_' . $entity . '_' . $storeViewCode;
     }
 
+    /**
+     * Whether an index or an alias of that name exists.
+     */
     public function indexExists(string $index): bool
     {
         return $this->client()->indices()->exists(['index' => $index]);
@@ -45,9 +75,43 @@ class Client
         }
     }
 
-    public function createIndex(string $index, array $mapping): void
+    /**
+     * @param string[] $aliases the aliases the new index carries from the start
+     */
+    public function createIndex(string $index, array $mapping, array $aliases = []): void
     {
-        $this->client()->indices()->create(['index' => $index, 'body' => ['mappings' => $mapping]]);
+        $body = ['mappings' => $mapping];
+        if ($aliases) {
+            $body['aliases'] = array_fill_keys($aliases, new \stdClass());
+        }
+        $this->client()->indices()->create(['index' => $index, 'body' => $body]);
+    }
+
+    /**
+     * @return string[] the indices behind an alias, none for a missing alias or a plain index
+     */
+    public function aliasTargets(string $alias): array
+    {
+        try {
+            return array_keys($this->client()->indices()->getAlias(['name' => $alias]));
+        } catch (Missing404Exception) {
+            return [];
+        }
+    }
+
+    /**
+     * Points an alias at one index in a single atomic alias update.
+     *
+     * @param string[] $from the indices the alias leaves
+     */
+    public function moveAlias(string $alias, array $from, string $to): void
+    {
+        $actions = [];
+        foreach ($from as $index) {
+            $actions[] = ['remove' => ['index' => $index, 'alias' => $alias]];
+        }
+        $actions[] = ['add' => ['index' => $to, 'alias' => $alias]];
+        $this->client()->indices()->updateAliases(['body' => ['actions' => $actions]]);
     }
 
     /**
@@ -72,6 +136,15 @@ class Client
         }
 
         return $documents;
+    }
+
+    public function count(string $index): int
+    {
+        try {
+            return (int)($this->client()->count(['index' => $index])['count'] ?? 0);
+        } catch (Missing404Exception) {
+            return 0;
+        }
     }
 
     public function search(string $index, array $body): array
@@ -110,10 +183,39 @@ class Client
     {
         $body = [];
         foreach ($documents as $id => $document) {
-            $body[] = ['update' => ['_index' => $index, '_id' => (string)$id]];
+            $body[] = ['update' => ['_index' => $index, '_id' => (string)$id, 'retry_on_conflict' => 3]];
             $body[] = ['doc' => ['id' => $id] + $document, 'doc_as_upsert' => true];
         }
         $this->bulk($body);
+    }
+
+    /**
+     * Adds ids to and removes ids from id lists of stored documents, in the
+     * store itself, so two feed threads that touch the same list cannot
+     * lose each other's change. A missing document is created with the
+     * added ids.
+     *
+     * @param array<int|string, array<string, array{add?: int[], remove?: int[]}>> $changes by id and list key
+     */
+    public function updateLists(string $index, array $changes): void
+    {
+        $body = [];
+        foreach ($changes as $id => $byKey) {
+            $upsert = ['id' => $id];
+            $params = [];
+            foreach ($byKey as $key => $change) {
+                $params[$key] = ['add' => array_values($change['add'] ?? []), 'remove' => array_values($change['remove'] ?? [])];
+                $upsert[$key] = $params[$key]['add'];
+            }
+            $body[] = ['update' => ['_index' => $index, '_id' => (string)$id, 'retry_on_conflict' => 3]];
+            $body[] = [
+                'script' => ['lang' => 'painless', 'source' => self::LIST_SCRIPT, 'params' => ['changes' => $params]],
+                'upsert' => $upsert,
+            ];
+        }
+        if ($body) {
+            $this->bulk($body);
+        }
     }
 
     public function delete(string $index, array $ids): void

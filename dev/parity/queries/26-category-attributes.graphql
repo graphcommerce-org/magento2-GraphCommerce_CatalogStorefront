@@ -1,0 +1,13 @@
+query {
+  categoryList(filters: { ids: { eq: "20" } }) {
+    id
+    name
+    seo_text
+    meta_title
+    children {
+      id
+      name
+      seo_text
+    }
+  }
+}

@@ -59,7 +59,8 @@ jobs:
           MAGENTO_ROOT=${{ steps.magento.outputs.path }} php phpunit.phar -c phpunit.xml.dist
 
   # The parity gate: a Mage-OS install with sample data and OpenSearch, the feeds exported into the
-  # document store, every query of dev/parity/queries on both paths, in the three price setups.
+  # document store, every query of dev/parity/queries on both paths, in the three price setups,
+  # as a guest, as a signed-in customer and on a second website's store view.
   parity:
     needs: [matrix, unit]
     strategy:
@@ -125,15 +126,22 @@ jobs:
           sleep 3
           TOKEN=$(curl -s -X POST http://127.0.0.1:8080/rest/V1/integration/admin/token -H 'Content-Type: application/json' -d '{"username":"parity","password":"Parity12345"}' | tr -d '"')
           curl -s -o /dev/null -w 'fixture: %{http_code}\n' -X POST http://127.0.0.1:8080/rest/V1/products -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d @${{ github.workspace }}/dev/parity/fixtures/bundle-fixed.json
+          # A signed-in customer with a Michigan address, the demo catalog's only tax rule.
+          curl -s -o /dev/null -w 'customer: %{http_code}\n' -X POST http://127.0.0.1:8080/rest/V1/customers -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"customer":{"email":"customer@example.com","firstname":"Parity","lastname":"Customer","website_id":1,"group_id":1,"addresses":[{"firstname":"Parity","lastname":"Customer","street":["1 Main St"],"city":"Detroit","region":{"region_id":33},"postcode":"48201","country_id":"US","telephone":"5555555555","default_billing":true,"default_shipping":true}]},"password":"Parity12345!"}'
           mysql --host 127.0.0.1 --port ${{ job.services.mysql.ports['3306'] }} -u root -prootpassword magento -e "
             UPDATE cataloginventory_stock_item SET qty = 1 WHERE product_id = (SELECT entity_id FROM catalog_product_entity WHERE sku = '24-WG01');
             UPDATE inventory_source_item SET quantity = 1 WHERE sku = '24-WG01';"
+          # A second website with the store view "second" that sells every product.
+          php ${{ github.workspace }}/dev/parity/fixtures/second-store.php
+          # A reduced product tax class on one variant of WJ02, so a composite mixes child tax classes.
+          php ${{ github.workspace }}/dev/parity/fixtures/reduced-tax-class.php
+          # A custom category attribute with a value, so the category queries select a field GraphQL adds for it.
+          php ${{ github.workspace }}/dev/parity/fixtures/category-attribute.php
       - name: Configure and export the feeds
         working-directory: ${{ steps.magento.outputs.path }}
         run: |
           bin/magento config:set catalog/storefront_documents/index_enabled 1
-          bin/magento config:set catalog/storefront_documents/request_override 1
-          bin/magento config:set catalog/storefront_documents/strict 1
+          bin/magento config:set catalog/storefront_documents/key parity-gate
           bin/magento config:set currency/options/allow USD,EUR
           mysql --host 127.0.0.1 --port ${{ job.services.mysql.ports['3306'] }} -u root -prootpassword magento -e "INSERT INTO directory_currency_rate (currency_from, currency_to, rate) VALUES ('USD', 'EUR', 0.85)"
           for pair in ${{ matrix.prices.set }}; do bin/magento config:set "${pair%%=*}" "${pair#*=}"; done
@@ -142,3 +150,11 @@ jobs:
       - name: Parity gate
         working-directory: ${{ steps.magento.outputs.path }}
         run: bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql
+      - name: Signed-in parity gate
+        working-directory: ${{ steps.magento.outputs.path }}
+        run: |
+          CUSTOMER_TOKEN=$(curl -s -X POST http://127.0.0.1:8080/graphql -H 'Content-Type: application/json' -d '{"query":"mutation { generateCustomerToken(email: \"customer@example.com\", password: \"Parity12345!\") { token } }"}' | php -r 'echo json_decode(stream_get_contents(STDIN), true)["data"]["generateCustomerToken"]["token"] ?? exit(1);')
+          bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql --header "Authorization: Bearer $CUSTOMER_TOKEN"
+      - name: Parity gate on the second store view
+        working-directory: ${{ steps.magento.outputs.path }}
+        run: bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql --header "Store: second"

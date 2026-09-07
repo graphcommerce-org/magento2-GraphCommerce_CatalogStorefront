@@ -23,9 +23,18 @@ interface MetadataDocumentStorageInterface
     public function delete(string $entity, string $storeViewCode, array $ids): void;
 
     /**
-     * Removes the entity's documents of the store view as a whole; the next write starts a fresh store.
+     * A fresh, empty index takes the writes of the entity in the store view;
+     * the reads stay on the current documents until promote().
      */
-    public function drop(string $entity, string $storeViewCode): void;
+    public function stage(string $entity, string $storeViewCode): void;
+
+    /**
+     * The staged documents serve the reads from now on; the ones they replace
+     * are deleted.
+     */
+    public function promote(string $entity, string $storeViewCode): void;
+
+    public function count(string $entity, string $storeViewCode): int;
 
     /**
      * @param array<int|string> $ids
@@ -47,6 +56,14 @@ interface MetadataDocumentStorageInterface
      * @return array{documents: array<int|string, array>, total: int} the page keyed by id, and the match count
      */
     public function find(string $entity, string $storeViewCode, array $filter, array $sort, int $from, int $size): array;
+
+    /**
+     * The documents matching one of the alternatives, each a filter as find() takes it, up to the result window.
+     *
+     * @param array<int, array<string, scalar|scalar[]>> $alternatives
+     * @return array<int|string, array> keyed by id
+     */
+    public function any(string $entity, string $storeViewCode, array $alternatives): array;
 
     /**
      * The document count and the average of a declared field per group.

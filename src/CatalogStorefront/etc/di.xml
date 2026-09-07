@@ -7,11 +7,12 @@
         <arguments>
             <argument name="commands" xsi:type="array">
                 <item name="catalog_storefront_rebuild" xsi:type="object">GraphCommerce\CatalogStorefront\Console\Command\Rebuild</item>
+                <item name="catalog_storefront_status" xsi:type="object">GraphCommerce\CatalogStorefront\Console\Command\Status</item>
             </argument>
         </arguments>
     </type>
-    <!-- The feeds a rebuild of an entity re-exports; a module adds the feeds it writes. -->
-    <type name="GraphCommerce\CatalogStorefront\Console\Command\Rebuild">
+    <!-- The feeds that write each entity; a module adds the feeds it writes. -->
+    <type name="GraphCommerce\CatalogStorefront\Model\Feeds">
         <arguments>
             <argument name="feeds" xsi:type="array">
                 <item name="product" xsi:type="array">
@@ -36,6 +37,34 @@
                 <item name="categories" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Writer\Categories</item>
                 <item name="productAttributes" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Writer\Attributes</item>
             </argument>
+            <!-- The cache tags a feed batch purges after its write: cat_p is the product tag, cat_c the category tag. -->
+            <argument name="identities" xsi:type="array">
+                <item name="products" xsi:type="array">
+                    <item name="cat_p" xsi:type="array">
+                        <item name="productId" xsi:type="string">productId</item>
+                    </item>
+                </item>
+                <item name="prices" xsi:type="array">
+                    <item name="cat_p" xsi:type="array">
+                        <item name="productId" xsi:type="string">productId</item>
+                    </item>
+                </item>
+                <item name="categories" xsi:type="array">
+                    <item name="cat_c" xsi:type="array">
+                        <item name="categoryId" xsi:type="string">categoryId</item>
+                    </item>
+                </item>
+            </argument>
+        </arguments>
+    </type>
+    <!-- A new customer group re-exports the prices feed, so every price index gets the group's entry. -->
+    <type name="Magento\Customer\Api\GroupRepositoryInterface">
+        <plugin name="graphcommerce_catalog_storefront_prices_feed_on_new_group" type="GraphCommerce\CatalogStorefront\Plugin\Customer\PricesFeedOnNewGroup"/>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Plugin\Customer\PricesFeedOnNewGroup">
+        <arguments>
+            <argument name="feed" xsi:type="object">Magento\ProductPriceDataExporter\Model\Indexer\ProductPriceFeedIndexMetadata</argument>
+            <argument name="indexerId" xsi:type="string">catalog_data_exporter_product_prices</argument>
         </arguments>
     </type>
     <type name="GraphCommerce\CatalogStorefront\Model\Document\Writer\Products">
@@ -43,6 +72,7 @@
             <argument name="fields" xsi:type="array">
                 <item name="imageUrls" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Field\ImageUrls</item>
                 <item name="taxClassId" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Field\TaxClassId</item>
+                <item name="websiteIds" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Field\WebsiteIds</item>
             </argument>
         </arguments>
     </type>
@@ -70,12 +100,13 @@
                     <item name="bundleParentIds" xsi:type="string">keyword</item>
                     <item name="status" xsi:type="string">keyword</item>
                     <item name="stock.isSalable" xsi:type="string">boolean</item>
+                    <item name="taxClassId" xsi:type="string">keyword</item>
                     <item name="priceIndex" xsi:type="array">
                         <item name="type" xsi:type="string">nested</item>
                         <item name="fields" xsi:type="array">
                             <item name="group" xsi:type="string">keyword</item>
-                            <item name="regular" xsi:type="string">float</item>
-                            <item name="final" xsi:type="string">float</item>
+                            <item name="regular" xsi:type="string">double</item>
+                            <item name="final" xsi:type="string">double</item>
                         </item>
                     </item>
                 </item>
@@ -88,15 +119,13 @@
                     <item name="isActive" xsi:type="string">integer</item>
                     <item name="level" xsi:type="string">integer</item>
                 </item>
-            </argument>
-        </arguments>
-    </type>
-    <!-- Read side shared by every frontend. -->
-    <type name="GraphCommerce\CatalogStorefront\Model\Read\PriceRanges">
-        <arguments>
-            <argument name="ranges" xsi:type="array">
-                <item name="simple" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Read\Price\SingleRange</item>
-                <item name="virtual" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Read\Price\SingleRange</item>
+                <item name="attribute" xsi:type="array">
+                    <item name="id" xsi:type="string">keyword</item>
+                    <item name="attributeId" xsi:type="string">integer</item>
+                    <item name="frontendInput" xsi:type="string">keyword</item>
+                    <item name="filterableMode" xsi:type="string">integer</item>
+                    <item name="options.id" xsi:type="string">keyword</item>
+                </item>
             </argument>
         </arguments>
     </type>
@@ -106,11 +135,19 @@
     <type name="Magento\Catalog\Model\Layer\Filter\Price\Range">
         <plugin name="graphcommerce_catalog_storefront_price_step" type="GraphCommerce\CatalogStorefront\Plugin\Layer\PriceRangeStepFromDocument"/>
     </type>
+    <!-- The `single` price navigation step calculation: one range, served from the search response. -->
+    <type name="Magento\Framework\Search\Dynamic\Algorithm\Repository">
+        <arguments>
+            <argument name="algorithms" xsi:type="array">
+                <item name="single" xsi:type="string">GraphCommerce\CatalogStorefront\Model\Layer\SingleRange</item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="Magento\Elasticsearch\SearchAdapter\Aggregation\Builder\Dynamic">
+        <plugin name="graphcommerce_catalog_storefront_single_price_range" type="GraphCommerce\CatalogStorefront\Plugin\Layer\SingleRangeFromResponse"/>
+    </type>
     <type name="Magento\Elasticsearch\Model\Adapter\FieldMapper\FieldMapperResolver">
         <plugin name="graphcommerce_catalog_storefront_field_name_memo" type="GraphCommerce\CatalogStorefront\Plugin\Search\FieldNameMemo"/>
-    </type>
-    <type name="Magento\Framework\DB\Adapter\Pdo\Mysql">
-        <plugin name="graphcommerce_catalog_storefront_statement_recorder" type="GraphCommerce\CatalogStorefront\Plugin\Db\StatementRecorder"/>
     </type>
     <type name="Magento\Search\Model\Query">
         <plugin name="graphcommerce_catalog_storefront_search_term_recording" type="GraphCommerce\CatalogStorefront\Plugin\Search\SearchTermRecording"/>

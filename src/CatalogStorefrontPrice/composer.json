@@ -1,0 +1,25 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-price",
+    "description": "How a document price becomes the amount a request displays: currency, tax and the price ranges",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-catalog": "*",
+        "magento/module-catalog-inventory": "*",
+        "magento/module-store": "*",
+        "magento/module-tax": "*",
+        "magento/module-weee": "*",
+        "graphcommerce/module-catalog-storefront-api": "self.version",
+        "graphcommerce/module-catalog-storefront": "self.version"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontPrice\\": ""
+        }
+    }
+}

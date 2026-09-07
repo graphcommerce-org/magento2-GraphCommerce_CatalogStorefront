@@ -3,16 +3,19 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontGroupedProduct\Model\Read;
 
-use GraphCommerce\CatalogStorefront\Model\Read\DisplayPrice;
+use GraphCommerce\CatalogStorefrontPrice\Model\Read\DisplayPrice;
+use GraphCommerce\CatalogStorefrontApi\Read\Amount;
 use GraphCommerce\CatalogStorefrontApi\Read\DocumentContext;
 use GraphCommerce\CatalogStorefrontApi\Read\PriceRangeInterface;
 use Magento\Catalog\Model\Product;
 
 /**
  * Core takes, over the associated products, the lowest regular and the
- * lowest final price each on its own, and the maximum equals the minimum;
+ * lowest final base price each on its own, taxes each with the tax class of
+ * the child that carries it, and the maximum equals the minimum;
  * out-of-stock children count only when out-of-stock products are shown.
- * The range is taxed with the grouped product's own tax class.
+ * When children of different tax classes share the lowest base price, the
+ * lowest taxed amount is taken; core takes the last child in position order.
  */
 class GroupedRange implements PriceRangeInterface
 {
@@ -28,8 +31,23 @@ class GroupedRange implements PriceRangeInterface
         if ($range === null) {
             return null;
         }
-        $regular = $this->displayPrice->regular($range[0], $product, $context->store);
-        $final = $this->displayPrice->final($range[1], $range[0], $product, $context->store);
+        $byTaxClass = $range[4] ?? [];
+        if (!$byTaxClass) {
+            $byTaxClass = [(int)$product->getTaxClassId() => $range];
+        }
+        $regular = null;
+        $final = null;
+        foreach ($byTaxClass as $taxClassId => [$minRegular, $minFinal]) {
+            $child = $this->displayPrice->forTaxClass($product, $taxClassId ?: null);
+            if ($minRegular <= $range[0]) {
+                $amount = $this->displayPrice->regular($minRegular, $child, $context->store);
+                $regular = $regular === null || $amount->value < $regular->value ? $amount : $regular;
+            }
+            if ($minFinal <= $range[1]) {
+                $amount = $this->displayPrice->final($minFinal, $minRegular, $child, $context->store);
+                $final = $final === null || $amount->value < $final->value ? $amount : $final;
+            }
+        }
 
         return [$regular, $final, $regular, $final];
     }

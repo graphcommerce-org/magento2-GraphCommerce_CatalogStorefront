@@ -3,6 +3,7 @@
     <module name="GraphCommerce_CatalogStorefrontBundleProduct">
         <sequence>
             <module name="GraphCommerce_CatalogStorefront"/>
+            <module name="GraphCommerce_CatalogStorefrontPrice"/>
             <module name="Magento_BundleProductDataExporter"/>
         </sequence>
     </module>

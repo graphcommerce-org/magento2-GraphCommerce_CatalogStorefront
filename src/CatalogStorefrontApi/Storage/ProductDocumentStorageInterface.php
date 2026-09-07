@@ -24,9 +24,27 @@ interface ProductDocumentStorageInterface
     public function delete(string $storeViewCode, array $ids): void;
 
     /**
-     * Removes the store view's documents as a whole; the next write starts a fresh store.
+     * A fresh, empty index takes the writes of the store view; the reads stay
+     * on the current documents until promote().
      */
-    public function drop(string $storeViewCode): void;
+    public function stage(string $storeViewCode): void;
+
+    /**
+     * The staged documents serve the reads from now on; the ones they replace
+     * are deleted.
+     */
+    public function promote(string $storeViewCode): void;
+
+    /**
+     * Adds ids to and removes ids from id lists of stored documents in the
+     * store itself, so parallel writers cannot lose each other's change; a
+     * missing document is created with the added ids.
+     *
+     * @param array<int, array<string, array{add?: int[], remove?: int[]}>> $changes by product id and list key
+     */
+    public function updateLists(string $storeViewCode, array $changes): void;
+
+    public function count(string $storeViewCode): int;
 
     /**
      * @param int[] $ids
@@ -40,6 +58,20 @@ interface ProductDocumentStorageInterface
      * @return array<int, array> the documents that exist, keyed by product id
      */
     public function findBySku(string $storeViewCode, array $skus): array;
+
+    /**
+     * The documents as a writer sees them: read from the index that takes the
+     * writes, which during a rebuild is the staged one. A writer that merges
+     * into stored documents reads here, never through get().
+     *
+     * @return array<int, array> by product id
+     */
+    public function stored(string $storeViewCode, array $ids, array $fields = []): array;
+
+    /**
+     * @return array<int, array> by product id, the writer's view as stored()
+     */
+    public function storedBySku(string $storeViewCode, array $skus): array;
 
     /**
      * The documents of a listing page in one round trip and, when a group key

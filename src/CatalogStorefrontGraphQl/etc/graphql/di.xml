@@ -16,4 +16,17 @@
             </argument>
         </arguments>
     </type>
+    <!-- The session cleanup after dispatch reads the customer from the token's claims, not from two customer loads. -->
+    <type name="Magento\GraphQl\Controller\GraphQl">
+        <plugin name="ClearCustomerSessionAfterRequest" disabled="true"/>
+        <plugin name="graphcommerce_catalog_storefront_customer_session_after_dispatch" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Request\CustomerSessionAfterDispatch" sortOrder="1"/>
+    </type>
+    <type name="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Request\CustomerSessionAfterDispatch">
+        <arguments>
+            <argument name="session" xsi:type="object">Magento\Customer\Model\Session\Proxy</argument>
+        </arguments>
+    </type>
+    <type name="Magento\Customer\Model\Session">
+        <plugin name="graphcommerce_catalog_storefront_customer_id_check_from_token" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Request\CustomerIdCheckFromToken"/>
+    </type>
 </config>

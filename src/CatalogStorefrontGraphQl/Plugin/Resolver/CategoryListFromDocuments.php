@@ -6,6 +6,7 @@ namespace GraphCommerce\CatalogStorefrontGraphQl\Plugin\Resolver;
 use GraphCommerce\CatalogStorefrontGraphQl\Model\CategoryDocuments;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\HydrationInterface;
 use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
+use Magento\CatalogGraphQl\Model\Resolver\CategoryList;
 use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Query\Resolver\ContextInterface;
 use Magento\Framework\GraphQl\Query\ResolverInterface;
@@ -16,9 +17,10 @@ use GraphCommerce\CatalogStorefront\Model\Strict;
 /**
  * Serves the categories and categoryList queries from the category documents:
  * the active categories matching the id, uid, url key, url path or parent
- * filters, by position then id, paged as asked, each with its breadcrumbs
- * and its active children to the depth the query selects. A name match or
- * a page past the end keeps the core path, which reports it.
+ * filters, by position then id, each with its breadcrumbs and its active
+ * children to the depth the query selects: categories paged as asked in its
+ * items, categoryList as the plain list of every match. A name match or a
+ * page past the end keeps the core path, which reports it.
  */
 class CategoryListFromDocuments
 {
@@ -32,6 +34,7 @@ class CategoryListFromDocuments
     ];
 
     private const DEFAULT_PAGE_SIZE = 20;
+    private const ALL = 10000;
 
     public function __construct(
         private readonly HydrationInterface $hydration,
@@ -51,8 +54,9 @@ class CategoryListFromDocuments
         ?array $value = null,
         ?array $args = null
     ) {
-        $pageSize = (int)($args['pageSize'] ?? self::DEFAULT_PAGE_SIZE);
-        $currentPage = (int)($args['currentPage'] ?? 1);
+        $list = $subject instanceof CategoryList;
+        $pageSize = $list ? self::ALL : (int)($args['pageSize'] ?? self::DEFAULT_PAGE_SIZE);
+        $currentPage = $list ? 1 : (int)($args['currentPage'] ?? 1);
         $filter = $this->filter($args, $context);
         if (!$this->hydration->enabled() || $pageSize < 1 || $currentPage < 1) {
             return $proceed($field, $context, $info, $value, $args);
@@ -74,12 +78,12 @@ class CategoryListFromDocuments
                 $pageSize
             );
             $totalPages = (int)ceil($total / $pageSize);
-            if ($currentPage > $totalPages && $total > 0) {
+            if (!$list && $currentPage > $totalPages && $total > 0) {
                 $this->strict->fallback(self::class, 'page past the last page');
                 return $proceed($field, $context, $info, $value, $args);
             }
             $documents = array_combine(array_map('intval', array_keys($documents)), $documents);
-            $selection = (array)($info->getFieldSelection(20)['items'] ?? []);
+            $selection = $list ? $info->getFieldSelection(20) : (array)($info->getFieldSelection(20)['items'] ?? []);
             $categories = $this->categoryDocuments->hydrate($store, $documents, array_keys($selection));
             $this->categoryDocuments->breadcrumbs($store, $categories, $documents);
             $this->categoryDocuments->children($store, $categories, $documents, $this->depth($selection), $this->childFields($selection));
@@ -89,7 +93,7 @@ class CategoryListFromDocuments
             return $proceed($field, $context, $info, $value, $args);
         }
 
-        return [
+        return $list ? array_values($categories) : [
             'items' => array_values($categories),
             'total_count' => $total,
             'page_info' => ['total_pages' => $totalPages, 'page_size' => $pageSize, 'current_page' => $currentPage],

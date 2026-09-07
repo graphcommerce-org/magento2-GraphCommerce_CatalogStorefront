@@ -1,0 +1,20 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-profiler",
+    "description": "Times the document store client of the catalog read model in a MageOS_Profiler trace",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "mage-os/module-profiler": "*",
+        "graphcommerce/module-catalog-storefront-open-search": "self.version"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontProfiler\\": ""
+        }
+    }
+}

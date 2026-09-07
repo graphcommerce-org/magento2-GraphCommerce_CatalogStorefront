@@ -13,10 +13,14 @@ from a document, and the gate below proves it.
 
 ## The rule
 
-A GraphQL request MUST NOT run a SQL lookup for catalog data. Index time (feed
+Two levels. In the monolith a GraphQL request SHOULD answer catalog data from
+documents and MAY read the database where a document cannot; a MageOS_Profiler
+trace shows every statement. On a deployment whose read side has no catalog
+database a request MUST NOT run a SQL lookup for catalog data. Build for the
+second level: it is compatible with both. Index time (feed
 providers, writers, document fields) MAY run SQL. When a document cannot answer
-a field, hand the call to the core resolver; never read the database yourself on
-the request path. Nothing derived from catalog data may live longer than one
+a field, hand the call to the core resolver; never read the database yourself in
+a document plugin. Nothing derived from catalog data may live longer than one
 request: a per-request memo implements `ResetAfterRequestInterface`.
 
 ## Decide what you have
@@ -69,7 +73,7 @@ copy the pattern, not the code.
   entity name to field name to `keyword`, `integer`, `float`, `boolean` or
   `date`. Only declared fields filter, sort and aggregate; every other field
   stays in the source. Example: `CatalogStorefrontReview/etc/di.xml`. A mapping
-  change needs the index dropped and the feed re-exported.
+  change needs a rebuild (`catalog-storefront:rebuild <entity>`).
 
 ## Request time
 
@@ -128,35 +132,34 @@ core modules they plug into, so a shop without them leaves yours disabled.
    into the query; see `21-` to `24-` for the shape.
 2. Re-export what changed: truncate the feed table (`cde_products_feed`,
    `cde_categories_feed`, `inventory_data_exporter_stock_status_feed`, ...) and
-   reindex the feed; after a mapping change, drop the entity's index first.
+   reindex the feed; after a mapping change, `catalog-storefront:rebuild <entity>`.
 3. Compile after di.xml changes, flush the host and the worker caches, restart
    the worker, reload the host php-fpm masters after a module link changes.
-4. Turn on Allow Request Override and Strict Mode (Catalog > Catalog > Catalog
-   Storefront Document Store), then run the gate:
+4. Save Catalog > Catalog > Catalog Storefront Document Store once, so the
+   storefront key exists, then run the gate:
 
    ```sh
    bin/magento catalog-storefront:parity https://<host>/graphql
    ```
 
    It runs every query on the core path and the document path (the
-   `X-Catalog-Storefront` header picks the path per request), warms each query
-   twice, and reports per query: `PASS`, `DIFF` with the differing fields, `SQL`
-   with the statements the document path ran (a failure), `FALLBACK` with the
-   reason a plugin handed a field to core (printed), `WRITE` for a write
-   (printed, allowed). `--dump=<dir>` keeps both responses. A query file sends
-   its own headers through `# @header Content-Currency: EUR` lines.
+   `X-Catalog-Storefront` header picks the path per request, under the key),
+   warms each query twice, and reports per query: `PASS`, `DIFF` with the
+   differing fields, `FALLBACK` with the reason a plugin handed a field to core
+   (printed). `--dump=<dir>` keeps both responses. A query file sends its own
+   headers through `# @header Content-Currency: EUR` lines.
 5. A `DIFF` is yours to explain: match core byte for byte, or document the
-   deviation in CLAUDE.md under known deviations with the reason. A `SQL` line
-   means a lookup escaped: find the resolver in the statement's stack through
-   `dev/attribution/run.sh`, which prints the resolver classes and their SQL
-   per request. A `FALLBACK` line on a field you serve means the document
-   lacks what the field needs: put it on the document.
+   deviation in CLAUDE.md under known deviations with the reason. A `FALLBACK`
+   line on a field you serve means the document lacks what the field needs: put
+   it on the document. A statement your field runs shows in a MageOS_Profiler
+   trace, or through `dev/attribution/run.sh`, which prints the resolver classes
+   and their SQL per request.
 6. Poison test one field: edit its value in the document, request it, see the
    edited value. The gate proves equality, not that the document is the source.
 
 ## Checklist
 
-- No SQL on the request path, fallback to `$proceed` only, reported through `Strict`.
+- Documents first on the request path, fallback to `$proceed` only, reported through `Strict`.
 - Every `using` field returned by every provider row.
 - Arrays on the product document bounded per product; unbounded data is an entity.
 - Fields registered: `prefilledFields`, and `baseFields` or `fieldDocumentKeys`.

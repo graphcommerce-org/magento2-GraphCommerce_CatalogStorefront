@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- The range of a product by type id; a type module adds its own. -->
+    <type name="GraphCommerce\CatalogStorefrontPrice\Model\Read\PriceRanges">
+        <arguments>
+            <argument name="ranges" xsi:type="array">
+                <item name="simple" xsi:type="object">GraphCommerce\CatalogStorefrontPrice\Model\Read\Price\SingleRange</item>
+                <item name="virtual" xsi:type="object">GraphCommerce\CatalogStorefrontPrice\Model\Read\Price\SingleRange</item>
+            </argument>
+        </arguments>
+    </type>
+</config>

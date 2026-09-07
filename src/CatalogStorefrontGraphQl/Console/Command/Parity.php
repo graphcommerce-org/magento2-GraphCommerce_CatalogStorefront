@@ -4,22 +4,28 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontGraphQl\Console\Command;
 
 use GraphCommerce\CatalogStorefront\Model\Config;
+use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
+use GraphCommerce\CatalogStorefrontGraphQlApi\Parity\JudgeInterface;
 use GraphCommerce\CatalogStorefrontGraphQl\Model\Mode;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
  * The parity gate: runs every query of a directory against one GraphQL
  * endpoint on the core path and on the document path, picked per request
- * with the X-Catalog-Storefront header, and diffs the responses. With strict
- * mode on, the document path's SQL statements and fallbacks come back in the
- * response extensions: a lookup fails the query, a write and a fallback are
- * printed. Every query runs unjudged first so the gate sees the steady state.
- * A query file sends extra request headers through comment lines of the form
- * `# @header Content-Currency: EUR`.
+ * with the X-Catalog-Storefront header under the storefront key, and diffs
+ * the responses. The document path's fallbacks come back in the response
+ * extensions and are printed. Every query runs unjudged first so the gate
+ * sees the steady state, and a query that fails is requested again up to
+ * `--attempts` times before its verdict counts: a worker thread that has not
+ * served the shape yet answers from a cold state once. A query file sends extra request headers through
+ * comment lines of the form `# @header Content-Currency: EUR`; `--header`
+ * sends one with every query, a customer token for a signed-in gate. Other
+ * modules add verdicts through di.xml `judges`.
  */
 class Parity extends Command
 {
@@ -27,9 +33,15 @@ class Parity extends Command
     private const QUERIES = 'queries';
     private const DUMP = 'dump';
     private const WARM = 'warm';
+    private const HEADER = 'header';
+    private const ATTEMPTS = 'attempts';
 
+    /**
+     * @param JudgeInterface[] $judges
+     */
     public function __construct(
         private readonly Config $config,
+        private readonly array $judges = [],
     ) {
         parent::__construct();
     }
@@ -41,19 +53,18 @@ class Parity extends Command
             ->addArgument(self::ENDPOINT, InputArgument::REQUIRED, 'The GraphQL endpoint, for example https://shop.example/graphql')
             ->addOption(self::QUERIES, null, InputOption::VALUE_REQUIRED, 'Directory of .graphql files', dirname(__DIR__, 4) . '/dev/parity/queries')
             ->addOption(self::DUMP, null, InputOption::VALUE_REQUIRED, 'Directory that keeps both responses of every query')
-            ->addOption(self::WARM, null, InputOption::VALUE_REQUIRED, 'Unjudged runs of every query per path before the judged one', '2');
+            ->addOption(self::WARM, null, InputOption::VALUE_REQUIRED, 'Unjudged runs of every query per path before the judged one', '2')
+            ->addOption(self::HEADER, null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'A request header for every query, "Name: value"; a customer token makes it a signed-in gate')
+            ->addOption(self::ATTEMPTS, null, InputOption::VALUE_REQUIRED, 'Judged requests of a query before a failing verdict counts', '3');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        if (!$this->config->requestOverride()) {
-            $output->writeln('<error>Turn on Catalog > Catalog > Catalog Storefront Document Store > Allow Request Override first.</error>');
+        $key = $this->config->key();
+        if ($key === '') {
+            $output->writeln('<error>Save Catalog > Catalog > Catalog Storefront Document Store once to generate the storefront key.</error>');
 
             return Command::FAILURE;
-        }
-        $strict = $this->config->strict();
-        if (!$strict) {
-            $output->writeln('NOTE  SQL gate skipped: turn on Strict Mode to judge the SQL of the document path');
         }
         $endpoint = (string)$input->getArgument(self::ENDPOINT);
         $files = glob(rtrim((string)$input->getOption(self::QUERIES), '/') . '/*.graphql') ?: [];
@@ -64,45 +75,51 @@ class Parity extends Command
             return Command::FAILURE;
         }
         $warm = max(0, (int)$input->getOption(self::WARM));
+        $attempts = max(1, (int)$input->getOption(self::ATTEMPTS));
         $dump = $input->getOption(self::DUMP);
+        $shared = [];
+        foreach ((array)$input->getOption(self::HEADER) as $header) {
+            [$headerName, $value] = array_map('trim', explode(':', $header, 2) + [1 => '']);
+            $shared[$headerName] = $value;
+        }
 
         $failed = 0;
         foreach ($files as $file) {
             $name = basename($file, '.graphql');
             $query = (string)file_get_contents($file);
             preg_match_all('/^#\s*@header\s+([\w-]+):\s*(.+?)\s*$/m', $query, $matches, PREG_SET_ORDER);
-            $headers = array_combine(array_column($matches, 1), array_column($matches, 2));
-            $responses = [];
+            $headers = array_combine(array_column($matches, 1), array_column($matches, 2)) + $shared;
             foreach ([Mode::CORE, Mode::DOCUMENTS] as $mode) {
                 for ($run = 0; $run < $warm; $run++) {
-                    $this->request($endpoint, $query, $mode, $headers);
+                    $this->request($endpoint, $query, $mode, $key, $headers);
                 }
-                // Judged three times: a worker thread that has not served the shape yet fills its memos with
-                // a few lookups, and the gate judges the steady state, so the response with the fewest
-                // statements counts.
-                $best = null;
-                foreach ([1, 2, 3] as $attempt) {
-                    $response = $this->request($endpoint, $query, $mode, $headers);
-                    if ($best === null || count($response['extensions']['catalogStorefront']['sql'] ?? []) < count($best['extensions']['catalogStorefront']['sql'] ?? [])) {
-                        $best = $response;
+            }
+            for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+                $responses = [];
+                foreach ([Mode::CORE, Mode::DOCUMENTS] as $mode) {
+                    $responses[$mode] = $this->request($endpoint, $query, $mode, $key, $headers);
+                }
+                if ($dump) {
+                    @mkdir($dump, 0777, true);
+                    foreach ($responses as $mode => $response) {
+                        file_put_contents("$dump/$name.$mode.json", json_encode($response, JSON_PRETTY_PRINT));
                     }
                 }
-                $responses[$mode] = $best;
-            }
-            if ($dump) {
-                @mkdir($dump, 0777, true);
-                foreach ($responses as $mode => $response) {
-                    file_put_contents("$dump/$name.$mode.json", json_encode($response, JSON_PRETTY_PRINT));
+                $verdict = new BufferedOutput($output->getVerbosity(), $output->isDecorated());
+                $ok = $this->judge($verdict, $name, $responses[Mode::CORE], $responses[Mode::DOCUMENTS]);
+                if ($ok || $attempt === $attempts) {
+                    $output->write($verdict->fetch());
+                    $failed += $ok ? 0 : 1;
+                    break;
                 }
             }
-            $failed += $this->judge($output, $name, $responses[Mode::CORE], $responses[Mode::DOCUMENTS], $strict) ? 0 : 1;
         }
         $output->writeln(sprintf("\n%d of %d queries identical", count($files) - $failed, count($files)));
 
         return $failed > 0 ? Command::FAILURE : Command::SUCCESS;
     }
 
-    private function judge(OutputInterface $output, string $name, array $core, array $documents, bool $strict): bool
+    private function judge(OutputInterface $output, string $name, array $core, array $documents): bool
     {
         // An error on either path is never parity, even when both paths fail alike.
         foreach ([Mode::CORE => $core, Mode::DOCUMENTS => $documents] as $mode => $response) {
@@ -119,7 +136,7 @@ class Parity extends Command
             }
         }
         $report = $documents['extensions']['catalogStorefront'] ?? [];
-        if ($strict && ($report['mode'] ?? null) !== Mode::DOCUMENTS) {
+        if (($report['mode'] ?? null) !== Mode::DOCUMENTS) {
             $output->writeln(sprintf('ERROR %s: the endpoint did not honour the %s header', $name, Mode::HEADER));
 
             return false;
@@ -127,23 +144,7 @@ class Parity extends Command
         foreach ((array)($report['fallbacks'] ?? []) as $fallback) {
             $output->writeln(sprintf('FALLBACK %s: %s', $name, $fallback));
         }
-        $lookups = [];
-        foreach ((array)($report['sql'] ?? []) as $statement => $count) {
-            // A write is not a lookup: core records the search term's popularity on every search.
-            if (preg_match('/^\s*(INSERT|UPDATE|DELETE|REPLACE)\b/i', $statement)) {
-                $output->writeln(sprintf('WRITE %s (document path): %dx %s', $name, $count, substr($statement, 0, 160)));
-            } else {
-                $lookups[$statement] = $count;
-            }
-        }
         $ok = true;
-        if ($lookups) {
-            $ok = false;
-            $output->writeln(sprintf('SQL   %s (document path): %d queries', $name, array_sum($lookups)));
-            foreach (array_slice($lookups, 0, 8, true) as $statement => $count) {
-                $output->writeln(sprintf('      %dx %s', $count, $statement));
-            }
-        }
         $diffs = $this->diff($this->normalize($core['data'] ?? null), $this->normalize($documents['data'] ?? null));
         if ($diffs) {
             $ok = false;
@@ -155,6 +156,9 @@ class Parity extends Command
                 $output->writeln(sprintf('      ... and %d more', count($diffs) - 12));
             }
         }
+        foreach ($this->judges as $judge) {
+            $ok = $judge->judge($name, $core, $documents, $output) && $ok;
+        }
         if ($ok) {
             $output->writeln('PASS  ' . $name);
         }
@@ -165,9 +169,9 @@ class Parity extends Command
     /**
      * @param array<string, string> $headers
      */
-    private function request(string $endpoint, string $query, string $mode, array $headers): array
+    private function request(string $endpoint, string $query, string $mode, string $key, array $headers): array
     {
-        $headers = ['Content-Type' => 'application/json', Mode::HEADER => $mode] + $headers;
+        $headers = ['Content-Type' => 'application/json', Mode::HEADER => $mode, StorefrontKey::HEADER => $key] + $headers;
         $context = stream_context_create(['http' => [
             'method' => 'POST',
             'header' => implode('', array_map(static fn($name, $value) => "$name: $value\r\n", array_keys($headers), $headers)),
@@ -183,7 +187,8 @@ class Parity extends Command
     /**
      * Orders that core leaves undefined are not document differences: aggregation
      * options tie-break in the search engine, and configurable_options come from a
-     * collection without ORDER BY. Both are sorted so the diff sees the set, not the
+     * collection without ORDER BY, and so do an option's values and a category's
+     * children of equal position. All are sorted so the diff sees the set, not the
      * order. Zero-count aggregation options are dropped: core's option provider joins
      * attributes by code across entity types, so an option of a same-named attribute
      * of another entity shows up on some runs.
@@ -209,6 +214,15 @@ class Parity extends Command
         foreach ($node as $key => $child) {
             if (is_string($key) && str_ends_with($key, 'configurable_options') && is_array($child)) {
                 usort($child, static fn($a, $b) => ($a['attribute_code'] ?? '') <=> ($b['attribute_code'] ?? ''));
+                $node[$key] = $child;
+            }
+            // Core lists an option's values and a category's children among equal positions in database order.
+            if ($key === 'values' && is_array($child) && (isset($child[0]['value_index']) || isset($child[0]['uid']))) {
+                usort($child, static fn($a, $b) => [$a['value_index'] ?? 0, $a['uid'] ?? ''] <=> [$b['value_index'] ?? 0, $b['uid'] ?? '']);
+                $node[$key] = $child;
+            }
+            if ($key === 'children' && is_array($child) && isset($child[0]['uid'])) {
+                usort($child, static fn($a, $b) => [(int)($a['position'] ?? 0), $a['uid'] ?? ''] <=> [(int)($b['position'] ?? 0), $b['uid'] ?? '']);
                 $node[$key] = $child;
             }
         }

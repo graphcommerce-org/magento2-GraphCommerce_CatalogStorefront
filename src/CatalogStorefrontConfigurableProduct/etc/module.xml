@@ -3,6 +3,7 @@
     <module name="GraphCommerce_CatalogStorefrontConfigurableProduct">
         <sequence>
             <module name="GraphCommerce_CatalogStorefront"/>
+            <module name="GraphCommerce_CatalogStorefrontPrice"/>
             <module name="Magento_ConfigurableProductDataExporter"/>
         </sequence>
     </module>

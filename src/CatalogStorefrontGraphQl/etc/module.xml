@@ -7,6 +7,8 @@
             <module name="Magento_CatalogGraphQl"/>
             <module name="Magento_GraphQlCache"/>
             <module name="Magento_GraphQlResolverCache"/>
+            <module name="Magento_Integration"/>
+            <module name="Magento_JwtUserToken"/>
         </sequence>
     </module>
 </config>

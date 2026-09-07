@@ -13,8 +13,10 @@ use GraphCommerce\CatalogStorefrontApi\Storage\ProductDocumentStorageInterface;
  * feed delivers parent and child does not matter: a child row sets its parent
  * id lists to the parents that exist, a parent row adds itself to the children
  * that exist and removes itself from the children it no longer lists or, when
- * deleted, from all of them. The price read aggregates over `groupedParentIds`
- * and fetches the selections by `bundleParentIds`.
+ * deleted, from all of them. A child outside the batch gets its parent id
+ * lists changed in the store itself, so a parallel batch that touches the
+ * same child cannot lose the change. The price read aggregates over
+ * `groupedParentIds` and fetches the selections by `bundleParentIds`.
  */
 class CompositeLinks
 {
@@ -31,7 +33,9 @@ class CompositeLinks
     /**
      * @param array[] $rows product rows of one store view keyed by product id, deleted rows excluded
      * @param int[] $deletedIds
-     * @return array[] link keys per product id, to merge into the upserts of the same store view
+     * @return array{0: array[], 1: array[]} link keys per product id, to merge into the upserts of
+     *   the same store view, and the list changes (add and remove per list key) of the children
+     *   outside the batch
      */
     public function upserts(string $storeViewCode, array $rows, array $deletedIds): array
     {
@@ -60,7 +64,7 @@ class CompositeLinks
             $ids[$row['sku']] = (int)$id;
         }
         if ($skus) {
-            foreach ($this->storage->findBySku($storeViewCode, array_values(array_unique($skus))) as $id => $document) {
+            foreach ($this->storage->storedBySku($storeViewCode, array_values(array_unique($skus))) as $id => $document) {
                 $ids[$document['sku']] ??= $id;
             }
         }
@@ -89,9 +93,9 @@ class CompositeLinks
             $parents[$id] = [null, []];
         }
         if (!$parents) {
-            return $upserts;
+            return [$upserts, []];
         }
-        $storedChildren = $this->storage->get($storeViewCode, array_keys($parents), array_column(self::TYPES, 'childIds'));
+        $storedChildren = $this->storage->stored($storeViewCode, array_keys($parents), array_column(self::TYPES, 'childIds'));
         $changes = [];
         foreach ($parents as $parentId => [$type, $childIds]) {
             foreach (self::TYPES as $linkType => $keys) {
@@ -107,17 +111,16 @@ class CompositeLinks
                 }
             }
         }
-        $storedParents = [];
-        $unknown = array_diff(array_keys($changes), array_keys($rows));
-        if ($unknown) {
-            $storedParents = $this->storage->get($storeViewCode, $unknown, array_column(self::TYPES, 'parentIds'));
-        }
+        $listChanges = [];
         foreach ($changes as $childId => $byKey) {
             foreach ($byKey as $key => $linked) {
-                $list = array_fill_keys(
-                    (array)($upserts[$childId][$key] ?? $storedParents[$childId][$key] ?? []),
-                    true
-                );
+                if (!isset($rows[$childId])) {
+                    foreach ($linked as $parentId => $isLinked) {
+                        $listChanges[$childId][$key][$isLinked ? 'add' : 'remove'][] = (int)$parentId;
+                    }
+                    continue;
+                }
+                $list = array_fill_keys((array)($upserts[$childId][$key] ?? []), true);
                 foreach ($linked as $parentId => $isLinked) {
                     if ($isLinked) {
                         $list[$parentId] = true;
@@ -129,6 +132,6 @@ class CompositeLinks
             }
         }
 
-        return $upserts;
+        return [$upserts, $listChanges];
     }
 }

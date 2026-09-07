@@ -12,9 +12,11 @@ use Magento\Store\Api\Data\StoreInterface;
 
 /**
  * Category values for GraphQL from the category documents: each document
- * becomes a category model run through core's hydrator, with the product
- * count and the breadcrumbs pre-filled, and the active children nested to
- * the depth a query asks for, by position as core sorts them.
+ * becomes a category model run through core's hydrator, with the raw value
+ * of every category attribute the document carries (the fields GraphQL adds
+ * for them read the model data), the product count and the breadcrumbs
+ * pre-filled, and the active children nested to the depth a query asks for,
+ * by position as core sorts them.
  */
 class CategoryDocuments
 {
@@ -72,6 +74,11 @@ class CategoryDocuments
         $categories = [];
         foreach ($documents as $id => $document) {
             $data = [];
+            foreach ((array)($document['customAttributes'] ?? []) as $attribute) {
+                if (isset($attribute['attributeCode'])) {
+                    $data[$attribute['attributeCode']] = $attribute['value'] ?? null;
+                }
+            }
             foreach (self::FIELDS as $key => $documentKey) {
                 $data[$key] = $document[$documentKey] ?? null;
             }
