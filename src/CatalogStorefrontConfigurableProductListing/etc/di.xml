@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- Both act only on a product that carries a document, so a core-served page is untouched. -->
+    <type name="Magento\ConfigurableProduct\Model\Product\Type\Configurable">
+        <plugin name="graphcommerce_catalog_storefront_used_products"
+                type="GraphCommerce\CatalogStorefrontConfigurableProductListing\Plugin\Listing\UsedProductsFromDocuments"/>
+        <plugin name="graphcommerce_catalog_storefront_configurable_attributes"
+                type="GraphCommerce\CatalogStorefrontConfigurableProductListing\Plugin\Listing\ConfigurableAttributesFromDocument"/>
+    </type>
+
+    <!-- Wraps core's provider rather than replacing it: anything it cannot serve goes there. -->
+    <preference for="Magento\ConfigurableProduct\Pricing\Price\LowestPriceOptionsProviderInterface"
+                type="GraphCommerce\CatalogStorefrontConfigurableProductListing\Model\Read\DocumentLowestPriceOptionsProvider"/>
+</config>
