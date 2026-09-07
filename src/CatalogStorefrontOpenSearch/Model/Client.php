@@ -157,13 +157,13 @@ class Client
     }
 
     /**
-     * @param array[] $searches search bodies, all against the index
+     * @param array<int, array{0: string, 1: array}> $searches index and search body per search
      * @return array[] one response per search, an empty one for a missing index
      */
-    public function multiSearch(string $index, array $searches): array
+    public function multiSearch(array $searches): array
     {
         $body = [];
-        foreach ($searches as $search) {
+        foreach ($searches as [$index, $search]) {
             $body[] = ['index' => $index];
             $body[] = $search;
         }

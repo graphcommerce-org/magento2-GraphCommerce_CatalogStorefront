@@ -5,7 +5,7 @@ namespace GraphCommerce\CatalogStorefrontExplorer\Model;
 
 use GraphCommerce\CatalogStorefront\Model\Config;
 use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
-use GraphCommerce\CatalogStorefrontGraphQl\Model\Mode;
+use GraphCommerce\CatalogStorefront\Model\Mode;
 
 /**
  * The Catalog switcher of the API explorer: Default sends no header, the

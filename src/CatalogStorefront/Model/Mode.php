@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontGraphQl\Model;
+namespace GraphCommerce\CatalogStorefront\Model;
 
 use GraphCommerce\CatalogStorefront\Model\Config;
 use GraphCommerce\CatalogStorefront\Model\StorefrontKey;

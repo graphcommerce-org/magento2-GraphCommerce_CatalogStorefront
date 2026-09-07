@@ -3,8 +3,10 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontGraphQl\Test\Unit\Plugin\Layer;
 
+use GraphCommerce\CatalogStorefront\Model\Mode;
 use GraphCommerce\CatalogStorefront\Model\Strict;
 use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
+use GraphCommerce\CatalogStorefrontGraphQl\Model\Read\FacetDocuments;
 use GraphCommerce\CatalogStorefrontGraphQl\Plugin\Layer\AttributeOptionsFromDocuments;
 use Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\AttributeOptionProvider;
 use Magento\Store\Api\Data\StoreInterface;
@@ -14,18 +16,32 @@ use PHPUnit\Framework\TestCase;
 class AttributeOptionsFromDocumentsTest extends TestCase
 {
     private MetadataDocumentStorageInterface $storage;
+    private FacetDocuments $facets;
     private Strict $strict;
     private AttributeOptionsFromDocuments $plugin;
 
     protected function setUp(): void
     {
         $this->storage = $this->createMock(MetadataDocumentStorageInterface::class);
+        $this->facets = $this->createMock(FacetDocuments::class);
         $this->strict = $this->createMock(Strict::class);
         $store = $this->createMock(StoreInterface::class);
         $store->method('getCode')->willReturn('default');
         $storeManager = $this->createMock(StoreManagerInterface::class);
         $storeManager->method('getStore')->with(1)->willReturn($store);
-        $this->plugin = new AttributeOptionsFromDocuments($this->storage, $storeManager, $this->strict);
+        $mode = $this->createMock(Mode::class);
+        $mode->method('documents')->willReturn(true);
+        $this->plugin = new AttributeOptionsFromDocuments($this->facets, $this->storage, $storeManager, $mode, $this->strict);
+    }
+
+    public function testTheCorePathRunsCore(): void
+    {
+        $mode = $this->createMock(Mode::class);
+        $mode->method('documents')->willReturn(false);
+        $this->storage->expects(self::never())->method('any');
+        $plugin = new AttributeOptionsFromDocuments($this->facets, $this->storage, $this->createMock(StoreManagerInterface::class), $mode, $this->strict);
+
+        self::assertSame(['core'], $plugin->aroundGetOptions($this->createMock(AttributeOptionProvider::class), static fn() => ['core'], [5], 1));
     }
 
     public function testOneQueryFetchesTheOwnersTheUnfilteredAndTheRequestedBooleanAttributes(): void
@@ -69,6 +85,20 @@ class AttributeOptionsFromDocumentsTest extends TestCase
                 'position' => '0', 'is_filterable' => 1, 'options' => [],
             ],
         ], $result);
+    }
+
+    public function testAPrimedFacetReadServesTheOptionsWithoutAQuery(): void
+    {
+        $this->facets->method('attributes')->with('default', [5], ['color'])->willReturn([
+            'color' => ['attributeId' => 93, 'label' => 'Color', 'frontendInput' => 'select', 'filterableMode' => 1, 'options' => [['id' => 5, 'label' => 'Red']]],
+            'size' => ['attributeId' => 94, 'label' => 'Size', 'frontendInput' => 'select', 'filterableMode' => 1, 'options' => [['id' => 8, 'label' => 'S']]],
+        ]);
+        $this->storage->expects(self::never())->method('any');
+
+        $result = $this->plugin->aroundGetOptions($this->createMock(AttributeOptionProvider::class), static fn() => self::fail('core must not run'), [5], 1, ['color']);
+
+        self::assertSame(['color'], array_keys($result));
+        self::assertSame(['5' => 'Red'], $result['color']['options']);
     }
 
     public function testAnEmptyStoreViewFallsBackToCoreAndAnEmptyMatchDoesNot(): void

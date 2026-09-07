@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <catalog>
+            <storefront_search>
+                <entity_id_sort>1</entity_id_sort>
+                <record_search_terms>0</record_search_terms>
+            </storefront_search>
+        </catalog>
+    </default>
+</config>

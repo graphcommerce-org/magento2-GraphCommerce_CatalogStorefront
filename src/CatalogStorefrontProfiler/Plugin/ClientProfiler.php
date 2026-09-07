@@ -39,9 +39,11 @@ class ClientProfiler
         return $this->measure('search', $index, null, $body, fn() => $proceed($index, $body));
     }
 
-    public function aroundMultiSearch(Client $subject, callable $proceed, string $index, array $searches): array
+    public function aroundMultiSearch(Client $subject, callable $proceed, array $searches): array
     {
-        return $this->measure('msearch', $index, count($searches), $searches, fn() => $proceed($index, $searches));
+        $indices = implode('+', array_unique(array_column($searches, 0)));
+
+        return $this->measure('msearch', $indices, count($searches), array_column($searches, 1), fn() => $proceed($searches));
     }
 
     public function aroundUpsert(Client $subject, callable $proceed, string $index, array $documents): void

@@ -78,10 +78,9 @@ interface ProductDocumentStorageInterface
      * is given, the price data of the page's composite products with them.
      *
      * @param int[] $ids
-     * @param string[] $sourceExcludes document keys to leave out
      * @return array{0: array<int, array>, 1: array} documents keyed by product id, price data as priceData() returns it
      */
-    public function listing(string $storeViewCode, array $ids, array $sourceExcludes, ?string $groupKey): array;
+    public function listing(string $storeViewCode, array $ids, ?string $groupKey): array;
 
     /**
      * Price data of composite products: the configurable and grouped price

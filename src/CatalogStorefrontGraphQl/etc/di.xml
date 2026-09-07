@@ -58,6 +58,9 @@
     <type name="Magento\EavGraphQl\Model\TypeResolver\AttributeValue">
         <plugin name="graphcommerce_catalog_storefront_attribute_value_type" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Resolver\AttributeValueTypeFromDocument"/>
     </type>
+    <type name="Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\LayerBuilder">
+        <plugin name="graphcommerce_catalog_storefront_prime_facet_documents" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Layer\PrimeFacetDocuments"/>
+    </type>
     <type name="Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\AttributeOptionProvider">
         <plugin name="graphcommerce_catalog_storefront_attribute_options" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Layer\AttributeOptionsFromDocuments"/>
     </type>
@@ -113,44 +116,7 @@
         <arguments>
             <argument name="prefillers" xsi:type="array">
                 <item name="productFields" xsi:type="object">GraphCommerce\CatalogStorefrontGraphQl\Model\Prefill\ProductFields</item>
-            </argument>
-            <argument name="fieldDocumentKeys" xsi:type="array">
-                <item name="description" xsi:type="array"><item name="0" xsi:type="string">description</item></item>
-                <item name="short_description" xsi:type="array"><item name="0" xsi:type="string">shortDescription</item></item>
-                <item name="media_gallery" xsi:type="array"><item name="0" xsi:type="string">media_gallery</item><item name="1" xsi:type="string">images</item><item name="2" xsi:type="string">videos</item></item>
-                <item name="media_gallery_entries" xsi:type="array"><item name="0" xsi:type="string">media_gallery</item><item name="1" xsi:type="string">images</item><item name="2" xsi:type="string">videos</item></item>
-                <item name="url_rewrites" xsi:type="array"><item name="0" xsi:type="string">urlRewrites</item></item>
-                <item name="related_products" xsi:type="array"><item name="0" xsi:type="string">links</item></item>
-                <item name="upsell_products" xsi:type="array"><item name="0" xsi:type="string">links</item></item>
-                <item name="crosssell_products" xsi:type="array"><item name="0" xsi:type="string">links</item></item>
-                <item name="categories" xsi:type="array"><item name="0" xsi:type="string">categoryData</item></item>
-                <item name="custom_attributesV2" xsi:type="array"><item name="0" xsi:type="string">customAttributes</item></item>
-                <item name="product_links" xsi:type="array"><item name="0" xsi:type="string">links</item><item name="1" xsi:type="string">optionsV2</item></item>
-                <item name="options" xsi:type="array"><item name="0" xsi:type="string">optionsV2</item><item name="1" xsi:type="string">shopperInputOptions</item></item>
-            </argument>
-            <argument name="baseFields" xsi:type="array">
-                <item name="__typename" xsi:type="string">__typename</item>
-                <item name="uid" xsi:type="string">uid</item>
-                <item name="id" xsi:type="string">id</item>
-                <item name="sku" xsi:type="string">sku</item>
-                <item name="name" xsi:type="string">name</item>
-                <item name="url_key" xsi:type="string">url_key</item>
-                <item name="url_suffix" xsi:type="string">url_suffix</item>
-                <item name="type_id" xsi:type="string">type_id</item>
-                <item name="created_at" xsi:type="string">created_at</item>
-                <item name="updated_at" xsi:type="string">updated_at</item>
-                <item name="image" xsi:type="string">image</item>
-                <item name="small_image" xsi:type="string">small_image</item>
-                <item name="thumbnail" xsi:type="string">thumbnail</item>
-                <item name="price_range" xsi:type="string">price_range</item>
-                <item name="new_from_date" xsi:type="string">new_from_date</item>
-                <item name="new_to_date" xsi:type="string">new_to_date</item>
-                <item name="canonical_url" xsi:type="string">canonical_url</item>
-                <item name="price" xsi:type="string">price</item>
-                <item name="price_tiers" xsi:type="string">price_tiers</item>
-                <item name="tier_prices" xsi:type="string">tier_prices</item>
-                <item name="websites" xsi:type="string">websites</item>
-                <item name="attribute_set_id" xsi:type="string">attribute_set_id</item>
+                <item name="customAttributeDocuments" xsi:type="object">GraphCommerce\CatalogStorefrontGraphQl\Model\Prefill\CustomAttributeDocuments</item>
             </argument>
         </arguments>
     </type>

@@ -57,9 +57,27 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
         return $this->client->count($this->indexName($storeViewCode));
     }
 
+    /**
+     * A search by id: a multi-get reads every document on its own and costs three times as
+     * much for a few hundred ids. The writers read through stored(), which stays a multi-get
+     * because it must see the batch's own writes.
+     */
     public function get(string $storeViewCode, array $ids, array $fields = []): array
     {
-        return $this->byId($this->indexName($storeViewCode), $ids, $fields);
+        if (!$ids) {
+            return [];
+        }
+        $response = $this->client->search($this->indexName($storeViewCode), [
+            'size' => count($ids),
+            'query' => ['ids' => ['values' => array_values(array_map('strval', $ids))]],
+            '_source' => $fields ?: true,
+        ]);
+        $documents = [];
+        foreach ($response['hits']['hits'] ?? [] as $hit) {
+            $documents[(int)$hit['_id']] = $hit['_source'];
+        }
+
+        return $documents;
     }
 
     public function findBySku(string $storeViewCode, array $skus): array
@@ -104,17 +122,20 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
         return $documents;
     }
 
-    public function listing(string $storeViewCode, array $ids, array $sourceExcludes, ?string $groupKey): array
+    /**
+     * The page's documents whole: filtering the source costs OpenSearch more than the bytes it saves.
+     */
+    public function listing(string $storeViewCode, array $ids, ?string $groupKey): array
     {
         $searches = [[
             'size' => count($ids),
             'query' => ['ids' => ['values' => array_values(array_map('strval', $ids))]],
-            '_source' => $sourceExcludes ? ['excludes' => $sourceExcludes] : true,
         ]];
         if ($groupKey !== null) {
             $searches = array_merge($searches, $this->priceSearches($ids, $groupKey));
         }
-        $responses = $this->client->multiSearch($this->indexName($storeViewCode), $searches);
+        $index = $this->indexName($storeViewCode);
+        $responses = $this->client->multiSearch(array_map(static fn(array $search) => [$index, $search], $searches));
         $documents = [];
         foreach ($responses[0]['hits']['hits'] ?? [] as $hit) {
             $documents[(int)$hit['_id']] = $hit['_source'];
@@ -126,7 +147,10 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
     public function priceData(string $storeViewCode, array $ids, string $groupKey): array
     {
         return $this->parsePriceData(
-            $this->client->multiSearch($this->indexName($storeViewCode), $this->priceSearches($ids, $groupKey))
+            $this->client->multiSearch(array_map(
+                fn(array $search) => [$this->indexName($storeViewCode), $search],
+                $this->priceSearches($ids, $groupKey)
+            ))
         );
     }
 

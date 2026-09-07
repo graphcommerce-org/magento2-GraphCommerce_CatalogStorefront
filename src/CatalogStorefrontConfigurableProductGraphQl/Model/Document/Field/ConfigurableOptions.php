@@ -33,6 +33,13 @@ class ConfigurableOptions implements ProductDocumentFieldInterface
         foreach ($documents as &$document) {
             if (($document['type'] ?? null) === 'configurable') {
                 $document['configurableOptions'] = $this->build($document);
+                // The configurable entries live on as the response shape; the raw ones were a third of the document.
+                if ($document['configurableOptions'] !== null) {
+                    $document['optionsV2'] = array_values(array_filter(
+                        (array)($document['optionsV2'] ?? []),
+                        static fn(array $option) => ($option['type'] ?? null) !== 'configurable'
+                    ));
+                }
             }
         }
 

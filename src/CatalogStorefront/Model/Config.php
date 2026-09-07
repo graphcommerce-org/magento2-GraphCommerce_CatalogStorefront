@@ -14,7 +14,6 @@ class Config
 {
     public const INDEX_ENABLED = 'catalog/storefront_documents/index_enabled';
     public const SERVE_GRAPHQL = 'catalog/storefront_documents/serve_graphql';
-    public const RECORD_SEARCH_TERMS = 'catalog/storefront_documents/record_search_terms';
     public const KEY = 'catalog/storefront_documents/key';
 
     public function __construct(
@@ -48,11 +47,4 @@ class Config
         return trim((string)$this->scopeConfig->getValue(self::KEY));
     }
 
-    /**
-     * Whether a search records its term and popularity in the database.
-     */
-    public function recordSearchTerms(): bool
-    {
-        return $this->scopeConfig->isSetFlag(self::RECORD_SEARCH_TERMS, ScopeInterface::SCOPE_STORE);
-    }
 }

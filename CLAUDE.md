@@ -41,16 +41,29 @@ passes.
   its `_write` twin for the writes, created on first write with the entity's
   `EntityMappings` fields and nothing else mapped; `stage` puts a fresh index
   behind the write alias, `promote` moves the read alias to it and deletes the
-  old one) and the two stores.
+  old one) and the two stores. A request-path read by id (`get`) is a search
+  with an ids query: a multi-get reads every document on its own and costs
+  three times as much for a few hundred ids. A read of declared fields only
+  takes them from doc values without the source (the 500-category facet read
+  takes 3 ms instead of 5, since no document is parsed); a keyword doc value
+  ends at 256 characters, so declare a field for it only when its values stay
+  short. The product store's `stored()` stays a multi-get, so a writer sees its
+  batch's own writes before a refresh.
+  `MetadataDocumentStorage::any()` answers alternatives (an OR of AND-filters)
+  over the declared fields in one query, `batch()` runs several reads in one
+  multi-search.
 - `CatalogStorefront`: the base. Feed delivery and the writers for the
   products, prices, categories and attributes feeds, the composite links, the
   image URL field, the exporter patch-ups the core feeds need, the model
   builder, `ProductDocuments`, `AttributeDocuments`, the
   configuration (`Model/Config`: storefront indexing, serve GraphQL, the
-  storefront key, search term recording; the group sits under Catalog >
+  storefront key; the group sits under Catalog >
   Catalog in the admin; `Model/Config/Backend/Key` generates the key on a
   save with the field empty), `Model/StorefrontKey` (whether the request
-  carries the key in `X-Catalog-Storefront-Key`), `Model/Strict` (the fallback
+  carries the key in `X-Catalog-Storefront-Key`), `Model/Mode` (the request's
+  path: `X-Catalog-Storefront` under the key, else the serve setting; every
+  plugin that reads documents at request time gates on it, so the core path
+  is core alone), `Model/Strict` (the fallback
   report of a keyed request), `Model/Feeds` (the feeds per entity, for the
   rebuild and status commands), `Model/Document/StoreAssignments` (the store
   views a product is assigned to, for the slice writers whose rows name no
@@ -58,8 +71,21 @@ passes.
   exists for a product outside its websites), `Plugin/Customer/PricesFeedOnNewGroup` (a new or
   deleted group truncates the prices feed table and invalidates its indexer) and the
   plugins on non-GraphQL core: product links, the layer price step, the single
-  price range mode, the search field name memo, salable.
-- `CatalogStorefrontGraphQl`: `Model/Mode` (the request's path), `DocumentHydration`
+  price range mode, salable.
+- `CatalogStorefrontSearch`: what the package changes about core's fulltext
+  search, each behind a setting (Catalog > Catalog > Catalog Storefront Search,
+  `Model/Config`), with no dependency on the document store so it runs alone:
+  `Plugin/EntityIdField` writes the product id as an integer field of the
+  fulltext document and `EntityIdSort` sorts the listing tie-break on it where
+  core runs a painless script over every matching document (40 ms of a listing
+  over 300 000 visible products against 6 ms; the data patch
+  `ReindexFulltextForEntityId` invalidates the fulltext indexer so the field
+  lands, and a document indexed before it sorts last among its ties; off, the
+  script sort stands), `Plugin/FieldNameMemo` (one search index field name
+  lookup per attribute code and context per request, the core mapper asks
+  several times), `Plugin/SearchTermRecording` (the search term writes, off by
+  default).
+- `CatalogStorefrontGraphQl`: `DocumentHydration`
   with the prefiller list, the product prefiller, the listing data
   provider plugins, the resolver plugins for categories, media gallery, URL
   rewrites, custom attributes and linked products, the layered navigation
@@ -99,7 +125,10 @@ passes.
   class from the session's group, where core loads the customer twice.
 - `CatalogStorefrontWorker`: what a FrankenPHP worker keeps between requests,
   each memo under a generation (`Model/Generation`: a token in the cache with
-  the config tag; `Model/Memo`): the kept schemas per query shape, the validated
+  the config tag; `Model/Memo`): the parsed documents per query text (core's
+  parser drops its cache in its state reset, and the validated set keys on the
+  document object, so without the kept documents every request parsed and
+  validated again, 7 ms), the kept schemas per query shape, the validated
   documents, the deployment config check, the guest cache id tax factor, the
   guest tax rates, the customer group and the currency rate lookups. Nothing
   is keyed by customer: a signed-in customer's request carries its own
@@ -162,7 +191,7 @@ Inside a GraphQl module: `Model/DocumentHydration`, `Model/Prefill/`,
 A module registers its parts in its own `etc/di.xml`: `writers` (by feed
 name) on `Delivery`, `fields` on the products writer, `ranges` (by product
 type id) on `PriceRanges`, and on the GraphQL side `prefillers`,
-`priceFields`, `fieldDocumentKeys` and `baseFields` on `DocumentHydration`,
+`priceFields` on `DocumentHydration`,
 `prefilledFields` on `RoutePrefilledFields`. Prefillers run in di.xml order, so a later
 one may rewrite what an earlier one filled. The composite price searches
 (`ProductDocumentStorageInterface::priceData`, by `parentIds`,
@@ -227,7 +256,11 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   documents; together they build one document per store view
   (products = base, prices = the feed rows under `prices` with their customer
   `group` id (the feed names a group by the hash of its id; the writer maps it
-  back, rows of an unknown group are dropped) plus `priceIndex`, a nested list
+  back, rows of an unknown group are dropped; the feed's all-groups row comes
+  with code `0`, the id of the NOT LOGGED IN group, and is keyed `all` on the
+  document so the two stay apart; a deleted feed row, a group price or catalog
+  rule price that stopped applying, names the product by sku only and drops
+  that group's stored row) plus `priceIndex`, a nested list
   with one entry per customer group holding the regular and final price with
   the fallback row resolved, in base currency before tax, inventory = `stock`,
   variants = `variantIds` on the configurable parent). Reviews are documents of their own (entity `review`, one per
@@ -250,7 +283,12 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   indexer the generic serializer). The reviews slice keeps each review's votes
   as rating id to value; the read side turns them into percents with the
   rating's value scale for the store view.
-- Facet layer: `Plugin/Layer/CategoryFacetFromDocuments` builds the category
+- Facet layer: `Plugin/Layer/PrimeFacetDocuments` fetches, in one request
+  before core's layer builders run, the attribute documents of the aggregated
+  option ids and the names and paths of the aggregated categories into
+  `Model/Read/FacetDocuments` (request-scoped), which the two plugins below
+  read when the prime covered their request; core's builders ask one after
+  the other, a round trip each. `Plugin/Layer/CategoryFacetFromDocuments` builds the category
   bucket from the category documents (store tree membership by path, store
   view names, direct children and their activity for a category-filtered
   query); `RootCategoryFromStore` takes the root category id from the store
@@ -276,10 +314,9 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   columns to the exporter's own `catalog_data_exporter_product_reviews`).
 - Read: `ServeSearchFromDocuments` / `ServeFilterFromDocuments` rebuild product
   models from documents through `DocumentHydration`. A listing page is one
-  multi-search request: the documents by id with the heavy keys the query does
-  not select left out (di.xml `fieldDocumentKeys`; `customAttributes` only
-  when a non-base field is selected, the labelled `attributes` slice never),
-  and, when a price field is selected, the composite price data:
+  multi-search request: the documents by id, whole (filtering the source costs
+  OpenSearch more than the bytes it saves: 15 ms against 10 ms for 200
+  documents of 13 KB), and, when a price field is selected, the composite price data:
   the configurable and the grouped price aggregation (terms on `parentIds`
   and on `groupedParentIds`, then nested into `priceIndex` filtered on the
   group, min and max of regular and final over salable and over all enabled
@@ -359,7 +396,7 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   review percents; the facet labels come from one `any()` query on the attribute
   index by option id, filterable mode and code through
   `Plugin/Layer/AttributeOptionsFromDocuments` (GraphQl), so a listing never loads
-  every attribute), `Plugin/Search/FieldNameMemo` (search index field name
+  every attribute), `CatalogStorefrontSearch/Plugin/FieldNameMemo` (search index field name
   per attribute code and context, the core mapper asks several times per
   attribute), `Model/Mode` and `Model/Strict` are request-scoped. Derivations
   that used to be memos are made by the writer instead:
@@ -380,7 +417,10 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   cache flush or config cache clean, which the admin config save does.
 - `configurable_options` is built at index time (`Model/Document/Field/ConfigurableOptions` of the configurable GraphQl module,
   document key `configurableOptions`) and returned as is; its values carry the
-  pre-filled `uid` and `swatch_data`.
+  pre-filled `uid` and `swatch_data`. The field drops the configurable entries
+  of `optionsV2` once it has built them: they were a third of a configurable
+  document (13 KB), and every request-time reader of `optionsV2` looks for the
+  other option types (custom, downloadable, grouped, bundle).
 - The GraphCommerce ProductList query (`dev/parity/queries/13-*.graphql`, all
   fragments and injections resolved) runs on the document path with no catalog
   SQL: only per-process metadata and bootstrap queries remain.

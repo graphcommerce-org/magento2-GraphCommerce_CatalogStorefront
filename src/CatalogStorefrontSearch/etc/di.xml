@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- The listing's entity id tie-break sorts on a field of the fulltext document instead of a script over every match. -->
+    <type name="Magento\Elasticsearch\Model\Adapter\BatchDataMapper\ProductDataMapper">
+        <plugin name="graphcommerce_catalog_storefront_entity_id_field" type="GraphCommerce\CatalogStorefrontSearch\Plugin\EntityIdField"/>
+    </type>
+    <type name="Magento\Elasticsearch\SearchAdapter\Query\Builder\Sort\EntityId">
+        <plugin name="graphcommerce_catalog_storefront_entity_id_sort" type="GraphCommerce\CatalogStorefrontSearch\Plugin\EntityIdSort"/>
+    </type>
+    <type name="Magento\Elasticsearch\Model\Adapter\FieldMapper\FieldMapperResolver">
+        <plugin name="graphcommerce_catalog_storefront_field_name_memo" type="GraphCommerce\CatalogStorefrontSearch\Plugin\FieldNameMemo"/>
+    </type>
+    <type name="Magento\Search\Model\Query">
+        <plugin name="graphcommerce_catalog_storefront_search_term_recording" type="GraphCommerce\CatalogStorefrontSearch\Plugin\SearchTermRecording"/>
+    </type>
+</config>

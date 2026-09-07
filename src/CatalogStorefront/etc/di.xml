@@ -118,6 +118,9 @@
                     <item name="position" xsi:type="string">integer</item>
                     <item name="isActive" xsi:type="string">integer</item>
                     <item name="level" xsi:type="string">integer</item>
+                    <item name="name" xsi:type="string">keyword</item>
+                    <item name="path" xsi:type="string">keyword</item>
+                    <item name="children" xsi:type="string">integer</item>
                 </item>
                 <item name="attribute" xsi:type="array">
                     <item name="id" xsi:type="string">keyword</item>
@@ -145,11 +148,5 @@
     </type>
     <type name="Magento\Elasticsearch\SearchAdapter\Aggregation\Builder\Dynamic">
         <plugin name="graphcommerce_catalog_storefront_single_price_range" type="GraphCommerce\CatalogStorefront\Plugin\Layer\SingleRangeFromResponse"/>
-    </type>
-    <type name="Magento\Elasticsearch\Model\Adapter\FieldMapper\FieldMapperResolver">
-        <plugin name="graphcommerce_catalog_storefront_field_name_memo" type="GraphCommerce\CatalogStorefront\Plugin\Search\FieldNameMemo"/>
-    </type>
-    <type name="Magento\Search\Model\Query">
-        <plugin name="graphcommerce_catalog_storefront_search_term_recording" type="GraphCommerce\CatalogStorefront\Plugin\Search\SearchTermRecording"/>
     </type>
 </config>

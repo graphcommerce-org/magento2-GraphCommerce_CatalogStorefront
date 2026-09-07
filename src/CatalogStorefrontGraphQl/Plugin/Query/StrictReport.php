@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query;
 
 use GraphCommerce\CatalogStorefront\Model\Strict;
-use GraphCommerce\CatalogStorefrontGraphQl\Model\Mode;
+use GraphCommerce\CatalogStorefront\Model\Mode;
 use Magento\Framework\GraphQl\Query\QueryProcessor;
 
 /**

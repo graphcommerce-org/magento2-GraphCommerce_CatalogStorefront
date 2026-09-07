@@ -40,7 +40,8 @@
         "graphcommerce/module-catalog-storefront-downloadable-graph-ql": "self.version",
         "graphcommerce/module-catalog-storefront-review": "self.version",
         "graphcommerce/module-catalog-storefront-review-graph-ql": "self.version",
-        "graphcommerce/module-catalog-storefront-profiler": "self.version"
+        "graphcommerce/module-catalog-storefront-profiler": "self.version",
+        "graphcommerce/module-catalog-storefront-search": "self.version"
     },
     "suggest": {
         "magento/module-catalog-graph-ql": "GraphCommerce_CatalogStorefrontGraphQl serves catalog GraphQL from documents",
@@ -68,6 +69,7 @@
             "src/CatalogStorefrontWorker/registration.php",
             "src/CatalogStorefrontExplorer/registration.php",
             "src/CatalogStorefrontProfiler/registration.php",
+            "src/CatalogStorefrontSearch/registration.php",
             "src/CatalogStorefrontInventory/registration.php",
             "src/CatalogStorefrontInventoryGraphQl/registration.php",
             "src/CatalogStorefrontConfigurableProduct/registration.php",
@@ -107,7 +109,8 @@
             "GraphCommerce\\CatalogStorefrontDownloadable\\": "src/CatalogStorefrontDownloadable/",
             "GraphCommerce\\CatalogStorefrontDownloadableGraphQl\\": "src/CatalogStorefrontDownloadableGraphQl/",
             "GraphCommerce\\CatalogStorefrontReview\\": "src/CatalogStorefrontReview/",
-            "GraphCommerce\\CatalogStorefrontReviewGraphQl\\": "src/CatalogStorefrontReviewGraphQl/"
+            "GraphCommerce\\CatalogStorefrontReviewGraphQl\\": "src/CatalogStorefrontReviewGraphQl/",
+            "GraphCommerce\\CatalogStorefrontSearch\\": "src/CatalogStorefrontSearch/"
         }
     }
 }

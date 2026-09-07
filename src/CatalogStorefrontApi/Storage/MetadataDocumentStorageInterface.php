@@ -38,7 +38,8 @@ interface MetadataDocumentStorageInterface
 
     /**
      * @param array<int|string> $ids
-     * @param string[] $fields the document keys to return; empty returns the whole document
+     * @param string[] $fields the document keys to return; empty returns the whole document. Keys that
+     *   are all declared fields come back as the index holds them: a scalar, or a list of values.
      * @return array<int|string, array> the documents that exist, keyed by id
      */
     public function get(string $entity, string $storeViewCode, array $ids, array $fields = []): array;
@@ -64,6 +65,15 @@ interface MetadataDocumentStorageInterface
      * @return array<int|string, array> keyed by id
      */
     public function any(string $entity, string $storeViewCode, array $alternatives): array;
+
+    /**
+     * Several reads in one request: a get() as `entity`, `ids` and `fields`, or an any() as
+     * `entity` and `any`; the documents of each read come back in the same order.
+     *
+     * @param array<int, array{entity: string, ids?: array<int|string>, fields?: string[], any?: array}> $reads
+     * @return array<int, array<int|string, array>>
+     */
+    public function batch(string $storeViewCode, array $reads): array;
 
     /**
      * The document count and the average of a declared field per group.

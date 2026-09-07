@@ -85,10 +85,7 @@ copy the pattern, not the code.
   composites) and returns values per product id. List the fields under
   `prefilledFields` on `CatalogStorefrontGraphQl\Plugin\Query\RoutePrefilledFields`, per
   GraphQL type or interface: the executor then returns the value without a
-  resolver call, and falls back to the core resolver when nothing was filled.
-  Add the fields to `baseFields` when the model answers them without the
-  `customAttributes` slice, or map them to the document keys they need under
-  `fieldDocumentKeys`, so a listing fetch leaves the other keys out. Example:
+  resolver call, and falls back to the core resolver when nothing was filled. Example:
   `CatalogStorefrontInventoryGraphQl/Model/Prefill/Stock`. Prefillers run in
   di.xml order; a later one may read what an earlier one filled from the model
   under `PrefillerInterface::KEY`.
@@ -162,6 +159,6 @@ core modules they plug into, so a shop without them leaves yours disabled.
 - Documents first on the request path, fallback to `$proceed` only, reported through `Strict`.
 - Every `using` field returned by every provider row.
 - Arrays on the product document bounded per product; unbounded data is an entity.
-- Fields registered: `prefilledFields`, and `baseFields` or `fieldDocumentKeys`.
+- Fields registered under `prefilledFields`.
 - Per-request state resets through `ResetAfterRequestInterface`.
 - A parity query committed next to the code, gate green, deviations documented.

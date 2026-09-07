@@ -16,10 +16,12 @@ use Magento\Framework\Search\Response\Aggregation;
 use Magento\Framework\Search\Response\AggregationFactory;
 use Magento\Framework\Search\Response\BucketFactory;
 use Magento\Store\Model\StoreManagerInterface;
+use GraphCommerce\CatalogStorefront\Model\Mode;
 use GraphCommerce\CatalogStorefront\Model\Strict;
+use GraphCommerce\CatalogStorefrontGraphQl\Model\Read\FacetDocuments;
 
 /**
- * Serves the category facet from the category documents: the store's tree
+ * Serves the category facet from the category documents on the document path: the store's tree
  * membership (path under the store root) and the store view's names replace
  * core's category collection and attribute queries, and the direct-children
  * filter of a category-filtered query reads the requested categories'
@@ -33,6 +35,7 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
     private array $filter = [];
 
     public function __construct(
+        private readonly FacetDocuments $facets,
         private readonly MetadataDocumentStorageInterface $storage,
         private readonly StoreManagerInterface $storeManager,
         private readonly LayerFormatter $layerFormatter,
@@ -41,6 +44,7 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
         private readonly IncludeDirectChildrenOnly $includeDirectChildrenOnly,
         private readonly AggregationFactory $aggregationFactory,
         private readonly BucketFactory $bucketFactory,
+        private readonly Mode $mode,
         private readonly Strict $strict,
     ) {
     }
@@ -59,7 +63,8 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
         $requested = $this->filter['category'] ?? null;
         $buckets = $aggregation->getBuckets();
         $bucket = $buckets[self::CATEGORY_BUCKET] ?? null;
-        if ($requested === null
+        if (!$this->mode->documents()
+            || $requested === null
             || !$this->layerCategoryConfig->isCategoryFilterVisibleInLayerNavigation()
             || $bucket === null
             || !$bucket->getValues()
@@ -98,6 +103,9 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
 
     public function aroundBuild(Category $subject, \Closure $proceed, AggregationInterface $aggregation, ?int $storeId): array
     {
+        if (!$this->mode->documents()) {
+            return $proceed($aggregation, $storeId);
+        }
         try {
             $store = $this->storeManager->getStore($storeId);
             $rootId = (int)$store->getRootCategoryId();
@@ -107,7 +115,8 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
                 return [];
             }
             $ids = array_map(static fn(AggregationValueInterface $value) => (int)$value->getValue(), $bucket->getValues());
-            $documents = $this->storage->get('category', $store->getCode(), $ids, ['name', 'path']);
+            $documents = $this->facets->categories($store->getCode(), $ids)
+                ?? $this->storage->get('category', $store->getCode(), $ids, ['name', 'path']);
         } catch (\Throwable $e) {
             $this->strict->exception(self::class, $e);
 

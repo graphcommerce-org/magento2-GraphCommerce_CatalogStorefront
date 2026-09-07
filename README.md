@@ -32,6 +32,9 @@ through the Api modules, never through a preference on a class of this package.
   2026; its modules are not on repo.mage-os.org yet, so an install without Adobe keys
   clones the fork and adds its module directories as composer `path` repositories,
   as the CI workflow does.
+- A fulltext reindex after the install. The Search module writes the product id into the
+  fulltext document as an integer field and sorts every listing's tie-break on it, where core
+  runs a script over every matching document; the install invalidates the fulltext indexer.
 
 ## Settings
 
@@ -42,8 +45,15 @@ Stores > Configuration > Catalog > Catalog > Catalog Storefront Document Store:
 | Enable Storefront Indexing | The feeds are written into the document store as they export. |
 | Serve GraphQL From Documents | Per store view: catalog GraphQL reads come from documents. |
 | Storefront Key | Generated when the page is saved with the field empty. A request that sends it in the `X-Catalog-Storefront-Key` header picks its own path with the `X-Catalog-Storefront` header (`documents` or `core`) and gets its path and every fallback to core with its reason under `extensions.catalogStorefront` of the response. The admin API explorer and the parity gate send it. The path is a factor of the response cache id and of the resolver result cache keys. |
-| Record Search Terms | Off by default: the search terms report and the suggestions stop updating, the request path stops writing. |
 | Index Prefix | The indices are named prefix, entity and store view code, for example `catalog_storefront_product_default`. |
+
+Stores > Configuration > Catalog > Catalog > Catalog Storefront Search, from the
+`GraphCommerce_CatalogStorefrontSearch` module, which also runs without the document store:
+
+| Setting | Effect |
+| --- | --- |
+| Sort Ties On The Product Id Field | On by default. Every listing sorts equal products by product id; core computes the id with a script for every matching product (41 ms of an unfiltered listing over 308 000 products), the module reads it from a field it writes into the fulltext document (6 ms). Needs a fulltext reindex after the install, which the install schedules. |
+| Record Search Terms | Off by default: the search terms report and the suggestions stop updating, the request path stops writing. |
 
 Stores > Configuration > Catalog > Catalog > Layered Navigation > Price Navigation Step
 Calculation gets a fourth option, Single range: the `price` aggregation is one option from
@@ -71,6 +81,7 @@ modules next to the `*GraphQl` ones.
 | `GraphCommerce_CatalogStorefrontWorker` | What a persistent PHP worker keeps between requests: kept schemas, validated documents, the guest tax, customer group and currency rate memos, each lifted by a cache generation. Nothing is keyed by customer. Only for FrankenPHP worker mode. |
 | `GraphCommerce_CatalogStorefrontExplorer` | The path switcher in the MageOS_GraphQLAdminHtml API explorer |
 | `GraphCommerce_CatalogStorefrontProfiler` | Times the document store client in a MageOS_Profiler trace, request bodies included |
+| `GraphCommerce_CatalogStorefrontSearch` | Cheaper core fulltext listings, each behind a setting: the entity id tie-break on a field instead of a script, one field name lookup per attribute per request, optional search term recording. Stands alone, without the document store |
 | `GraphCommerce_CatalogStorefrontInventory` / `...InventoryGraphQl` | The stock slice / stock status, only_x_left_in_stock, quantity, min and max sale qty |
 | `GraphCommerce_CatalogStorefrontConfigurableProduct` / `...ConfigurableProductGraphQl` | Variants and the configurable range / configurable options, variants, options selection |
 | `GraphCommerce_CatalogStorefrontBundleProduct` / `...BundleProductGraphQl` | Bundle feed fields and the bundle range / bundle items, price details |
@@ -138,8 +149,6 @@ A module registers its parts through di.xml:
   without a resolver call. List the fields under `prefilledFields` on
   `Plugin\Query\RoutePrefilledFields`.
 - `ranges` on `Model\Read\PriceRanges`: a `PriceRangeInterface` per product type id.
-- `fieldDocumentKeys` and `baseFields` on the hydration tell a listing fetch which
-  document keys a field needs.
 - `mappings` on `EntityMappings`: the fields of an entity that filter, sort or aggregate.
 - `judges` on the parity command: a `JudgeInterface` adds a verdict per query next to the
   response diff, with both responses in hand.
@@ -186,31 +195,62 @@ Desktop at 6 GB for MariaDB, OpenSearch and the worker together:
 | Exporter feed tables | 24 GB for 1.8 million products rows with `PERSIST_EXPORTED_FEED` set, 174 bytes a row without it; the document store never reads them, so leave it unset |
 
 Read side, the GraphCommerce product list query, median over the wire, guest, excluding
-tax, no page cache, php-fpm and the FrankenPHP worker (four threads next to OpenSearch in
-the same 6 GB):
+tax, no page cache, php-fpm on the host and the FrankenPHP worker in the Docker network next
+to OpenSearch and MariaDB (a round trip from the host to a container costs 0.3 ms against
+0.04 ms inside it, which core's hundreds of statements per listing pay and the document path
+does not):
 
 | Listing | fpm core | fpm documents | worker core | worker documents |
 | --- | --- | --- | --- | --- |
-| 24 items of a 12 463-product category | 174 ms | 91 ms | 128 ms | 60 ms |
-| 200 items of that category | 762 ms | 149 ms | 615 ms | 112 ms |
-| 200 items of a search over 308 000 visible products | 783 ms | 267 ms | 566 ms | 164 ms |
-| 200 items unfiltered | 925 ms | 261 ms | 683 ms | 163 ms |
-| 24 items unfiltered | 295 ms | 202 ms | 177 ms | 112 ms |
+| 24 items of a 12 463-product category | 238 ms | 93 ms | 133 ms | 41 ms |
+| 200 items of that category | 1 433 ms | 145 ms | 624 ms | 98 ms |
+| 200 items of a search over 308 000 visible products | 1 549 ms | 210 ms | 519 ms | 148 ms |
+| 200 items unfiltered | 1 661 ms | 194 ms | 629 ms | 130 ms |
+| 24 items unfiltered | 271 ms | 132 ms | 172 ms | 79 ms |
 
 The unfiltered listings pay for core's facet aggregations over every visible product in the
 search index, on both paths. A trace of the 24-item category listing on the document path,
-php-fpm, 108 ms in all: 24 ms of bootstrap, 18 ms in which core builds the GraphQL schema
-from its stitched config, 22 ms for core's search (12 ms in OpenSearch), 10 ms for the
-document multi-search of the five requests, 3 ms for the review documents, 10 ms for the
-aggregations (two attribute queries by option id and three category multi-gets, all under
-3 ms), 4 ms after the response for core's cache id. The core path spends its time in price
-range resolvers and hundreds of SQL statements. On the FrankenPHP worker the same request
-answers in 44 ms: bootstrap and schema build are gone, the search takes 15 ms, the
-multi-search 7 ms, the aggregations 6 ms; the worker then spends 33 ms resetting state
-before it takes the next request (14 ms reloading the system config from Redis, 9 ms in the
-worker module's reload, which reads the EAV attribute tables five times). A facet label
-lookup that loaded every attribute document cost 40 ms on php-fpm and 25 ms on the worker
-before the attribute index got mappings for the option id, the filterable mode and the code.
+php-fpm, 93 ms in all: 24 ms of bootstrap, 18 ms in which core builds the GraphQL schema
+from its stitched config, 17 ms for core's search (5 ms in OpenSearch), 10 ms for the
+document multi-search of the five requests, 3 ms for the review documents, 8 ms for the
+aggregations (one multi-search primes the attribute documents of the option ids and the names
+of the aggregated categories before core's layer builders run; the builders then ask no
+question of their own), 4 ms after the response for core's cache id. The core path spends its time in price range
+resolvers and hundreds of SQL statements. On the FrankenPHP worker the same request answers
+in 41 ms: bootstrap and schema build are gone, a repeated query is parsed and validated once
+per process (core's parser drops its cache between requests, 7 ms a request without the kept
+documents), the search takes 7 ms, the multi-search 3 ms, the aggregations 5 ms; the worker then spends 33 ms resetting state before it takes the next
+request (14 ms reloading the system config from Redis, gzip and unserialize included, 9 ms in
+the worker module's reload, which reads the EAV attribute tables five times).
+
+Core's search sorted every listing by score and then by a painless script that parses the
+document id as a tie-break, which runs for every matching document: 41 ms of an unfiltered
+listing over 308 000 visible products, 8 ms of a 12 000-product category. The fulltext
+document now carries the product id as an integer field and the tie-break sorts on it: 6 ms
+and 1 ms, the same order. What remains of the unfiltered search is its 30 aggregations,
+28 ms, of which the category terms aggregation over an integer field takes 10; the same
+aggregation over a keyword field takes 2, which core's category builder cannot take yet
+because it compares the bucket keys strictly as integers.
+
+Two reads used to load whole indices per request. The facet labels loaded every attribute
+document of the store view (1.3 MB at 1 095 attributes, 40 ms on php-fpm) before the
+attribute index got mappings for the option id, the filterable mode and the code; one query
+now fetches the few attributes a facet needs. `custom_attributesV2` loaded the same set once
+per request; a prefiller now fetches the codes the page's documents carry in one search (15 ms
+for a 100-product page with hundreds of codes, the option labels being the payload). An
+unfiltered listing's category facet labels the 500 categories of core's bucket from the
+category documents: 4 ms on the worker with the name and the path read from doc values
+instead of the parsed source; the search by id replaced a multi-get that cost three times as
+much for hundreds of ids.
+A page fetch takes its documents whole. Leaving the unselected keys out through a source
+filter made OpenSearch parse every document: 15 ms of server time for 200 documents against
+10 ms for the whole documents, and the smaller transfer did not pay it back. The documents
+got smaller instead: a configurable carried its options twice, raw as `optionsV2` and shaped
+as `configurableOptions`, and the raw entries were a third of its 13 KB; the field that
+builds the shape drops them, and a configurable is 9 KB. The 200-item multi-search went from
+18 to 12 ms on the worker for it. What remains is the document lookup itself, 5 ms, the price
+aggregations, 5 ms, and the transfer and decode of 1.7 MB. The pure lookup would need the
+listing slice stored as one field of its own to get lower.
 
 Per row the document store is a quarter of the export; the exporter's own queries and
 hashing are the rest. A full `indexer:reindex` of a feed re-sends every row whose hash or
@@ -299,32 +339,39 @@ of the links.
 
 ## Ideas and to do
 
-1. **custom_attributesV2 by the page's codes.** The resolver loads every attribute
-   document of the store view (1.3 MB at 1 095 attributes) to list the visible ones by
-   attribute id. A query on the mapped flags, or a multi-get of the codes the page's
-   documents carry, fetches the few it needs.
-2. **Integration tests.** Magento integration tests for the writers and the model
+1. **Integration tests.** Magento integration tests for the writers and the model
     builder next to the unit tests, which is what a Mage-OS review asks for.
-3. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
+2. **Worker parity and memory.** The parity gate against the worker endpoint with the
+   headers, stores, currencies, customer groups and filters varied per query, so a memo
+   that keeps what it must not shows up as a diff, and the worker's memory per process
+   sampled over a long run, so a memo that grows per request shows up as a slope.
+3. **A leaner configurable document.** JSON key names are a third of a listing page and
+   `configurableOptions` another third: per value the uid, the attribute id, the swatch
+   thumbnail and `use_default_value` are derivable from the value index, the option and the
+   swatch file. Stored compact and expanded by the resolver, a 200-item page drops from
+   1.8 MB to about 1.2 MB and its multi-search from 22 to about 15 ms. The swatch thumbnail
+   URL built at read time also ends the host difference between two front ends of one
+   store. Needs a products re-export.
+4. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
     hook on the search request and a permission hook on the documents, so an extension
     plugs in without a preference on a class of this package.
-4. **Fixed product taxes.** The last price display setup that falls back to core.
+5. **Fixed product taxes.** The last price display setup that falls back to core.
     The weee amounts per product travel on the document; the read side adds them the
     way the weee adjustment does.
-5. **Package publishing.** A subtree split of the module directories to their own
+6. **Package publishing.** A subtree split of the module directories to their own
     repositories and a release on packagist, so the modules install separately while
     the repository stays one.
 
-6. **Cart, wishlist and order products.** A cart item's product still loads from the
+7. **Cart, wishlist and order products.** A cart item's product still loads from the
    database. A plugin on the cart items data swaps in the document model by product
    id; the quote keeps what it owns, the row price, the options and the quantity checks.
-7. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
+8. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
    product listing collection, the product page and the layered navigation read from the
    base modules. The price rendering goes through the pricing system, so it needs its
    own document-backed price providers.
-8. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
-9. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
+9. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
+10. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
    listing needs a gate of its own: the rendered listing and product page on both
    paths, so an integrator proves an extension on every surface it touches.
-10. **REST integration.** The product repository and the search API behind the same
+11. **REST integration.** The product repository and the search API behind the same
    document models, for headless setups that read the catalog over REST.

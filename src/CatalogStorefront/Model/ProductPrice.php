@@ -8,7 +8,9 @@ namespace GraphCommerce\CatalogStorefront\Model;
  *
  * A product's price rows are the feed rows by customer group id: the group's
  * own row when the feed exported one (group-specific catalog rule, group or
- * tier prices), else the fallback row every product carries under group 0.
+ * tier prices), else the fallback row every product carries. The feed names
+ * that row with customer group code `0`, the id of the NOT LOGGED IN group,
+ * so the document keys it `all` to keep the two apart.
  * The final price is the regular price lowered by the best discount or
  * single-quantity tier price, which is the minimum the core BasePrice takes
  * over its providers; core rounds a special or tier price to two decimals
@@ -19,7 +21,7 @@ namespace GraphCommerce\CatalogStorefront\Model;
  */
 class ProductPrice
 {
-    public const FALLBACK_GROUP = '0';
+    public const FALLBACK_GROUP = 'all';
 
     public function groupKey(int $customerGroupId): string
     {

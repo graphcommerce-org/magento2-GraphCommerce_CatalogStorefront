@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefront\Plugin\Search;
+namespace GraphCommerce\CatalogStorefrontSearch\Plugin;
 
-use GraphCommerce\CatalogStorefront\Model\Config;
+use GraphCommerce\CatalogStorefrontSearch\Model\Config;
 use Magento\Search\Model\Query;
 
 /**

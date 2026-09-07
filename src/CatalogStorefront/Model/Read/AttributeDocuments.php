@@ -7,14 +7,17 @@ use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
 use Magento\Framework\ObjectManager\ResetAfterRequestInterface;
 
 /**
- * The store view's attribute documents, loaded once per request: labels,
- * frontend input, layer position, filterable mode and the options with their
- * labels, from the product attributes feed.
+ * The store view's attribute documents by code, fetched once per request and
+ * code: labels, frontend input, flags and the options with their labels, from
+ * the product attributes feed.
  */
 class AttributeDocuments implements ResetAfterRequestInterface
 {
-    /** @var array<string, array[]> attribute documents per store view keyed by attribute code */
+    /** @var array<string, array<string, array|null>> per store view and code; null marks a code without a document */
     private array $byStore = [];
+
+    /** @var array<string, bool> per store view: whether the feed has landed */
+    private array $available = [];
 
     public function __construct(
         private readonly MetadataDocumentStorageInterface $storage,
@@ -22,20 +25,32 @@ class AttributeDocuments implements ResetAfterRequestInterface
     }
 
     /**
-     * @return array[] keyed by attribute code; empty when the feed has not landed
+     * @param string[] $codes
+     * @return array<string, array> the documents of the codes that have one, keyed by code
      */
-    public function all(string $storeViewCode): array
+    public function byCodes(string $storeViewCode, array $codes): array
     {
-        return $this->byStore[$storeViewCode] ??= $this->storage->all('attribute', $storeViewCode);
+        $known = $this->byStore[$storeViewCode] ?? [];
+        $missing = array_values(array_diff($codes, array_keys($known)));
+        if ($missing) {
+            $fetched = $this->storage->get('attribute', $storeViewCode, $missing);
+            foreach ($missing as $code) {
+                $known[$code] = $fetched[$code] ?? null;
+            }
+            $this->byStore[$storeViewCode] = $known;
+        }
+
+        return array_filter(array_intersect_key($known, array_flip($codes)));
     }
 
-    public function get(string $storeViewCode, string $attributeCode): ?array
+    public function available(string $storeViewCode): bool
     {
-        return $this->all($storeViewCode)[$attributeCode] ?? null;
+        return $this->available[$storeViewCode] ??= $this->storage->count('attribute', $storeViewCode) > 0;
     }
 
     public function _resetState(): void
     {
         $this->byStore = [];
+        $this->available = [];
     }
 }
