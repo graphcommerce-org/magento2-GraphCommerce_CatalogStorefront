@@ -7,8 +7,8 @@ use GraphCommerce\CatalogStorefrontWorker\Model\Generation;
 
 /**
  * Bumps one generation after a save or delete on the repository it is
- * registered on (di.xml: a virtual type per generation), so every memo built
- * under it refills.
+ * registered on, or after a reset of the search request config (di.xml: a
+ * virtual type per generation), so every memo built under it refills.
  */
 class Bump
 {
@@ -40,6 +40,13 @@ class Bump
     }
 
     public function afterSaveRates($subject, $result)
+    {
+        $this->generations->bump($this->name);
+
+        return $result;
+    }
+
+    public function afterReset($subject, $result)
     {
         $this->generations->bump($this->name);
 

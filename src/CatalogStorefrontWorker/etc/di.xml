@@ -30,7 +30,26 @@
         <plugin name="graphcommerce_catalog_storefront_bump_currency" type="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpCurrency"/>
     </type>
 
+    <!-- The reload after a response runs once per config generation; between generations only the request's own processor runs. -->
+    <type name="Magento\Framework\App\State\ReloadProcessorComposite">
+        <plugin name="graphcommerce_catalog_storefront_reload_per_generation" type="GraphCommerce\CatalogStorefrontWorker\Plugin\State\ReloadPerGeneration" sortOrder="20"/>
+        <arguments>
+            <argument name="processors" xsi:type="array">
+                <item name="Opengento_Application::reload" xsi:type="object">GraphCommerce\CatalogStorefrontWorker\Model\State\RequestReload</item>
+            </argument>
+        </arguments>
+    </type>
+    <preference for="Magento\Framework\Search\Request\Config" type="GraphCommerce\CatalogStorefrontWorker\Model\State\SearchRequestConfig"/>
+
     <!-- The saves that lift a generation. -->
+    <type name="Magento\Framework\Search\Request\Config">
+        <plugin name="graphcommerce_catalog_storefront_bump_config" type="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpConfig"/>
+    </type>
+    <virtualType name="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpConfig" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Bump">
+        <arguments>
+            <argument name="name" xsi:type="const">GraphCommerce\CatalogStorefrontWorker\Model\Generation::CONFIG</argument>
+        </arguments>
+    </virtualType>
     <virtualType name="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpTax" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Bump">
         <arguments>
             <argument name="name" xsi:type="const">GraphCommerce\CatalogStorefrontWorker\Model\Generation::TAX</argument>
