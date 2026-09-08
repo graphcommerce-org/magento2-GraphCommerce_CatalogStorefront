@@ -17,7 +17,7 @@ jobs:
         with:
           project: mage-os
           kind: latest
-          service_preferences: opensearch,redis
+          service_preferences: opensearch,valkey
 
   # The pure classes: price semantics, ranges, mappings, routing, memos. Needs a Magento vendor
   # directory for the autoloader and the mocked core classes, nothing installed. PHPUnit runs

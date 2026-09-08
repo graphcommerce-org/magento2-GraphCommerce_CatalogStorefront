@@ -327,7 +327,7 @@ writes. A module that writes a feed registers it under `feeds` on `Model\Feeds`.
 installation that holds the package (`MAGENTO_ROOT`, else the project two levels up).
 `.github/workflows/ci.yml` runs them on the latest Mage-OS release through the
 [graycore actions](https://github.com/graycoreio/github-actions-magento2), then installs
-the sample data with OpenSearch, MySQL and Redis as service containers, adds the query set's
+the sample data with OpenSearch, MySQL and Valkey as service containers, adds the query set's
 fixtures, exports the feeds and runs the parity gate in four price setups: excluding tax,
 catalog prices including tax, both prices displayed, fixed product taxes in the price; each
 as a guest, as a signed-in customer with a Michigan address, and on the store view of a
