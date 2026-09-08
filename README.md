@@ -262,9 +262,12 @@ filter made OpenSearch parse every document: 15 ms of server time for 200 docume
 got smaller instead: a configurable carried its options twice, raw as `optionsV2` and shaped
 as `configurableOptions`, and the raw entries were a third of its 13 KB; the field that
 builds the shape drops them, and a configurable is 9 KB. The 200-item multi-search went from
-18 to 12 ms on the worker for it. The shape itself is stored compact since: per value the
+18 to 12 ms on the worker for it. The shape itself is stored compact: per value the
 index, the label and the swatch, per option the ids, code, label and position; every uid,
-every repeated id and the label triple are derived at read time. What remains is the document lookup itself, 5 ms, the price
+every repeated id and the label triple are derived at read time. On 200 configurables of the
+large catalog the options went from 715 KB to 174 KB and the whole page from 1.66 MB to
+1.19 MB, the multi-search from 22 to 18 ms of OpenSearch time; the wire was gzipped before,
+so the saving is parse time and memory. What remains is the document lookup itself, 5 ms, the price
 aggregations, 5 ms, and the transfer and decode of 1.7 MB. The pure lookup would need the
 listing slice stored as one field of its own to get lower.
 
