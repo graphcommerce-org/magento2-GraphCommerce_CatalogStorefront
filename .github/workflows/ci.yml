@@ -155,6 +155,8 @@ jobs:
           bin/magento cache:flush
           bin/magento indexer:set-mode schedule catalog_data_exporter_products catalog_data_exporter_product_prices
           bin/magento indexer:reindex
+          # The install's own reindex exported the feeds with the host-less modules still on; the rebuild exports them again.
+          bin/magento catalog-storefront:rebuild
       - name: Parity gate
         working-directory: ${{ steps.magento.outputs.path }}
         run: bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql

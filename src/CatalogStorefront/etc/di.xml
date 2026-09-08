@@ -138,10 +138,14 @@
     <type name="Magento\Catalog\Model\Layer\Filter\Price\Range">
         <plugin name="graphcommerce_catalog_storefront_price_step" type="GraphCommerce\CatalogStorefront\Plugin\Layer\PriceRangeStepFromDocument"/>
     </type>
-    <!-- The `single` price navigation step calculation: one range, served from the search response. -->
+    <!-- The `single` price navigation step calculation: one range, served from the search response.
+         The array replaces the one app/etc/di.xml declares, so core's three travel with it. -->
     <type name="Magento\Framework\Search\Dynamic\Algorithm\Repository">
         <arguments>
             <argument name="algorithms" xsi:type="array">
+                <item name="auto" xsi:type="string">Magento\Framework\Search\Dynamic\Algorithm\Auto</item>
+                <item name="manual" xsi:type="string">Magento\Framework\Search\Dynamic\Algorithm\Manual</item>
+                <item name="improved" xsi:type="string">Magento\Framework\Search\Dynamic\Algorithm\Improved</item>
                 <item name="single" xsi:type="string">GraphCommerce\CatalogStorefront\Model\Layer\SingleRange</item>
             </argument>
         </arguments>
