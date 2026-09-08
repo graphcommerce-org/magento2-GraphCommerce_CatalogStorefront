@@ -68,7 +68,9 @@ passes.
   carries the key in `X-Catalog-Storefront-Key`), `Model/Mode` (the request's
   path: `X-Catalog-Storefront` under the key, else the serve setting; every
   plugin that reads documents at request time gates on it, so the core path
-  is core alone), `Model/Strict` (the fallback
+  is core alone; a keyed GraphQL request is never cacheable, since a cache
+  that hashes on the URL alone would hand its answer to every visitor),
+  `Model/Strict` (the fallback
   report of a keyed request), `Model/Feeds` (the feeds per entity, for the
   rebuild and status commands), `Model/Document/StoreAssignments` (the store
   views a product is assigned to, for the slice writers whose rows name no
