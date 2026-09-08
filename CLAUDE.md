@@ -310,6 +310,14 @@ registers all modules through composer autoload.
   `fallback(self::class, reason)` where the document cannot answer,
   `exception(self::class, $e)` where the plugin failed (it logs a warning).
   The keyed report is what makes a silent fallback visible outside the gate.
+- Every request-time document read gates on `Model/Mode::documents()` before
+  it touches a document or the store: a resolver plugin, a layer plugin, a
+  data provider, a hydration, a prefill. Under `X-Catalog-Storefront: core`
+  the request MUST run core alone, in every field, with core's own SQL; that
+  is what the parity gate's core path compares against, and a plugin without
+  the gate corrupts the comparison for every query that touches its field.
+  A read that is not a plugin (a console command, an indexer) is not a
+  request and does not gate.
 - Code and configuration for one search engine, one theme or one front end
   live in a module with that name as suffix (`CatalogStorefrontElasticsuite`;
   a `...ProductListingHyva` the day a Hyvä class, template or config path is
