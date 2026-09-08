@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontConfigurableProductListing\Plugin\Listing;
 
+use GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Model\Read\ConfigurableOptions;
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
 use Magento\Catalog\Model\Product;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
@@ -18,7 +19,7 @@ use Psr\Log\LoggerInterface;
  * card's block cache is even consulted, because the swatch block's cache key is built from these
  * attributes.
  *
- * configurableOptions is assembled at index time and already carries everything the read path
+ * configurableOptions expanded from the document carries everything the read path
  * asks of these models: the attribute id, position, label, and the option list with value_index
  * and label. The only field it lacks, product_super_attribute_id, is a join key used inside the
  * resource layer and read by nothing on this path.
@@ -35,6 +36,7 @@ class ConfigurableAttributesFromDocument
         private readonly AttributeFactory $attributeFactory,
         private readonly EavConfig $eavConfig,
         private readonly LoggerInterface $logger,
+        private readonly ConfigurableOptions $configurableOptions,
     ) {
     }
 
@@ -52,12 +54,13 @@ class ConfigurableAttributesFromDocument
         }
 
         $document = $product->getData(ProductDocumentsInterface::DOCUMENT_KEY);
-        if (!is_array($document) || !isset($document['configurableOptions'])) {
+        $options = is_array($document) ? $this->configurableOptions->expand($document) : null;
+        if ($options === null) {
             return $proceed($product);
         }
 
         try {
-            $attributes = $this->build((array)$document['configurableOptions']);
+            $attributes = $this->build($options);
         } catch (\Throwable $e) {
             $this->logger->warning(
                 'catalog-storefront configurable attribute fallback: ' . $e->getMessage(),

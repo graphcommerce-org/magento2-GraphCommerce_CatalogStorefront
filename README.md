@@ -256,7 +256,9 @@ filter made OpenSearch parse every document: 15 ms of server time for 200 docume
 got smaller instead: a configurable carried its options twice, raw as `optionsV2` and shaped
 as `configurableOptions`, and the raw entries were a third of its 13 KB; the field that
 builds the shape drops them, and a configurable is 9 KB. The 200-item multi-search went from
-18 to 12 ms on the worker for it. What remains is the document lookup itself, 5 ms, the price
+18 to 12 ms on the worker for it. The shape itself is stored compact since: per value the
+index, the label and the swatch, per option the ids, code, label and position; every uid,
+every repeated id and the label triple are derived at read time. What remains is the document lookup itself, 5 ms, the price
 aggregations, 5 ms, and the transfer and decode of 1.7 MB. The pure lookup would need the
 listing slice stored as one field of its own to get lower.
 
@@ -349,31 +351,25 @@ Documents.
    headers, stores, currencies, customer groups and filters varied per query, so a memo
    that keeps what it must not shows up as a diff, and the worker's memory per process
    sampled over a long run, so a memo that grows per request shows up as a slope.
-3. **A leaner configurable document.** JSON key names are a third of a listing page and
-   `configurableOptions` another third: per value the uid, the attribute id, the swatch
-   thumbnail and `use_default_value` are derivable from the value index, the option and the
-   swatch file. Stored compact and expanded by the resolver, a 200-item page drops from
-   1.8 MB to about 1.2 MB and its multi-search from 22 to about 15 ms. Needs a products
-   re-export.
-4. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
+3. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
     hook on the search request and a permission hook on the documents, so an extension
     plugs in without a preference on a class of this package.
-5. **Fixed product taxes.** The last price display setup that falls back to core.
+4. **Fixed product taxes.** The last price display setup that falls back to core.
     The weee amounts per product travel on the document; the read side adds them the
     way the weee adjustment does.
-6. **Subtree split.** The module directories to their own repositories and packages,
+5. **Subtree split.** The module directories to their own repositories and packages,
     so the modules install separately while the repository stays one.
 
-7. **Cart, wishlist and order products.** A cart item's product still loads from the
+6. **Cart, wishlist and order products.** A cart item's product still loads from the
    database. A plugin on the cart items data swaps in the document model by product
    id; the quote keeps what it owns, the row price, the options and the quantity checks.
-8. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
+7. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
    product listing collection, the product page and the layered navigation read from the
    base modules. The price rendering goes through the pricing system, so it needs its
    own document-backed price providers.
-9. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
-10. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
+8. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
+9. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
    listing needs a gate of its own: the rendered listing and product page on both
    paths, so an integrator proves an extension on every surface it touches.
-11. **REST integration.** The product repository and the search API behind the same
+10. **REST integration.** The product repository and the search API behind the same
    document models, for headless setups that read the catalog over REST.

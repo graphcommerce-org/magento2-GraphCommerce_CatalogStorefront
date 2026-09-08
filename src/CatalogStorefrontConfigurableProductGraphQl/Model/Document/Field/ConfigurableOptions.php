@@ -4,23 +4,23 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Model\Document\Field;
 
 use GraphCommerce\CatalogStorefrontApi\Document\ProductDocumentFieldInterface;
-use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
 use Magento\Framework\GraphQl\Query\Uid;
 use Magento\Swatches\Helper\Media as SwatchMedia;
 use Magento\Swatches\Model\Swatch;
 
 /**
- * Puts the configurable_options response shape on a configurable document at
- * index time, built from the optionsV2 slice, so a request returns it as is.
- * The feed value id already is the core value uid
- * ("configurable/<attribute id>/<value index>"), so attribute ids come from
- * decoding it, and the id itself is the pre-filled value uid. Swatch data
- * travels pre-filled with the values as the swatch file; the thumbnail
- * variation is generated here and its URL is built at read time, so the
- * document carries no host. Core returns the admin label as both
- * default_label and store_label, with use_default_value always true, and
- * lists the options in an undefined order (no ORDER BY); the merchant's
- * position order is used instead.
+ * Stores a configurable's options on its document in the compact form that
+ * Model\Read\ConfigurableOptions expands into the configurable_options
+ * response shape: per option the super attribute id, the attribute id and
+ * code, the label, the position and the use-default flag; per value the
+ * value index, the label, the admin label where it differs and the swatch.
+ * Every uid and every repeated id is derived at read time. The feed value id
+ * is the core value uid ("configurable/<attribute id>/<value index>"), so
+ * the attribute id comes from decoding it. Swatch images travel as the
+ * swatch file; the thumbnail variation is generated here and its URL is
+ * built at read time, so the document carries no host. Core lists the
+ * options in an undefined order (no ORDER BY); the merchant's position order
+ * is used instead.
  */
 class ConfigurableOptions implements ProductDocumentFieldInterface
 {
@@ -35,7 +35,7 @@ class ConfigurableOptions implements ProductDocumentFieldInterface
         foreach ($documents as &$document) {
             if (($document['type'] ?? null) === 'configurable') {
                 $document['configurableOptions'] = $this->build($document);
-                // The configurable entries live on as the response shape; the raw ones were a third of the document.
+                // The configurable entries live on in the compact form; the raw ones were a third of the document.
                 if ($document['configurableOptions'] !== null) {
                     $document['optionsV2'] = array_values(array_filter(
                         (array)($document['optionsV2'] ?? []),
@@ -53,7 +53,6 @@ class ConfigurableOptions implements ProductDocumentFieldInterface
      */
     private function build(array $productRow): ?array
     {
-        $productId = (int)$productRow['productId'];
         $swatchMediaUrl = $this->swatchMedia->getSwatchMediaUrl();
         $options = [];
         foreach ((array)($productRow['optionsV2'] ?? []) as $option) {
@@ -74,37 +73,27 @@ class ConfigurableOptions implements ProductDocumentFieldInterface
                 } elseif (isset($optionValue['textSwatchValue'])) {
                     $swatch = ['type' => Swatch::SWATCH_TYPE_TEXTUAL, 'value' => $optionValue['textSwatchValue']];
                 }
-                // Core hands ids through as the strings the database returns.
-                $values[] = [
-                    'value_index' => $valueIndex,
-                    'label' => $optionValue['label'] ?? null,
-                    'default_label' => $optionValue['defaultLabel'] ?? $optionValue['label'] ?? null,
-                    'store_label' => $optionValue['defaultLabel'] ?? $optionValue['label'] ?? null,
-                    'use_default_value' => true,
-                    'attribute_id' => $attributeId,
-                    PrefillerInterface::KEY => ['uid' => (string)$optionValue['id'], 'swatch_data' => $swatch],
-                ];
+                $label = $optionValue['label'] ?? null;
+                $defaultLabel = $optionValue['defaultLabel'] ?? $label;
+                $values[] = ['index' => (int)$valueIndex, 'label' => $label]
+                    + ($defaultLabel !== $label ? ['defaultLabel' => $defaultLabel] : [])
+                    + ($swatch !== null ? ['swatch' => $swatch] : []);
             }
             if ($attributeId === null) {
                 return null;
             }
             $options[] = [
                 'id' => isset($option['superAttributeId']) ? (int)$option['superAttributeId'] : null,
-                'use_default' => (bool)($option['useDefault'] ?? false),
-                'uid' => $this->uidEncoder->encode('configurable/' . $productId . '/' . $attributeId),
-                'attribute_id' => (string)$attributeId,
-                'attribute_id_v2' => (int)$attributeId,
-                'attribute_uid' => $this->uidEncoder->encode((string)$attributeId),
-                'attribute_code' => $option['id'],
+                'attribute' => (int)$attributeId,
+                'code' => $option['id'],
                 'label' => $option['label'] ?? null,
                 'position' => (int)($option['sortOrder'] ?? 0),
-                'product_id' => $productId,
-                'product_uid' => $this->uidEncoder->encode((string)$productId),
+                'useDefault' => (bool)($option['useDefault'] ?? false),
                 'values' => $values,
             ];
         }
         usort($options, static fn(array $a, array $b) =>
-            [$a['position'], $a['attribute_id_v2']] <=> [$b['position'], $b['attribute_id_v2']]);
+            [$a['position'], $a['attribute']] <=> [$b['position'], $b['attribute']]);
 
         return $options;
     }

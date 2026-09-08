@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Plugin\Resolver;
 
+use GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Model\Read\ConfigurableOptions;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\HydrationInterface;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 use GraphCommerce\CatalogStorefront\Model\Strict;
@@ -14,19 +15,18 @@ use Magento\Swatches\Helper\Media as SwatchMedia;
 use Magento\Swatches\Model\Swatch;
 
 /**
- * Serves configurable_options as built at index time by the
- * ConfigurableOptions document field. An image swatch's thumbnail URL is
- * built here from the swatch file on the document and the store's media base
- * URL, so it carries the host of the request, as core's does.
+ * Serves configurable_options expanded from the document. An image swatch's
+ * thumbnail URL is built here from the swatch file on the document and the
+ * store's media base URL, so it carries the host of the request, as core's does.
  */
 class ConfigurableOptionsFromDocument
 {
     public function __construct(
         private readonly Strict $strict,
         private readonly SwatchMedia $swatchMedia,
+        private readonly ConfigurableOptions $options,
     ) {
     }
-
 
     public function aroundResolve(
         Options $subject,
@@ -41,7 +41,8 @@ class ConfigurableOptionsFromDocument
         if (!is_array($document) || ($value['type_id'] ?? null) !== Configurable::TYPE_CODE) {
             return $proceed($field, $context, $info, $value, $args);
         }
-        if (!isset($document['configurableOptions'])) {
+        $options = $this->options->expand($document);
+        if ($options === null) {
             $this->strict->fallback(self::class, 'configurable document without configurableOptions');
 
             return $proceed($field, $context, $info, $value, $args);
@@ -60,7 +61,7 @@ class ConfigurableOptionsFromDocument
 
         return array_map(
             static fn(array $option) => ['values' => array_map($withThumbnail, $option['values'])] + $option,
-            $document['configurableOptions']
+            $options
         );
     }
 }

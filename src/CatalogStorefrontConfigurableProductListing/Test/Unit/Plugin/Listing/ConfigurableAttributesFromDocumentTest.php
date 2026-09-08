@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontConfigurableProductListing\Test\Unit\Plugin\Listing;
 
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
+use GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Model\Read\ConfigurableOptions;
+use Magento\Framework\GraphQl\Query\Uid;
 use GraphCommerce\CatalogStorefrontConfigurableProductListing\Plugin\Listing\ConfigurableAttributesFromDocument;
 use Magento\Catalog\Model\Product;
 use Magento\Catalog\Model\ResourceModel\Eav\Attribute as ProductAttribute;
@@ -52,13 +54,14 @@ class ConfigurableAttributesFromDocumentTest extends TestCase
         return new ConfigurableAttributesFromDocument(
             $factory,
             $eavConfig,
-            $this->createMock(LoggerInterface::class)
+            $this->createMock(LoggerInterface::class),
+            new ConfigurableOptions(new Uid())
         );
     }
 
     private function product(?array $options, bool $memoised = false): Product
     {
-        $document = $options === null ? null : ['configurableOptions' => $options];
+        $document = $options === null ? null : ['productId' => 7, 'configurableOptions' => $options];
 
         $product = $this->createMock(Product::class);
         $product->method('hasData')->willReturnCallback(
@@ -83,11 +86,13 @@ class ConfigurableAttributesFromDocumentTest extends TestCase
     private function option(array $overrides = []): array
     {
         return $overrides + [
-            'attribute_code' => 'color',
-            'attribute_id' => 93,
+            'id' => 5,
+            'code' => 'color',
+            'attribute' => 93,
             'position' => 0,
             'label' => 'Colour',
-            'values' => [['value_index' => 1, 'label' => 'Red']],
+            'useDefault' => false,
+            'values' => [['index' => 1, 'label' => 'Red']],
         ];
     }
 
@@ -124,16 +129,16 @@ class ConfigurableAttributesFromDocumentTest extends TestCase
         $this->plugin()->aroundGetConfigurableAttributes(
             $this->createMock(Configurable::class),
             $this->proceed(),
-            $this->product([$this->option(['attribute_id' => 163, 'label' => 'Size'])])
+            $this->product([$this->option(['attribute' => 163, 'label' => 'Size'])])
         );
 
-        $this->assertSame(163, $this->built[0]['attribute_id']);
+        $this->assertSame('163', $this->built[0]['attribute_id']);
         $this->assertSame('Size', $this->built[0]['label']);
     }
 
     public function testOptionValuesArePassedThroughAsAList(): void
     {
-        $values = [['value_index' => 1, 'label' => 'Red'], ['value_index' => 2, 'label' => 'Blue']];
+        $values = [['index' => 1, 'label' => 'Red'], ['index' => 2, 'label' => 'Blue']];
 
         $this->plugin()->aroundGetConfigurableAttributes(
             $this->createMock(Configurable::class),
@@ -141,7 +146,8 @@ class ConfigurableAttributesFromDocumentTest extends TestCase
             $this->product([$this->option(['values' => $values])])
         );
 
-        $this->assertSame($values, $this->built[0]['options']);
+        $this->assertSame(['1', '2'], array_column($this->built[0]['options'], 'value_index'));
+        $this->assertSame(['Red', 'Blue'], array_column($this->built[0]['options'], 'label'));
     }
 
     public function testUsesCoresOwnMemoWhenItIsAlreadySet(): void
@@ -182,7 +188,7 @@ class ConfigurableAttributesFromDocumentTest extends TestCase
     public function testFallsBackWhenAnOptionCarriesNoAttributeCode(): void
     {
         $option = $this->option();
-        unset($option['attribute_code']);
+        unset($option['code']);
 
         $result = $this->plugin()->aroundGetConfigurableAttributes(
             $this->createMock(Configurable::class),

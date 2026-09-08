@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Plugin\Resolver;
 
+use GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Model\Read\ConfigurableOptions;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\HydrationInterface;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
@@ -30,6 +31,7 @@ class OptionsSelectionFromDocuments
         private readonly SelectionUidFormatter $selectionUidFormatter,
         private readonly Uid $uidEncoder,
         private readonly Strict $strict,
+        private readonly ConfigurableOptions $configurableOptions,
     ) {
     }
 
@@ -46,7 +48,7 @@ class OptionsSelectionFromDocuments
         if (!is_array($document) || ($value['type_id'] ?? null) !== Configurable::TYPE_CODE) {
             return $proceed($field, $context, $info, $value, $args);
         }
-        $options = (array)($document['configurableOptions'] ?? []);
+        $options = (array)$this->configurableOptions->expand($document);
         if (!$options || !isset($options[0]['id'])) {
             $this->strict->fallback(self::class, 'configurableOptions without option ids');
             return $proceed($field, $context, $info, $value, $args);

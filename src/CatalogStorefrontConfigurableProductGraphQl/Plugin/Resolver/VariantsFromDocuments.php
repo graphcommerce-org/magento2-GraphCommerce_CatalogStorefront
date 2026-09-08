@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Plugin\Resolver;
 
+use GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Model\Read\ConfigurableOptions;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\HydrationInterface;
 use Magento\CatalogInventory\Api\StockConfigurationInterface;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
@@ -25,6 +26,7 @@ class VariantsFromDocuments
         private readonly HydrationInterface $hydration,
         private readonly StockConfigurationInterface $stockConfiguration,
         private readonly Strict $strict,
+        private readonly ConfigurableOptions $configurableOptions,
     ) {
     }
 
@@ -53,7 +55,7 @@ class VariantsFromDocuments
             ksort($children);
 
             $options = [];
-            foreach ((array)($document['configurableOptions'] ?? []) as $option) {
+            foreach ((array)$this->configurableOptions->expand($document) as $option) {
                 $map = [];
                 foreach ((array)($option['values'] ?? []) as $optionValue) {
                     $map[$option['attribute_id'] . ':' . $optionValue['value_index']] = $optionValue;
