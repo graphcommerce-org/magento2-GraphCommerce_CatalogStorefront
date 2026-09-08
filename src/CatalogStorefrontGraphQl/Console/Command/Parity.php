@@ -3,10 +3,13 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontGraphQl\Console\Command;
 
-use GraphCommerce\CatalogStorefront\Model\Config;
-use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Parity\JudgeInterface;
+use GraphCommerce\CatalogStorefront\Model\Config;
 use GraphCommerce\CatalogStorefront\Model\Mode;
+use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
+use Magento\Catalog\Model\Product;
+use Magento\Eav\Model\Config as EavConfig;
+use Magento\Framework\GraphQl\Query\Uid;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -23,7 +26,9 @@ use Symfony\Component\Console\Output\OutputInterface;
  * sees the steady state, and a query that fails is requested again up to
  * `--attempts` times before its verdict counts: a worker thread that has not
  * served the shape yet answers from a cold state once. A query file sends extra request headers through
- * comment lines of the form `# @header Content-Currency: EUR`; `--header`
+ * comment lines of the form `# @header Content-Currency: EUR`, and names a
+ * configurable option value as `{{option_uid:<attribute code>:<admin label>}}`,
+ * resolved to the installation's ids; `--header`
  * sends one with every query, a customer token for a signed-in gate. Other
  * modules add verdicts through di.xml `judges`.
  */
@@ -41,6 +46,8 @@ class Parity extends Command
      */
     public function __construct(
         private readonly Config $config,
+        private readonly EavConfig $eavConfig,
+        private readonly Uid $uidEncoder,
         private readonly array $judges = [],
     ) {
         parent::__construct();
@@ -86,7 +93,17 @@ class Parity extends Command
         $failed = 0;
         foreach ($files as $file) {
             $name = basename($file, '.graphql');
-            $query = (string)file_get_contents($file);
+            $query = preg_replace_callback(
+                '/\{\{option_uid:([\w-]+):([^}]+)\}\}/',
+                function (array $match): string {
+                    $attribute = $this->eavConfig->getAttribute(Product::ENTITY, $match[1]);
+
+                    return $this->uidEncoder->encode(
+                        'configurable/' . $attribute->getId() . '/' . $attribute->getSource()->getOptionId($match[2])
+                    );
+                },
+                (string)file_get_contents($file)
+            );
             preg_match_all('/^#\s*@header\s+([\w-]+):\s*(.+?)\s*$/m', $query, $matches, PREG_SET_ORDER);
             $headers = array_combine(array_column($matches, 1), array_column($matches, 2)) + $shared;
             foreach ([Mode::CORE, Mode::DOCUMENTS] as $mode) {

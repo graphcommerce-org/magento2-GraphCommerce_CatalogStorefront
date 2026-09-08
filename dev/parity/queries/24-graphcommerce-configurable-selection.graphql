@@ -5,7 +5,7 @@ query {
       __typename
       uid
       ... on ConfigurableProduct {
-        configurable_product_options_selection(configurableOptionValueUids: ["Y29uZmlndXJhYmxlLzE1Mi8xNjg="]) {
+        configurable_product_options_selection(configurableOptionValueUids: ["{{option_uid:size:M}}"]) {
           __typename
           configurable_options {
             __typename
