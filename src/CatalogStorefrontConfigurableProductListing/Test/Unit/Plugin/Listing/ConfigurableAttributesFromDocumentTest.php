@@ -4,8 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontConfigurableProductListing\Test\Unit\Plugin\Listing;
 
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
-use GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Model\Read\ConfigurableOptions;
-use Magento\Framework\GraphQl\Query\Uid;
+use GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Read\ConfigurableOptions;
 use GraphCommerce\CatalogStorefrontConfigurableProductListing\Plugin\Listing\ConfigurableAttributesFromDocument;
 use Magento\Catalog\Model\Product;
 use Magento\Catalog\Model\ResourceModel\Eav\Attribute as ProductAttribute;
@@ -55,7 +54,7 @@ class ConfigurableAttributesFromDocumentTest extends TestCase
             $factory,
             $eavConfig,
             $this->createMock(LoggerInterface::class),
-            new ConfigurableOptions(new Uid())
+            new ConfigurableOptions()
         );
     }
 

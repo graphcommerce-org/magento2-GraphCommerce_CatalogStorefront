@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Mview/etc/mview.xsd">
+    <!-- A fixed product tax amount lives in weee_tax; the products feed re-exports the product when one changes. -->
+    <view id="cde_products_feed" class="Magento\CatalogDataExporter\Model\Indexer\ProductFeedIndexer" group="indexer">
+        <subscriptions>
+            <table name="weee_tax" entity_column="entity_id"/>
+        </subscriptions>
+    </view>
+</config>

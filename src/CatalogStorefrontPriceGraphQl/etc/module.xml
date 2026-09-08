@@ -5,6 +5,7 @@
             <module name="GraphCommerce_CatalogStorefrontPrice"/>
             <module name="GraphCommerce_CatalogStorefrontGraphQl"/>
             <module name="Magento_Tax"/>
+            <module name="Magento_WeeeGraphQl"/>
         </sequence>
     </module>
 </config>

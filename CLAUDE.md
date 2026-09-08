@@ -225,10 +225,8 @@ passes.
   final and by regular price from `priceIndex` (per-variant discounts make
   those different children) and wraps core's provider for the rest. A child's
   `entity_id` and a super attribute's `position` are strings, since
-  `getJsonConfig()` puts them into the rendered JSON as they are. The module
-  requires `...ConfigurableProductGraphQl` until the `configurableOptions`
-  document field moves to `...ConfigurableProduct`, where `variantIds` sits;
-  without the field the plugin hands over to core with nothing logged.
+  `getJsonConfig()` puts them into the rendered JSON as they are. Without
+  the `configurableOptions` field the plugin hands over to core with nothing logged.
 - `CatalogStorefrontElasticsuite`: the `elasticsuite` engine registered with
   core's client resolver on core's own client factory, with
   `Model/Client/Options` answering from `smile_elasticsuite_core_base_settings/
@@ -535,11 +533,12 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   its type map is materialized at build time because the type registry resets
   between requests. A schema or config change reaches a worker at the next
   cache flush or config cache clean, which the admin config save does.
-- `configurable_options` is stored compact at index time (`Model/Document/Field/ConfigurableOptions` of the configurable GraphQl module,
+- `configurable_options` is stored compact at index time (`Model/Document/Field/ConfigurableOptions` of the configurable base module,
   document key `configurableOptions`: per option the super attribute id, attribute id, code,
   label, position and use-default flag, per value the index, label, the admin label where it
-  differs and the swatch as type plus file or value) and expanded into the response shape by
-  `Model/Read/ConfigurableOptions` (uids, repeated ids, the label triple, `_gc_prefilled`);
+  differs and the swatch as type plus file or value), expanded into the super attribute rows by
+  the base module's `Model/Read/ConfigurableOptions` (the listing module reads those) and into
+  the response shape by the GraphQl module's (uids, `_gc_prefilled` value uid and swatch);
   the plugin that serves it builds an image swatch's thumbnail URL at read time from the
   stored swatch file, so the document carries no host. The field drops the configurable entries
   of `optionsV2` once it has built them: they were a third of a configurable

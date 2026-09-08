@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontConfigurableProductListing\Plugin\Listing;
 
-use GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Model\Read\ConfigurableOptions;
+use GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Read\ConfigurableOptions;
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
 use Magento\Catalog\Model\Product;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
@@ -54,7 +54,7 @@ class ConfigurableAttributesFromDocument
         }
 
         $document = $product->getData(ProductDocumentsInterface::DOCUMENT_KEY);
-        $options = is_array($document) ? $this->configurableOptions->expand($document) : null;
+        $options = is_array($document) ? $this->configurableOptions->attributes($document) : null;
         if ($options === null) {
             return $proceed($product);
         }

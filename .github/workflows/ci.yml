@@ -59,7 +59,7 @@ jobs:
           MAGENTO_ROOT=${{ steps.magento.outputs.path }} php phpunit.phar -c phpunit.xml.dist
 
   # The parity gate: a Mage-OS install with sample data and OpenSearch, the feeds exported into the
-  # document store, every query of dev/parity/queries on both paths, in the three price setups,
+  # document store, every query of dev/parity/queries on both paths, in the four price setups,
   # as a guest, as a signed-in customer and on a second website's store view.
   parity:
     needs: [matrix, unit]
@@ -73,6 +73,8 @@ jobs:
             set: 'tax/display/type=2 tax/calculation/price_includes_tax=1 tax/defaults/region=33 tax/defaults/postcode=48201'
           - name: display-both
             set: 'tax/display/type=3 tax/defaults/region=33 tax/defaults/postcode=48201'
+          - name: fixed-product-tax
+            set: 'tax/weee/enable=1 tax/weee/display_list=1 tax/weee/apply_vat=1 tax/display/type=2 tax/defaults/region=33 tax/defaults/postcode=48201'
         magento: ${{ fromJSON(needs.matrix.outputs.matrix).include }}
     name: parity (${{ matrix.prices.name }})
     runs-on: ${{ matrix.magento.os }}
@@ -137,6 +139,8 @@ jobs:
           php ${{ github.workspace }}/dev/parity/fixtures/reduced-tax-class.php
           # A custom category attribute with a value, so the category queries select a field GraphQL adds for it.
           php ${{ github.workspace }}/dev/parity/fixtures/category-attribute.php
+          # A fixed product tax on two simple products and a variant, read by the fixed-product-tax setup.
+          php ${{ github.workspace }}/dev/parity/fixtures/fixed-product-tax.php
       - name: Configure and export the feeds
         working-directory: ${{ steps.magento.outputs.path }}
         run: |

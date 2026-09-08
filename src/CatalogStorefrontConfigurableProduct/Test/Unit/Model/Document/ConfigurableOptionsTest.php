@@ -1,11 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Test\Unit\Model\Document;
+namespace GraphCommerce\CatalogStorefrontConfigurableProduct\Test\Unit\Model\Document;
 
-use GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Model\Document\Field\ConfigurableOptions as Field;
-use GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Model\Read\ConfigurableOptions as Read;
-use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
+use GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Document\Field\ConfigurableOptions as Field;
+use GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Read\ConfigurableOptions as Read;
 use Magento\Framework\GraphQl\Query\Uid;
 use Magento\Swatches\Helper\Media as SwatchMedia;
 use PHPUnit\Framework\TestCase;
@@ -91,24 +90,19 @@ class ConfigurableOptionsTest extends TestCase
         ], $document['configurableOptions']);
     }
 
-    public function testExpandsToTheResponseShape(): void
+    public function testExpandsToTheSuperAttributeRows(): void
     {
-        $uid = new Uid();
-        $options = (new Read($uid))->expand($this->document());
+        $options = (new Read())->attributes($this->document());
 
         $this->assertCount(2, $options);
         $this->assertSame([
             'id' => 400,
             'use_default' => true,
-            'uid' => $uid->encode('configurable/494103/93'),
             'attribute_id' => '93',
-            'attribute_id_v2' => 93,
-            'attribute_uid' => $uid->encode('93'),
             'attribute_code' => 'color',
             'label' => 'Colour',
             'position' => 0,
             'product_id' => 494103,
-            'product_uid' => $uid->encode('494103'),
         ], array_diff_key($options[0], ['values' => null]));
         $this->assertSame([
             'value_index' => '1',
@@ -117,17 +111,14 @@ class ConfigurableOptionsTest extends TestCase
             'store_label' => 'Red',
             'use_default_value' => true,
             'attribute_id' => '93',
-            PrefillerInterface::KEY => [
-                'uid' => $uid->encode('configurable/93/1'),
-                'swatch_data' => ['type' => 1, 'value' => '#ff0000'],
-            ],
+            'swatch' => ['type' => 1, 'value' => '#ff0000'],
         ], $options[0]['values'][0]);
         $this->assertSame('Plain', $options[0]['values'][2]['default_label']);
-        $this->assertNull($options[0]['values'][2][PrefillerInterface::KEY]['swatch_data']);
+        $this->assertNull($options[0]['values'][2]['swatch']);
     }
 
     public function testAnswersNullWithoutTheField(): void
     {
-        $this->assertNull((new Read(new Uid()))->expand(['productId' => 1]));
+        $this->assertNull((new Read())->attributes(['productId' => 1]));
     }
 }

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Model\Document\Field;
+namespace GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Document\Field;
 
 use GraphCommerce\CatalogStorefrontApi\Document\ProductDocumentFieldInterface;
 use Magento\Framework\GraphQl\Query\Uid;
@@ -9,9 +9,8 @@ use Magento\Swatches\Helper\Media as SwatchMedia;
 use Magento\Swatches\Model\Swatch;
 
 /**
- * Stores a configurable's options on its document in the compact form that
- * Model\Read\ConfigurableOptions expands into the configurable_options
- * response shape: per option the super attribute id, the attribute id and
+ * Stores a configurable's options on its document in the compact form
+ * Model\Read\ConfigurableOptions expands: per option the super attribute id, the attribute id and
  * code, the label, the position and the use-default flag; per value the
  * value index, the label, the admin label where it differs and the swatch.
  * Every uid and every repeated id is derived at read time. The feed value id

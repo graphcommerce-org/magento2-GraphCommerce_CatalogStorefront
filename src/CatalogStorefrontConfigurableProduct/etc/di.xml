@@ -15,6 +15,14 @@
             </argument>
         </arguments>
     </type>
+    <!-- The super attributes and their values, stored compact on the configurable's document. -->
+    <type name="GraphCommerce\CatalogStorefront\Model\Document\Writer\Products">
+        <arguments>
+            <argument name="fields" xsi:type="array">
+                <item name="configurableOptions" xsi:type="object">GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Document\Field\ConfigurableOptions</item>
+            </argument>
+        </arguments>
+    </type>
     <type name="Magento\ConfigurableProductDataExporter\Model\Provider\Product\Options">
         <plugin name="graphcommerce_catalog_storefront_option_value_details" type="GraphCommerce\CatalogStorefrontConfigurableProduct\Plugin\DataExporter\OptionValueDetails"/>
     </type>

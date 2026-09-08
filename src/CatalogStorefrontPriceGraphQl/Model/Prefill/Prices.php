@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontPriceGraphQl\Model\Prefill;
 
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
+use GraphCommerce\CatalogStorefront\Model\Strict;
 use GraphCommerce\CatalogStorefrontPrice\Model\Read\DisplayPrice;
+use GraphCommerce\CatalogStorefrontPrice\Model\Read\FixedProductTax;
 use GraphCommerce\CatalogStorefrontPrice\Model\Read\PriceRanges;
 use GraphCommerce\CatalogStorefrontApi\Read\Amount;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
@@ -13,44 +15,58 @@ use Magento\Catalog\Model\Product;
 use Magento\CatalogGraphQl\Model\Resolver\Product\Price\Discount;
 use Magento\Framework\Pricing\PriceCurrencyInterface;
 use Magento\Store\Api\Data\StoreInterface;
+use Magento\Tax\Helper\Data as TaxHelper;
+use Magento\Tax\Model\Config as TaxConfig;
+use Magento\Weee\Model\Tax as WeeeTax;
 
 /**
  * The price range, the deprecated price and the tier prices, from the price
  * rows and the range of the product's type, in the request's display
- * currency and tax setup.
+ * currency and tax setup. With fixed product taxes active a composite
+ * carries the taxes of its children, which the aggregated ranges do not
+ * see, so composites go to core then.
  */
 class Prices implements PrefillerInterface
 {
+    private const OWN_PRICE_TYPES = ['simple', 'virtual', 'downloadable'];
+
     public function __construct(
         private readonly DisplayPrice $displayPrice,
         private readonly PriceCurrencyInterface $priceCurrency,
         private readonly Discount $discount,
         private readonly ProductPrice $productPrice,
         private readonly PriceRanges $priceRanges,
+        private readonly FixedProductTax $fixedProductTax,
+        private readonly TaxHelper $taxHelper,
+        private readonly Strict $strict,
     ) {
     }
 
     public function fill(array $models, array $documents, PrefillRequest $request): array
     {
-        if (!$request->selects('price_range', 'price', 'price_tiers', 'tier_prices')
-            || !$this->displayPrice->servable($request->store)
-        ) {
+        if (!$request->selects('price_range', 'price', 'price_tiers', 'tier_prices')) {
             return [];
         }
         $store = $request->store;
         $currency = $store->getCurrentCurrencyCode();
         $showOutOfStock = $this->displayPrice->showOutOfStock($store);
+        $fixedProductTaxes = $this->fixedProductTax->active($store);
         $output = [];
         foreach ($models as $id => $product) {
+            if ($fixedProductTaxes && !in_array($product->getTypeId(), self::OWN_PRICE_TYPES, true)) {
+                $this->strict->fallback(self::class, 'fixed product taxes on a ' . $product->getTypeId());
+                continue;
+            }
             $document = $documents[$id] ?? [];
             $range = $this->priceRanges->range($product, $document, $request, $showOutOfStock);
             if ($range === null) {
                 continue;
             }
             [$minRegular, $minFinal, $maxRegular, $maxFinal] = $range;
+            $taxes = $fixedProductTaxes ? $this->fixedProductTaxes((array)($document['fixedProductTaxes'] ?? []), $product, $store) : [];
             $priceRange = [
-                'minimum_price' => $this->format($minRegular->value, $minFinal->value, $product, $currency),
-                'maximum_price' => $this->format($maxRegular->value, $maxFinal->value, $product, $currency),
+                'minimum_price' => $this->format($minRegular->value, $minFinal->value, $product, $currency) + $taxes,
+                'maximum_price' => $this->format($maxRegular->value, $maxFinal->value, $product, $currency) + $taxes,
             ];
             // Core adds the separately purchased link prices to the rounded maximum after the discount is computed.
             if (!empty($document['linksPurchasedSeparately'])) {
@@ -94,21 +110,56 @@ class Prices implements PrefillerInterface
     }
 
     /**
-     * The deprecated price shape: the unrounded amount and its tax adjustment
-     * when the amount carries one.
+     * The fixed_product_taxes of a price, as core's resolver lists them: the
+     * amount by the tax display type, in the base currency under the display
+     * currency's code, as core answers it.
+     *
+     * @return array{fixed_product_taxes?: array[]}
+     */
+    private function fixedProductTaxes(array $rows, Product $product, StoreInterface $store): array
+    {
+        $listType = $this->fixedProductTax->listDisplayType($store);
+        $displayType = (int)$this->taxHelper->getPriceDisplayType($store);
+        $taxes = [];
+        foreach ($this->fixedProductTax->attributes($rows, $product, $store, in_array($listType, [WeeeTax::DISPLAY_INCL_DESCR, WeeeTax::DISPLAY_EXCL_DESCR_INCL], true)) as $attribute) {
+            $taxes[] = [
+                'amount' => [
+                    'value' => match ($displayType) {
+                        TaxConfig::DISPLAY_TYPE_EXCLUDING_TAX => $attribute['amountExclTax'],
+                        TaxConfig::DISPLAY_TYPE_INCLUDING_TAX => $attribute['amountExclTax'] + $attribute['taxAmount'],
+                        default => $attribute['amount'],
+                    },
+                    'currency' => $store->getCurrentCurrencyCode(),
+                ],
+                'label' => $attribute['label'],
+            ];
+        }
+
+        return ['fixed_product_taxes' => $taxes];
+    }
+
+    /**
+     * The deprecated price shape: the unrounded amount and the adjustments
+     * it carries, in core's adjustment order.
      */
     public function amount(Amount $amount, StoreInterface $store): array
     {
         $currency = $store->getCurrentCurrencyCode();
-
-        return [
-            'amount' => ['value' => $amount->value, 'currency' => $currency],
-            'adjustments' => $amount->tax ? [[
+        $adjustments = [];
+        if ($amount->tax) {
+            $adjustments[] = [
                 'code' => 'TAX',
                 'amount' => ['value' => $amount->tax, 'currency' => $currency],
                 'description' => $this->displayPrice->taxIncluded($store) ? 'INCLUDED' : 'EXCLUDED',
-            ]] : [],
-        ];
+            ];
+        }
+        foreach (['WEEE' => $amount->weee, 'WEEE_TAX' => $amount->weeeTax] as $code => $value) {
+            if ($value) {
+                $adjustments[] = ['code' => $code, 'amount' => ['value' => $value, 'currency' => $currency], 'description' => 'INCLUDED'];
+            }
+        }
+
+        return ['amount' => ['value' => $amount->value, 'currency' => $currency], 'adjustments' => $adjustments];
     }
 
     /**

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_DataExporter:etc/et_schema.xsd">
+    <record name="ProductFixedProductTax">
+        <field name="attributeCode" type="String"/>
+        <field name="label" type="String"/>
+        <field name="country" type="String"/>
+        <field name="region" type="Int"/>
+        <field name="website" type="Int"/>
+        <field name="value" type="Float"/>
+    </record>
+    <record name="Product">
+        <field name="fixedProductTaxes" type="ProductFixedProductTax" repeated="true" provider="GraphCommerce\CatalogStorefrontPrice\Model\DataExporter\Provider\FixedProductTaxes">
+            <using field="productId"/>
+            <using field="storeViewCode"/>
+        </field>
+    </record>
+</config>
