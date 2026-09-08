@@ -37,7 +37,7 @@ jobs:
           tools: composer:v${{ matrix.composer }}
           mode: extension
           magento_version: ${{ matrix.magento }}
-          magento_repository: https://mirror.mage-os.org/
+          magento_repository: https://repo.mage-os.org/
       - name: Install the exporter and this package into the Magento project
         working-directory: ${{ steps.magento.outputs.path }}
         env:
@@ -88,7 +88,7 @@ jobs:
           tools: composer:v${{ matrix.magento.composer }}
           mode: extension
           magento_version: ${{ matrix.magento.magento }}
-          magento_repository: https://mirror.mage-os.org/
+          magento_repository: https://repo.mage-os.org/
       - name: Install the exporter, the sample data and this package
         working-directory: ${{ steps.magento.outputs.path }}
         env:
