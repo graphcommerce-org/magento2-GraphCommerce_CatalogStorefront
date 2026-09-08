@@ -12,7 +12,7 @@ jobs:
     outputs:
       matrix: ${{ steps.supported-version.outputs.matrix }}
     steps:
-      - uses: graycoreio/github-actions-magento2/supported-version@v8
+      - uses: graycoreio/github-actions-magento2/supported-version@v8.10.0
         id: supported-version
         with:
           project: mage-os
@@ -30,7 +30,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: graycoreio/github-actions-magento2/setup-magento@v8
+      - uses: graycoreio/github-actions-magento2/setup-magento@v8.10.0
         id: magento
         with:
           php-version: ${{ matrix.php }}
@@ -81,7 +81,7 @@ jobs:
     services: ${{ matrix.magento.services }}
     steps:
       - uses: actions/checkout@v4
-      - uses: graycoreio/github-actions-magento2/setup-magento@v8
+      - uses: graycoreio/github-actions-magento2/setup-magento@v8.10.0
         id: magento
         with:
           php-version: ${{ matrix.magento.php }}
@@ -115,7 +115,7 @@ jobs:
           composer install --no-interaction --no-progress
       - name: Allow SQL triggers
         run: mysql --host 127.0.0.1 --port ${{ job.services.mysql.ports['3306'] }} -u root -prootpassword -e "set global log_bin_trust_function_creators=1;"
-      - uses: graycoreio/github-actions-magento2/setup-install@v8
+      - uses: graycoreio/github-actions-magento2/setup-install@v8.10.0
         with:
           path: ${{ steps.magento.outputs.path }}
           services: ${{ toJSON(matrix.magento.services) }}
