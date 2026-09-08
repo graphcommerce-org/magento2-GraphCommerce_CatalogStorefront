@@ -90,8 +90,15 @@ class Rebuild extends Command
             }
         }
         foreach ($indexers as $indexerId => $feedName) {
+            $indexer = $this->indexerRegistry->get($indexerId);
+            // A reindex of a working indexer returns at once; an interrupted run leaves that state behind.
+            if ($indexer->isWorking()) {
+                $output->writeln(sprintf('<error>The %s indexer is working: bin/magento indexer:reset %s</error>', $feedName, $indexerId));
+
+                return Command::FAILURE;
+            }
             $started = microtime(true);
-            $this->indexerRegistry->get($indexerId)->reindexAll();
+            $indexer->reindexAll();
             $output->writeln(sprintf('Exported the %s feed in %.1fs', $feedName, microtime(true) - $started));
         }
         $this->promote($entities, $output);

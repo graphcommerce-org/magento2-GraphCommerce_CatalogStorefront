@@ -150,6 +150,7 @@ jobs:
           mysql --host 127.0.0.1 --port ${{ job.services.mysql.ports['3306'] }} -u root -prootpassword magento -e "INSERT INTO directory_currency_rate (currency_from, currency_to, rate) VALUES ('USD', 'EUR', 0.85)"
           for pair in ${{ matrix.prices.set }}; do bin/magento config:set "${pair%%=*}" "${pair#*=}"; done
           bin/magento cache:flush
+          bin/magento indexer:set-mode schedule catalog_data_exporter_products catalog_data_exporter_product_prices
           bin/magento indexer:reindex
       - name: Parity gate
         working-directory: ${{ steps.magento.outputs.path }}
@@ -161,4 +162,8 @@ jobs:
           bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql --header "Authorization: Bearer $CUSTOMER_TOKEN"
       - name: Parity gate on the second store view
         working-directory: ${{ steps.magento.outputs.path }}
-        run: bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql --header "Store: second"
+        run: |
+          bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql --header "Store: second"
+      - name: Freshness gate
+        working-directory: ${{ steps.magento.outputs.path }}
+        run: php ${{ github.workspace }}/dev/parity/freshness.php

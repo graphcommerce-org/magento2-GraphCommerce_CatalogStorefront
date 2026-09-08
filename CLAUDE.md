@@ -134,7 +134,8 @@ passes.
   currency and taxed through core's tax service for the request's group and
   destination: display incl, excl or both, catalog prices incl tax,
   cross-border trade and the tax classes follow core config; fixed product
-  tax falls back), `PriceRanges` (di.xml `ranges`, by type id; the type
+  taxes from the document's `fixedProductTaxes` rows through `FixedProductTax`,
+  composites fall back while they are active), `PriceRanges` (di.xml `ranges`, by type id; the type
   modules add theirs) / the prices prefiller with its fields and routes (a
   type GraphQl module whose prefiller rewrites a price field sequences after
   `PriceGraphQl`, so the prices prefiller runs first), and
@@ -446,7 +447,7 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   taxes the way the tax adjustment taxes (core's tax service with the
   product's tax class, whenever catalog prices include tax or the display
   does), so the same request path answers every currency and tax display
-  setup except fixed product taxes. The tax gate needs a rate at the store's
+  setup, fixed product taxes included for the types with their own price. The tax gate needs a rate at the store's
   default destination: the demo catalog's only rule is Michigan (region 33). A grouped range is the
   lowest regular and lowest final child price, as core takes them; a bundle
   range is `Model/Read/BundlePriceRange`, a port of core's bundle amount
@@ -683,8 +684,13 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
 
 ## Known gaps and deviations
 
-- Prices are served in every currency and tax display setup except fixed
-  product taxes, which fall back to core. A configurable or grouped range
+- Prices are served in every currency and tax display setup. Fixed product
+  taxes are served for simple, virtual and downloadable products; a
+  composite falls back to core while the store has fixed product taxes
+  enabled and at least one weee attribute, since core prices a configurable
+  by its children's amounts with their taxes and a bundle by its own rows.
+  The `fixed_product_taxes` list answers the base currency amount under the
+  display currency's code, as core does. A configurable or grouped range
   taxes each bound with the tax class of the child that carries it, as core
   does: the price aggregation groups the bounds per child `taxClassId`, and
   the range picks the lowest and highest taxed amount (configurable) or the

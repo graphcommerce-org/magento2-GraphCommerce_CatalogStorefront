@@ -121,7 +121,13 @@ rounded to the decimals of its source (two for a special or tier price, four for
 rule price), through
 core's own tax service with the product's tax class (a dynamic bundle's selections
 with their own); the Worker module keeps its rate lookups between requests.
-Fixed product taxes are not answered. A new or deleted customer group changes the index
+Fixed product taxes travel on the document as the weee rows of the store's website and of
+all websites (`fixedProductTaxes`, exported by the Price module; its mview subscription on
+`weee_tax` takes effect after `indexer:reset` of the products feed, since the triggers are
+generated at the mode switch). The read side picks the rows of the request's destination and
+taxes them as core's weee model does; the list display setting decides whether they enter
+the price, as GraphQL renders no product page. A composite goes to core while fixed product
+taxes are active, since its children carry the taxes. A new or deleted customer group changes the index
 entries of every product, so its save truncates the prices feed table and invalidates the
 feed indexer; the next cron run re-exports every row.
 
@@ -322,10 +328,14 @@ installation that holds the package (`MAGENTO_ROOT`, else the project two levels
 `.github/workflows/ci.yml` runs them on the latest Mage-OS release through the
 [graycore actions](https://github.com/graycoreio/github-actions-magento2), then installs
 the sample data with OpenSearch, MySQL and Redis as service containers, adds the query set's
-fixtures, exports the feeds and runs the parity gate in three price setups: excluding tax,
-catalog prices including tax, both prices displayed; each as a guest, as a signed-in
-customer with a Michigan address, and on the store view of a second website that sells
-every product. PHPUnit runs from its phar in both
+fixtures, exports the feeds and runs the parity gate in four price setups: excluding tax,
+catalog prices including tax, both prices displayed, fixed product taxes in the price; each
+as a guest, as a signed-in customer with a Michigan address, and on the store view of a
+second website that sells every product. `dev/parity/freshness.php` then changes a price
+and a fixed product tax, updates the scheduled feed views as the indexer cron does and
+reads the document back: a table the feeds do not watch shows up here. The writer tests
+under `Test/Unit/Model/Document` hold the document contract: a feed batch in, the documents
+out. PHPUnit runs from its phar in both
 jobs: Magento's composer.json excludes every `Test` directory from the classmap, which
 drops PHPUnit's own event classes.
 
@@ -345,31 +355,26 @@ Documents.
 
 ## Ideas and to do
 
-1. **Integration tests.** Magento integration tests for the writers and the model
-    builder next to the unit tests, which is what a Mage-OS review asks for.
-2. **Worker parity and memory.** The parity gate against the worker endpoint with the
+1. **Worker parity and memory.** The parity gate against the worker endpoint with the
    headers, stores, currencies, customer groups and filters varied per query, so a memo
    that keeps what it must not shows up as a diff, and the worker's memory per process
    sampled over a long run, so a memo that grows per request shows up as a slope.
-3. **Extension hooks in the Api module.** A query-time filter on the listing, a ranking
-    hook on the search request and a permission hook on the documents, so an extension
-    plugs in without a preference on a class of this package.
-4. **Fixed product taxes.** The last price display setup that falls back to core.
-    The weee amounts per product travel on the document; the read side adds them the
-    way the weee adjustment does.
-5. **Subtree split.** The module directories to their own repositories and packages,
+2. **Subtree split.** The module directories to their own repositories and packages,
     so the modules install separately while the repository stays one.
 
-6. **Cart, wishlist and order products.** A cart item's product still loads from the
-   database. A plugin on the cart items data swaps in the document model by product
-   id; the quote keeps what it owns, the row price, the options and the quantity checks.
-7. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
+3. **Cart, wishlist and order products.** The quote recomputes an item's row price from
+   its product model at every totals collection, placeOrder included, so a document model
+   on a quote item would charge the document price at feed lag; the wishlist and order
+   item product resolvers are display reads. What fits is a merge of the document's display
+   fields into the cart item's product data, with the database model kept on the item.
+
+4. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
    product listing collection, the product page and the layered navigation read from the
    base modules. The price rendering goes through the pricing system, so it needs its
    own document-backed price providers.
-8. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
-9. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
+5. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
+6. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
    listing needs a gate of its own: the rendered listing and product page on both
    paths, so an integrator proves an extension on every surface it touches.
-10. **REST integration.** The product repository and the search API behind the same
+7. **REST integration.** The product repository and the search API behind the same
    document models, for headless setups that read the catalog over REST.
