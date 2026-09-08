@@ -27,3 +27,12 @@ if (!interface_exists(\Magento\Integration\Api\Data\UserTokenParametersExtension
 if (!interface_exists(\Magento\GraphQl\Model\Query\ContextExtensionInterface::class)) {
     require __DIR__ . '/generated/ContextExtensionInterface.php';
 }
+// A factory the DI compile generates: declared here with core's shape when no generated code exists.
+spl_autoload_register(static function (string $class): void {
+    if (!str_ends_with($class, 'Factory') || class_exists(substr($class, 0, -7)) === false && interface_exists(substr($class, 0, -7)) === false) {
+        return;
+    }
+    $namespace = substr($class, 0, strrpos($class, '\\'));
+    $name = substr($class, strrpos($class, '\\') + 1);
+    eval("namespace $namespace; class $name { public function create(array \$data = []) {} }");
+});
