@@ -327,23 +327,19 @@ every product. PHPUnit runs from its phar in both
 jobs: Magento's composer.json excludes every `Test` directory from the classmap, which
 drops PHPUnit's own event classes.
 
-## Development install
-
-The package is not yet published, so a project links the module directories into
-`app/code`. From the Magento root, with this repository cloned into `packages/`:
+## Install
 
 ```sh
-for d in packages/magento2-GraphCommerce_CatalogStorefront/src/*/; do
-  ln -s ../../../$d app/code/GraphCommerce/$(basename $d)
-done
-bin/magento module:enable $(ls packages/magento2-GraphCommerce_CatalogStorefront/src | sed 's/^/GraphCommerce_/')
+composer require graphcommerce/magento-catalog-storefront
 bin/magento setup:upgrade --keep-generated
 bin/magento setup:di:compile
 ```
 
-Then run the commerce-data-export indexers and turn on Serve GraphQL From Documents. A
-composer install from the package registers every module through its autoload instead
-of the links.
+The package registers every module through its autoload. A development install adds
+`"preferred-install": {"graphcommerce/magento-catalog-storefront": "source"}` to the
+project's composer config, so `vendor/graphcommerce/magento-catalog-storefront` is a git
+working copy. Then run the commerce-data-export indexers and turn on Serve GraphQL From
+Documents.
 
 ## Ideas and to do
 
@@ -365,9 +361,8 @@ of the links.
 5. **Fixed product taxes.** The last price display setup that falls back to core.
     The weee amounts per product travel on the document; the read side adds them the
     way the weee adjustment does.
-6. **Package publishing.** A subtree split of the module directories to their own
-    repositories and a release on packagist, so the modules install separately while
-    the repository stays one.
+6. **Subtree split.** The module directories to their own repositories and packages,
+    so the modules install separately while the repository stays one.
 
 7. **Cart, wishlist and order products.** A cart item's product still loads from the
    database. A plugin on the cart items data swaps in the document model by product
