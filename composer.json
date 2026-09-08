@@ -49,6 +49,7 @@
         "mage-os/module-worker-mode": "GraphCommerce_CatalogStorefrontWorker keeps the process memos of a FrankenPHP worker",
         "magento/module-inventory-data-exporter": "GraphCommerce_CatalogStorefrontInventory serves the stock fields",
         "magento/module-configurable-product-data-exporter": "GraphCommerce_CatalogStorefrontConfigurableProduct serves configurable options, variants and the options selection",
+        "magento/module-product-variant-data-exporter": "GraphCommerce_CatalogStorefrontConfigurableProduct writes the variants feed",
         "magento/module-bundle-product-data-exporter": "GraphCommerce_CatalogStorefrontBundleProduct serves bundle items and the bundle price range",
         "magento/module-grouped-product-graph-ql": "GraphCommerce_CatalogStorefrontGroupedProduct serves grouped items and the grouped price range",
         "magento/module-downloadable-graph-ql": "GraphCommerce_CatalogStorefrontDownloadable serves downloadable links and samples",
