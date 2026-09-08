@@ -10,6 +10,8 @@
         "magento/module-store": "*",
         "magento/module-data-exporter": "*",
         "magento/module-catalog-data-exporter": "*",
+        "magento/module-catalog-url-rewrite-data-exporter": "*",
+        "magento/module-parent-product-data-exporter": "*",
         "magento/module-product-price-data-exporter": "*",
         "magento/module-inventory-data-exporter": "*",
         "magento/module-configurable-product-data-exporter": "*",

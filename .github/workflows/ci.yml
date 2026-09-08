@@ -159,23 +159,31 @@ jobs:
           bin/magento catalog-storefront:rebuild
       - name: Parity gate
         working-directory: ${{ steps.magento.outputs.path }}
-        run: bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql
+        run: bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql --dump=parity-dump/guest
       - name: Signed-in parity gate
         working-directory: ${{ steps.magento.outputs.path }}
         run: |
           CUSTOMER_TOKEN=$(curl -s -X POST http://127.0.0.1:8080/graphql -H 'Content-Type: application/json' -d '{"query":"mutation { generateCustomerToken(email: \"customer@example.com\", password: \"Parity12345!\") { token } }"}' | php -r 'echo json_decode(stream_get_contents(STDIN), true)["data"]["generateCustomerToken"]["token"] ?? exit(1);')
-          bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql --header "Authorization: Bearer $CUSTOMER_TOKEN"
+          bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql --header "Authorization: Bearer $CUSTOMER_TOKEN" --dump=parity-dump/customer
       - name: Parity gate on the second store view
         working-directory: ${{ steps.magento.outputs.path }}
         run: |
-          bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql --header "Store: second"
+          bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql --header "Store: second" --dump=parity-dump/second
       - name: Freshness gate
         working-directory: ${{ steps.magento.outputs.path }}
         run: php ${{ github.workspace }}/dev/parity/freshness.php
+      - name: Responses of a failed gate
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-dump-${{ matrix.prices.name }}
+          path: ${{ steps.magento.outputs.path }}/parity-dump
+          if-no-files-found: ignore
       - name: Logs of a failed gate
         if: failure()
         working-directory: ${{ steps.magento.outputs.path }}
         run: |
+          bin/magento catalog-storefront:status
           for f in var/log/exception.log var/log/system.log var/log/debug.log php-server.log; do
             [ -f "$f" ] && { echo "== $f"; tail -n 120 "$f"; }
           done

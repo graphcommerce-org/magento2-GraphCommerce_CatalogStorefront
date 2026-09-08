@@ -205,8 +205,8 @@ class Parity extends Command
      * Orders that core leaves undefined are not document differences: aggregation
      * options tie-break in the search engine, and configurable_options come from a
      * collection without ORDER BY, and so do an option's values and a category's
-     * children of equal position. All are sorted so the diff sees the set, not the
-     * order. Zero-count aggregation options are dropped: core's option provider joins
+     * children of equal position, and reviews of one created_at come in database
+     * order. All are sorted so the diff sees the set, not the order. Zero-count aggregation options are dropped: core's option provider joins
      * attributes by code across entity types, so an option of a same-named attribute
      * of another entity shows up on some runs.
      */
@@ -236,6 +236,11 @@ class Parity extends Command
             // Core lists an option's values and a category's children among equal positions in database order.
             if ($key === 'values' && is_array($child) && (isset($child[0]['value_index']) || isset($child[0]['uid']))) {
                 usort($child, static fn($a, $b) => [$a['value_index'] ?? 0, $a['uid'] ?? ''] <=> [$b['value_index'] ?? 0, $b['uid'] ?? '']);
+                $node[$key] = $child;
+            }
+            if ($key === 'reviews' && is_array($child['items'] ?? null)) {
+                usort($child['items'], static fn($a, $b) => [$b['created_at'] ?? '', $a['nickname'] ?? '', $a['summary'] ?? '']
+                    <=> [$a['created_at'] ?? '', $b['nickname'] ?? '', $b['summary'] ?? '']);
                 $node[$key] = $child;
             }
             if ($key === 'children' && is_array($child) && isset($child[0]['uid'])) {
