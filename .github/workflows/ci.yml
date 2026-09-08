@@ -48,11 +48,7 @@ jobs:
           composer config repositories.package path '${{ github.workspace }}'
           composer config minimum-stability dev
           composer config prefer-stable true
-          composer require --no-update magento/module-data-exporter:'*' magento/module-catalog-data-exporter:'*' \
-            magento/module-product-price-data-exporter:'*' magento/module-inventory-data-exporter:'*' \
-            magento/module-configurable-product-data-exporter:'*' magento/module-product-variant-data-exporter:'*' \
-            magento/module-bundle-product-data-exporter:'*' \
-            magento/module-product-review-data-exporter:'*' graphcommerce/magento-catalog-storefront:'@dev'
+          composer require --no-update graphcommerce/magento-catalog-storefront:'@dev'
           composer install --no-interaction --no-progress
       - name: Unit tests
         run: |
@@ -100,11 +96,7 @@ jobs:
           composer config repositories.package path '${{ github.workspace }}'
           composer config minimum-stability dev
           composer config prefer-stable true
-          composer require --no-update magento/module-data-exporter:'*' magento/module-catalog-data-exporter:'*' \
-            magento/module-product-price-data-exporter:'*' magento/module-inventory-data-exporter:'*' \
-            magento/module-configurable-product-data-exporter:'*' magento/module-product-variant-data-exporter:'*' \
-            magento/module-bundle-product-data-exporter:'*' \
-            magento/module-product-review-data-exporter:'*' graphcommerce/magento-catalog-storefront:'@dev' \
+          composer require --no-update graphcommerce/magento-catalog-storefront:'@dev' \
             mage-os/module-catalog-sample-data:'*' mage-os/module-configurable-sample-data:'*' \
             mage-os/module-bundle-sample-data:'*' mage-os/module-grouped-product-sample-data:'*' \
             mage-os/module-downloadable-sample-data:'*' mage-os/module-review-sample-data:'*' \
