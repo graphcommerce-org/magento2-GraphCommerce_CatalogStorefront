@@ -24,3 +24,6 @@ foreach ($package['autoload']['psr-4'] as $prefix => $path) {
 if (!interface_exists(\Magento\Integration\Api\Data\UserTokenParametersExtensionInterface::class)) {
     require __DIR__ . '/generated/UserTokenParametersExtensionInterface.php';
 }
+if (!interface_exists(\Magento\GraphQl\Model\Query\ContextExtensionInterface::class)) {
+    require __DIR__ . '/generated/ContextExtensionInterface.php';
+}

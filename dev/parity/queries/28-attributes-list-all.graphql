@@ -1,0 +1,10 @@
+{
+  attributesList(entityType: CATALOG_PRODUCT, filters: {}) {
+    items {
+      code label frontend_input frontend_class is_required default_value is_unique
+      options { label value is_default }
+      ... on CatalogAttributeMetadata { apply_to is_filterable is_searchable used_in_product_listing swatch_input_type }
+    }
+    errors { type message }
+  }
+}

@@ -48,7 +48,8 @@ class AttributeOptions
                         }
                         $attribute->setStoreId($storeId);
                         foreach ($attribute->getSource()->getAllOptions() as $option) {
-                            if (!isset($option['value']) || is_array($option['value']) || (string)$option['value'] === '') {
+                            // Option groups carry no value; an empty option with a label stays, as in the attributes list of core
+                            if (!isset($option['value']) || is_array($option['value']) || (trim((string)$option['value']) === '' && trim((string)($option['label'] ?? '')) === '')) {
                                 continue;
                             }
                             $output[$storeViewCode . '_' . $id . '_' . $option['value']] = [

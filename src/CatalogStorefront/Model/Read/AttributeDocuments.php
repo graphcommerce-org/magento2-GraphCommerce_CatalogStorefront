@@ -19,6 +19,8 @@ class AttributeDocuments implements ResetAfterRequestInterface
     /** @var array<string, bool> per store view: whether the feed has landed */
     private array $available = [];
 
+    private array $all = [];
+
     public function __construct(
         private readonly MetadataDocumentStorageInterface $storage,
     ) {
@@ -43,6 +45,14 @@ class AttributeDocuments implements ResetAfterRequestInterface
         return array_filter(array_intersect_key($known, array_flip($codes)));
     }
 
+    /**
+     * @return array<string, array> every attribute document of the store view, by code
+     */
+    public function all(string $storeViewCode): array
+    {
+        return $this->all[$storeViewCode] ??= $this->storage->all('attribute', $storeViewCode);
+    }
+
     public function available(string $storeViewCode): bool
     {
         return $this->available[$storeViewCode] ??= $this->storage->count('attribute', $storeViewCode) > 0;
@@ -52,5 +62,6 @@ class AttributeDocuments implements ResetAfterRequestInterface
     {
         $this->byStore = [];
         $this->available = [];
+        $this->all = [];
     }
 }

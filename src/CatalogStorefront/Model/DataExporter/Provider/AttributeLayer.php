@@ -6,9 +6,9 @@ namespace GraphCommerce\CatalogStorefront\Model\DataExporter\Provider;
 use Magento\Framework\App\ResourceConnection;
 
 /**
- * Adds to an attribute metadata row its numeric id, the layered navigation
- * position and the filterable mode (0 off, 1 with results, 2 without) the
- * exporter reduces to a flag.
+ * The attribute columns the exporter's own metadata record leaves out or rewrites: the layer
+ * settings, what the attributes list of GraphQL reports beyond the exporter's flags, and the
+ * visibility and backend type as stored, since the exporter lifts its own pseudo attributes.
  */
 class AttributeLayer
 {
@@ -24,20 +24,35 @@ class AttributeLayer
             return [];
         }
         $connection = $this->resourceConnection->getConnection();
-        $configuration = $connection->fetchAssoc(
+        $rows = $connection->fetchAssoc(
             $connection->select()
-                ->from($this->resourceConnection->getTableName('catalog_eav_attribute'), ['attribute_id', 'position', 'is_filterable'])
-                ->where('attribute_id IN (?)', $ids)
+                ->from(['cea' => $this->resourceConnection->getTableName('catalog_eav_attribute')], [
+                    'attribute_id', 'position', 'is_filterable', 'is_html_allowed_on_front', 'is_wysiwyg_enabled',
+                    'is_used_for_promo_rules', 'is_visible_in_advanced_search', 'apply_to', 'additional_data', 'is_visible',
+                ])
+                ->join(['eav' => $this->resourceConnection->getTableName('eav_attribute')], 'eav.attribute_id = cea.attribute_id', ['frontend_class', 'default_value', 'backend_type'])
+                ->where('cea.attribute_id IN (?)', $ids)
         );
         $output = [];
         foreach ($values as $value) {
             $id = (int)$value['id'];
+            $row = $rows[$id] ?? [];
             $output[$value['storeViewCode'] . '_' . $id] = [
                 'id' => (string)$id,
                 'storeViewCode' => $value['storeViewCode'],
                 'attributeId' => $id,
-                'position' => (int)($configuration[$id]['position'] ?? 0),
-                'filterableMode' => (int)($configuration[$id]['is_filterable'] ?? 0),
+                'position' => (int)($row['position'] ?? 0),
+                'filterableMode' => (int)($row['is_filterable'] ?? 0),
+                'frontendClass' => $row['frontend_class'] ?? null,
+                'defaultValue' => $row['default_value'] ?? null,
+                'htmlAllowedOnFront' => !empty($row['is_html_allowed_on_front']),
+                'wysiwygEnabled' => !empty($row['is_wysiwyg_enabled']),
+                'usedForPromoRules' => !empty($row['is_used_for_promo_rules']),
+                'visibleInAdvancedSearch' => !empty($row['is_visible_in_advanced_search']),
+                'applyTo' => $row['apply_to'] ?? null,
+                'additionalData' => $row['additional_data'] ?? null,
+                'isVisible' => !empty($row['is_visible']),
+                'backendType' => $row['backend_type'] ?? null,
             ];
         }
 

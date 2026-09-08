@@ -57,5 +57,45 @@
             <using field="id"/>
             <using field="storeViewCode"/>
         </field>
+        <field name="frontendClass" type="String" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeLayer">
+            <using field="id"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="defaultValue" type="String" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeLayer">
+            <using field="id"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="htmlAllowedOnFront" type="Boolean" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeLayer">
+            <using field="id"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="wysiwygEnabled" type="Boolean" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeLayer">
+            <using field="id"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="usedForPromoRules" type="Boolean" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeLayer">
+            <using field="id"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="visibleInAdvancedSearch" type="Boolean" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeLayer">
+            <using field="id"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="applyTo" type="String" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeLayer">
+            <using field="id"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="additionalData" type="String" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeLayer">
+            <using field="id"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="isVisible" type="Boolean" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeLayer">
+            <using field="id"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="backendType" type="String" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeLayer">
+            <using field="id"/>
+            <using field="storeViewCode"/>
+        </field>
     </record>
 </config>
