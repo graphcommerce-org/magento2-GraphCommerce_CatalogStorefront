@@ -29,6 +29,9 @@
         <plugin name="graphcommerce_catalog_storefront_currency_rate_memo" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Directory\CurrencyRateMemo"/>
         <plugin name="graphcommerce_catalog_storefront_bump_currency" type="GraphCommerce\CatalogStorefrontWorker\Plugin\BumpCurrency"/>
     </type>
+    <type name="Magento\Store\Model\Store">
+        <plugin name="graphcommerce_catalog_storefront_reset_current_currency" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Store\ResetCurrentCurrency"/>
+    </type>
 
     <!-- The reload after a response runs once per config generation; between generations only the request's own processor runs. -->
     <type name="Magento\Framework\App\State\ReloadProcessorComposite">
