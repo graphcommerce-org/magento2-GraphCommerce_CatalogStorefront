@@ -24,7 +24,8 @@ jobs:
           service_preferences: opensearch,valkey
 
   # The pure classes: price semantics, ranges, mappings, routing, memos. Needs a Magento vendor
-  # directory for the autoloader and the mocked core classes, nothing installed. PHPUnit runs
+  # directory for the autoloader, mocked core classes and the worker's concrete request registry;
+  # setup:install is not run. PHPUnit runs
   # from its phar: the Magento composer.json excludes every Test directory from the classmap,
   # which drops PHPUnit's own event classes.
   unit:
@@ -52,7 +53,7 @@ jobs:
           composer config repositories.package path '${{ github.workspace }}'
           composer config minimum-stability dev
           composer config prefer-stable true
-          composer require --no-update graphcommerce/magento-catalog-storefront:'@dev'
+          composer require --no-update graphcommerce/magento-catalog-storefront:'@dev' opengento/module-application:'*'
           composer install --no-interaction --no-progress
       - name: Unit tests
         run: |
