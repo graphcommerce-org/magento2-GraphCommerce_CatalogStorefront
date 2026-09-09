@@ -200,8 +200,11 @@ jobs:
           SKUS="'24-WG080','24-WG085_Group','GC-BUNDLE-FIXED','WJ02','24-WG01','240-LV04'"
           mysql --host 127.0.0.1 --port ${{ job.services.mysql.ports['3306'] }} -u root -prootpassword magento_integration_tests -e "
             SELECT e.sku, e.type_id, s.website_id, s.stock_id, s.stock_status, s.qty, i.is_in_stock, i.qty AS item_qty FROM catalog_product_entity e JOIN cataloginventory_stock_status s ON s.product_id = e.entity_id LEFT JOIN cataloginventory_stock_item i ON i.product_id = e.entity_id WHERE e.sku IN ($SKUS);
-            SELECT feed_data->>'$.sku' AS sku, feed_data->>'$.storeViewCode' AS store, feed_data->>'$.inStock' AS inStock, feed_data->>'$.buyable' AS buyable, modified_at FROM cde_products_feed WHERE feed_data->>'$.sku' IN ($SKUS);
-            SELECT JSON_KEYS(feed_data) AS product_feed_keys FROM cde_products_feed LIMIT 1;
+            SELECT feed_data->>'$.sku' AS sku, feed_data->>'$.storeViewCode' AS store, modified_at FROM cde_products_feed WHERE feed_data->>'$.sku' IN ($SKUS);
+            SELECT e.sku, i.is_in_stock, i.qty, i.manage_stock, i.use_config_manage_stock FROM catalog_product_entity e LEFT JOIN cataloginventory_stock_item i ON i.product_id = e.entity_id WHERE e.sku IN ($SKUS);
+            SELECT sku, source_code, quantity, status FROM inventory_source_item WHERE sku IN ($SKUS);
+            SELECT e.type_id, COUNT(*) AS without_stock_status FROM catalog_product_entity e LEFT JOIN cataloginventory_stock_status s ON s.product_id = e.entity_id WHERE s.product_id IS NULL GROUP BY e.type_id;
+            SELECT indexer_id, status, updated FROM indexer_state WHERE indexer_id IN ('cataloginventory_stock', 'inventory', 'catalogsearch_fulltext');
             SELECT feed_data->>'$.sku' AS sku, feed_data->>'$.stockId' AS stock, feed_data->>'$.isSalable' AS isSalable, feed_data->>'$.qty' AS qty FROM inventory_data_exporter_stock_status_feed WHERE feed_data->>'$.sku' IN ($SKUS);"
           HOST=$(bin/magento config:show catalog/search/opensearch_server_hostname); PORT=$(bin/magento config:show catalog/search/opensearch_server_port); PREFIX=$(bin/magento config:show catalog/storefront_documents/index_prefix); CORE=$(bin/magento config:show catalog/search/opensearch_index_prefix)
           curl -s -H 'Content-Type: application/json' "http://$HOST:$PORT/${PREFIX:-catalog_storefront}_product_default/_search" -d '{"query":{"terms":{"sku":["24-WG080","24-WG085_Group","GC-BUNDLE-FIXED","WJ02","24-WG01","240-LV04"]}},"_source":["sku","type","inStock","buyable","stock"]}'; echo

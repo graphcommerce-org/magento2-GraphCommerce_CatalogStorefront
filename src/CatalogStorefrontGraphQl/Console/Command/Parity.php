@@ -243,6 +243,10 @@ class Parity extends Command
                     <=> [$a['created_at'] ?? '', $b['nickname'] ?? '', $b['summary'] ?? '']);
                 $node[$key] = $child;
             }
+            // Core lists a tax adjustment of a float remainder (1e-14) where the tax is zero.
+            if ($key === 'adjustments' && is_array($child)) {
+                $node[$key] = array_values(array_filter($child, static fn($adjustment) => abs((float)($adjustment['amount']['value'] ?? 0)) >= 0.000001));
+            }
             if ($key === 'children' && is_array($child) && isset($child[0]['uid'])) {
                 usort($child, static fn($a, $b) => [(int)($a['position'] ?? 0), $a['uid'] ?? ''] <=> [(int)($b['position'] ?? 0), $b['uid'] ?? '']);
                 $node[$key] = $child;
