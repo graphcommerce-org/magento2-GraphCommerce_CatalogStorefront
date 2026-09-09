@@ -119,6 +119,19 @@ jobs:
         with:
           path: ${{ steps.magento.outputs.path }}
           services: ${{ toJSON(matrix.magento.services) }}
+      - name: Sample data state
+        working-directory: ${{ steps.magento.outputs.path }}
+        # The install carries on past a sample data module that fails and leaves its products out; a
+        # reset lets setup:upgrade run those modules again.
+        run: |
+          grep -h "Sample Data error" var/log/*.log || true
+          if grep -q error var/.sample-data-state.flag; then
+            bin/magento sampledata:reset
+            bin/magento setup:upgrade --keep-generated
+            grep -h "Sample Data error" var/log/*.log || true
+            grep -q error var/.sample-data-state.flag && exit 1
+          fi
+          cat var/.sample-data-state.flag; echo
       - name: Fixtures of the query set
         working-directory: ${{ steps.magento.outputs.path }}
         run: |
@@ -195,6 +208,7 @@ jobs:
         working-directory: ${{ steps.magento.outputs.path }}
         run: |
           set +e
+          grep -h "Sample Data error" var/log/*.log
           bin/magento catalog-storefront:status
           # The stock of the composites and one variant: the legacy rows both paths read, the feeds, the documents.
           SKUS="'24-WG080','24-WG085_Group','GC-BUNDLE-FIXED','WJ02','24-WG01','240-LV04'"
