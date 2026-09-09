@@ -124,12 +124,16 @@ jobs:
         # The install carries on past a sample data module that fails and leaves its products out; a
         # reset lets setup:upgrade run those modules again.
         run: |
+          errors() { cat var/log/*.log 2>/dev/null | grep -c "Sample Data error" || true; }
           grep -h "Sample Data error" var/log/*.log || true
           if grep -q error var/.sample-data-state.flag; then
+            before=$(errors)
+            # The error state never clears itself, and the media the installers read must be in place.
+            : > var/.sample-data-state.flag
+            rsync -a --ignore-existing vendor/mage-os/sample-data-media/ pub/media/
             bin/magento sampledata:reset
             bin/magento setup:upgrade --keep-generated
-            grep -h "Sample Data error" var/log/*.log || true
-            grep -q error var/.sample-data-state.flag && exit 1
+            [ "$(errors)" = "$before" ] || { grep -h "Sample Data error" var/log/*.log | tail -n 3; exit 1; }
           fi
           cat var/.sample-data-state.flag; echo
       - name: Fixtures of the query set

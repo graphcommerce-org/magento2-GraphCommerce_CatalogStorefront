@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontPrice\Model\Read;
 
 use Magento\Catalog\Model\Product;
+use Magento\Customer\Model\Session;
 use Magento\Framework\Pricing\PriceCurrencyInterface;
 use Magento\Store\Api\Data\StoreInterface;
 use Magento\Tax\Helper\Data as TaxHelper;
@@ -28,6 +29,7 @@ class FixedProductTax
         private readonly WeeeTax $weeeTax,
         private readonly TaxHelper $taxHelper,
         private readonly PriceCurrencyInterface $priceCurrency,
+        private readonly Session $session,
     ) {
     }
 
@@ -58,7 +60,7 @@ class FixedProductTax
         if (!$rows || !$this->weeeHelper->isEnabled($store)) {
             return [];
         }
-        $request = $this->calculation->getRateRequest(null, null, null, $store);
+        $request = $this->calculation->getRateRequest(null, null, null, $store, $this->session->getCustomerId() ?: null);
         $country = (string)$request->getCountryId();
         $region = (int)$request->getRegionId();
         $websiteId = (int)$store->getWebsiteId();

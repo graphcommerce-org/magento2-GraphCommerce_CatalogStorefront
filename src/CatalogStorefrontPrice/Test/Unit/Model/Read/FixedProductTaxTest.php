@@ -5,6 +5,7 @@ namespace GraphCommerce\CatalogStorefrontPrice\Test\Unit\Model\Read;
 
 use GraphCommerce\CatalogStorefrontPrice\Model\Read\FixedProductTax;
 use Magento\Catalog\Model\Product;
+use Magento\Customer\Model\Session;
 use Magento\Framework\DataObject;
 use Magento\Framework\Pricing\PriceCurrencyInterface;
 use Magento\Store\Api\Data\StoreInterface;
@@ -43,7 +44,7 @@ class FixedProductTaxTest extends TestCase
         $priceCurrency = $this->createMock(PriceCurrencyInterface::class);
         $priceCurrency->method('convert')->willReturnCallback(static fn($amount) => $amount * 0.5);
 
-        return new FixedProductTax($calculation, $weeeHelper, $this->createMock(WeeeTax::class), $taxHelper, $priceCurrency);
+        return new FixedProductTax($calculation, $weeeHelper, $this->createMock(WeeeTax::class), $taxHelper, $priceCurrency, $this->createMock(Session::class));
     }
 
     private function store(): StoreInterface
