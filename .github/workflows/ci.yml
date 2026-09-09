@@ -113,6 +113,13 @@ jobs:
             mage-os/module-theme-sample-data:'*' mage-os/module-sales-rule-sample-data:'*' \
             mage-os/module-offline-shipping-sample-data:'*' mage-os/sample-data-media:'*'
           composer install --no-interaction --no-progress
+      - name: Prepare sample media before installation
+        working-directory: ${{ steps.magento.outputs.path }}
+        run: |
+          # Downloadable sample products read their files during setup:install.
+          mkdir -p pub/media
+          rsync -a vendor/mage-os/sample-data-media/ pub/media/
+          test -s pub/media/downloadable/files/links/l/u/luma_background_-_model_against_fence_4_sec_.mp4
       - name: Allow SQL triggers
         run: mysql --host 127.0.0.1 --port ${{ job.services.mysql.ports['3306'] }} -u root -prootpassword -e "set global log_bin_trust_function_creators=1;"
       - uses: graycoreio/github-actions-magento2/setup-install@v8.10.0
