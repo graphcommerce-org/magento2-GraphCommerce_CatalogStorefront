@@ -716,7 +716,10 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   the grouped range as core's associated products collection does. A fixed
   bundle with customizable options falls back to core, which adds their price
   range. A percent bundle selection is a percent of the bundle's regular
-  price; core applies a catalog rule on the bundle first.
+  price; core applies a catalog rule on the bundle first. In a display
+  currency other than the base, core leaves a percent selection's regular
+  amount unconverted (the final converts), and the fixed bundle range does
+  the same.
 - The feed exports the special price attribute without its from and to dates.
 - `dev/parity/queries/19-*.graphql` selects every product field of the
   schema (`dev/parity/gen-all-fields.py <skus...>` generates it from introspection); the

@@ -24,6 +24,7 @@ use Magento\Framework\App\Bootstrap;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\State;
 use Magento\Framework\Indexer\IndexerRegistry;
+use Magento\Indexer\Model\IndexerFactory;
 use Magento\Framework\Mview\ProcessorInterface;
 
 require getcwd() . '/app/bootstrap.php';
@@ -66,17 +67,20 @@ $stock = static function (float $qty, bool $inStock) use ($stockRegistry): void 
     $item->setIsInStock($inStock);
     $stockRegistry->updateStockItemBySku('24-WG02', $item);
 };
-$display = static function (string $value) use ($objectManager, $indexers): array {
+$display = static function (string $value) use ($objectManager): array {
     $config = $objectManager->create(Config::class, ['data' => ['scope' => 'default', 'scope_code' => null]]);
     $config->setDataByPath('cataloginventory/options/show_out_of_stock', $value);
     $config->save();
     $rebuilt = [];
     foreach (['catalog_data_exporter_products', 'catalog_data_exporter_categories'] as $id) {
-        if ($indexers->get($id)->isInvalid()) {
-            $indexers->get($id)->reindexAll();
+        // A fresh load reads the state the save left behind.
+        $indexer = $objectManager->get(IndexerFactory::class)->create()->load($id);
+        if ($indexer->isInvalid()) {
+            $indexer->reindexAll();
             $rebuilt[] = $id;
         }
     }
+    sleep(2);
     return $rebuilt;
 };
 
@@ -85,6 +89,7 @@ $display('0');
 $before = $count();
 $stock(0, false);
 $indexers->get('catalog_data_exporter_categories')->reindexAll();
+sleep(2);
 $hidden = $count();
 $rebuilt = $display('1');
 $shown = $count();

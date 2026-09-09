@@ -9,6 +9,7 @@ use GraphCommerce\CatalogStorefrontApi\Read\Amount;
 use GraphCommerce\CatalogStorefrontApi\Read\DocumentContext;
 use GraphCommerce\CatalogStorefrontBundleProduct\Model\Read\BundlePriceRange;
 use Magento\Catalog\Model\Product;
+use Magento\Framework\Pricing\PriceCurrencyInterface;
 use Magento\Store\Api\Data\StoreInterface;
 use PHPUnit\Framework\TestCase;
 
@@ -17,8 +18,10 @@ class BundlePriceRangeTest extends TestCase
     /**
      * A display price that adds 10% tax to a product of tax class 2 and none otherwise.
      */
-    private function range(): BundlePriceRange
+    private function range(float $rate = 1.0): BundlePriceRange
     {
+        $priceCurrency = $this->createMock(PriceCurrencyInterface::class);
+        $priceCurrency->method('convert')->willReturnCallback(static fn(float $amount): float => $amount * $rate);
         $display = $this->createMock(DisplayPrice::class);
         $display->method('forTaxClass')->willReturnCallback(function (Product $product, ?int $taxClassId): Product {
             $copy = $this->createMock(Product::class);
@@ -26,13 +29,13 @@ class BundlePriceRangeTest extends TestCase
 
             return $copy;
         });
-        $display->method('amount')->willReturnCallback(static function (float $base, bool $discounted, Product $product): Amount {
+        $display->method('amount')->willReturnCallback(static function (float $base, bool $discounted, Product $product) use ($rate): Amount {
             $tax = (int)$product->getData('tax_class_id') === 2 ? round($base * 0.1, 2) : 0.0;
 
-            return new Amount($base + $tax, $tax);
+            return new Amount(round(($base + $tax) * $rate, 2), $tax);
         });
 
-        return new BundlePriceRange(new ProductPrice(), $display);
+        return new BundlePriceRange(new ProductPrice(), $display, $priceCurrency);
     }
 
     private function product(int $id, ?int $taxClassId): Product
@@ -109,6 +112,27 @@ class BundlePriceRangeTest extends TestCase
 
         // The fixed total is taxed as a whole with the bundle's class.
         self::assertSame([121.0, 60.5, 132.0, 66.0], $this->values($range));
+    }
+
+    public function testFixedBundlePercentSelectionStaysUnconvertedInTheRegularBoundsAsCoreDoes(): void
+    {
+        $document = [
+            'stock' => ['isSalable' => true],
+            'prices' => [['group' => '0', 'regular' => 100.0, 'type' => 'BUNDLE_FIXED', 'discounts' => [['code' => 'special_price', 'percentage' => 50.0]]]],
+            'optionsV2' => [
+                ['type' => 'bundle', 'required' => true, 'renderType' => 'select', 'values' => [
+                    ['sku' => 'a', 'qty' => 1, 'price' => 10.0, 'priceType' => 'fixed'],
+                    ['sku' => 'b', 'qty' => 1, 'price' => 20.0, 'priceType' => 'percent'],
+                ]],
+            ],
+        ];
+        $range = $this->range(0.85)->range($this->product(1, null), $document, $this->context(['bundle' => [1 => [
+            'a' => $this->selection('a', 0.0, 0.0),
+            'b' => $this->selection('b', 0.0, 0.0),
+        ]]]), false);
+
+        // The regular maximum is 85 converted plus the 20 of the percent selection unconverted; the final converts all.
+        self::assertSame([93.5, 46.75, 105.0, 51.0], $this->values($range));
     }
 
     public function testFixedBundleWithCustomizableOptionsIsNotAnswered(): void

@@ -9,6 +9,7 @@ use GraphCommerce\CatalogStorefrontApi\Read\Amount;
 use GraphCommerce\CatalogStorefrontApi\Read\DocumentContext;
 use GraphCommerce\CatalogStorefrontApi\Read\PriceRangeInterface;
 use Magento\Catalog\Model\Product;
+use Magento\Framework\Pricing\PriceCurrencyInterface;
 
 /**
  * Bundle price range as core's bundle amount calculator derives it, from the
@@ -40,6 +41,7 @@ class BundlePriceRange implements PriceRangeInterface
     public function __construct(
         private readonly ProductPrice $productPrice,
         private readonly DisplayPrice $displayPrice,
+        private readonly PriceCurrencyInterface $priceCurrency,
     ) {
     }
 
@@ -77,6 +79,8 @@ class BundlePriceRange implements PriceRangeInterface
             }
         }
 
+        // Core prices a percent selection's regular amount on the base price and never converts it.
+        $rate = $fixed ? (float)$this->priceCurrency->convert(1.0, $store) : 1.0;
         $bundleSalable = (bool)($document['stock']['isSalable'] ?? $document['inStock'] ?? false);
         $stockFilter = $bundleSalable || ($fixed && !$showOutOfStock);
         $selectionValues = [];
@@ -88,10 +92,12 @@ class BundlePriceRange implements PriceRangeInterface
                 }
                 $childPrice = $this->productPrice->indexEntry((array)($child['priceIndex'] ?? []), $groupKey);
                 if ($fixed) {
-                    $unitRegular = ($value['priceType'] ?? null) === 'percent'
-                        ? $regular * (float)$value['price'] / 100
-                        : (float)$value['price'];
+                    $percent = ($value['priceType'] ?? null) === 'percent';
+                    $unitRegular = $percent ? $regular * (float)$value['price'] / 100 : (float)$value['price'];
                     $unitFinal = $discounted($unitRegular);
+                    if ($percent) {
+                        $unitRegular /= $rate ?: 1.0;
+                    }
                 } elseif ($childPrice !== null) {
                     $unitRegular = (float)$childPrice['regular'];
                     $unitFinal = $discounted((float)$childPrice['final']);
