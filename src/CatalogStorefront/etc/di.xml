@@ -153,4 +153,22 @@
     <type name="Magento\Elasticsearch\SearchAdapter\Aggregation\Builder\Dynamic">
         <plugin name="graphcommerce_catalog_storefront_single_price_range" type="GraphCommerce\CatalogStorefront\Plugin\Layer\SingleRangeFromResponse"/>
     </type>
+    <!-- A save of the out of stock display setting rebuilds the categories feed too: the category count reads it. -->
+    <type name="Magento\DataExporter\Service\IndexInvalidationManager">
+        <arguments>
+            <argument name="invalidationEvents" xsi:type="array">
+                <item name="stock_display_config_changed" xsi:type="array">
+                    <item name="products" xsi:type="string">catalog_data_exporter_products</item>
+                    <item name="categories" xsi:type="string">catalog_data_exporter_categories</item>
+                </item>
+            </argument>
+        </arguments>
+    </type>
+    <type name="Magento\CatalogDataExporter\Plugin\Index\InvalidateOnConfigChange">
+        <arguments>
+            <argument name="configPathToEvent" xsi:type="array">
+                <item name="cataloginventory/options/show_out_of_stock" xsi:type="string">stock_display_config_changed</item>
+            </argument>
+        </arguments>
+    </type>
 </config>

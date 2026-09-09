@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      seed:
+        description: The seed of the fuzz setup; a push takes its run id
+        required: false
 
 jobs:
   # The latest Mage-OS release with its service containers, from the graycore actions.
@@ -72,6 +76,8 @@ jobs:
             set: 'tax/display/type=3 tax/defaults/region=33 tax/defaults/postcode=48201'
           - name: fixed-product-tax
             set: 'tax/weee/enable=1 tax/weee/display_list=1 tax/weee/apply_vat=1 tax/display/type=2 tax/defaults/region=33 tax/defaults/postcode=48201'
+          - name: fuzz
+            set: fuzz
         magento: ${{ fromJSON(needs.matrix.outputs.matrix).include }}
     name: parity (${{ matrix.prices.name }})
     runs-on: ${{ matrix.magento.os }}
@@ -135,7 +141,8 @@ jobs:
           curl -s -o /dev/null -w 'customer: %{http_code}\n' -X POST http://127.0.0.1:8080/rest/V1/customers -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"customer":{"email":"customer@example.com","firstname":"Parity","lastname":"Customer","website_id":1,"group_id":1,"addresses":[{"firstname":"Parity","lastname":"Customer","street":["1 Main St"],"city":"Detroit","region":{"region_id":33},"postcode":"48201","country_id":"US","telephone":"5555555555","default_billing":true,"default_shipping":true}]},"password":"Parity12345!"}'
           mysql --host 127.0.0.1 --port ${{ job.services.mysql.ports['3306'] }} -u root -prootpassword magento_integration_tests -e "
             UPDATE cataloginventory_stock_item SET qty = 1 WHERE product_id = (SELECT entity_id FROM catalog_product_entity WHERE sku = '24-WG01');
-            UPDATE inventory_source_item SET quantity = 1 WHERE sku = '24-WG01';"
+            UPDATE inventory_source_item SET quantity = 1 WHERE sku = '24-WG01';
+            UPDATE cataloginventory_stock_item SET use_config_min_sale_qty = 0, min_sale_qty = 2, use_config_max_sale_qty = 0, max_sale_qty = 5 WHERE product_id = (SELECT entity_id FROM catalog_product_entity WHERE sku = '24-WG02');"
           # A second website with the store view "second" that sells every product.
           php ${{ github.workspace }}/dev/parity/fixtures/second-store.php
           # A reduced product tax class on one variant of WJ02, so a composite mixes child tax classes.
@@ -144,6 +151,8 @@ jobs:
           php ${{ github.workspace }}/dev/parity/fixtures/category-attribute.php
           # A fixed product tax on two simple products and a variant, read by the fixed-product-tax setup.
           php ${{ github.workspace }}/dev/parity/fixtures/fixed-product-tax.php
+          # A manual price step on the category of the aggregations query, read with manual price navigation.
+          php ${{ github.workspace }}/dev/parity/fixtures/category-price-step.php
       - name: Configure and export the feeds
         working-directory: ${{ steps.magento.outputs.path }}
         run: |
@@ -151,7 +160,9 @@ jobs:
           bin/magento config:set catalog/storefront_documents/key parity-gate
           bin/magento config:set currency/options/allow USD,EUR
           mysql --host 127.0.0.1 --port ${{ job.services.mysql.ports['3306'] }} -u root -prootpassword magento_integration_tests -e "INSERT INTO directory_currency_rate (currency_from, currency_to, rate) VALUES ('USD', 'EUR', 0.85) ON DUPLICATE KEY UPDATE rate = 0.85"
-          for pair in ${{ matrix.prices.set }}; do bin/magento config:set "${pair%%=*}" "${pair#*=}"; done
+          set='${{ matrix.prices.set }}'
+          if [ "$set" = fuzz ]; then set=$(php ${{ github.workspace }}/dev/parity/fuzz.php "${{ inputs.seed || github.run_id }}"); echo "$set"; fi
+          for pair in $set; do bin/magento config:set "${pair%%=*}" "${pair#*=}"; done
           bin/magento cache:flush
           bin/magento indexer:set-mode schedule catalog_data_exporter_products catalog_data_exporter_product_prices
           bin/magento indexer:reindex
@@ -184,6 +195,14 @@ jobs:
         working-directory: ${{ steps.magento.outputs.path }}
         run: |
           bin/magento catalog-storefront:status
+          # The stock of the composites and one variant: the legacy rows both paths read, the feeds, the documents.
+          SKUS="'24-WG080','24-WG085_Group','GC-BUNDLE-FIXED','WJ02','24-WG01'"
+          mysql --host 127.0.0.1 --port ${{ job.services.mysql.ports['3306'] }} -u root -prootpassword magento_integration_tests -e "
+            SELECT e.sku, e.type_id, s.website_id, s.stock_id, s.stock_status, s.qty, i.is_in_stock, i.qty AS item_qty FROM catalog_product_entity e JOIN cataloginventory_stock_status s ON s.product_id = e.entity_id LEFT JOIN cataloginventory_stock_item i ON i.product_id = e.entity_id WHERE e.sku IN ($SKUS);
+            SELECT feed_data->>'$.sku' AS sku, feed_data->>'$.storeViewCode' AS store, feed_data->>'$.inStock' AS inStock, feed_data->>'$.buyable' AS buyable, modified_at FROM catalog_data_exporter_products WHERE feed_data->>'$.sku' IN ($SKUS);
+            SELECT feed_data->>'$.sku' AS sku, feed_data->>'$.stockId' AS stock, feed_data->>'$.isSalable' AS isSalable, feed_data->>'$.qty' AS qty FROM inventory_data_exporter_stock_status_feed WHERE feed_data->>'$.sku' IN ($SKUS);"
+          HOST=$(bin/magento config:show catalog/search/opensearch_server_hostname); PORT=$(bin/magento config:show catalog/search/opensearch_server_port); PREFIX=$(bin/magento config:show catalog/storefront_documents/index_prefix)
+          curl -s -H 'Content-Type: application/json' "http://$HOST:$PORT/${PREFIX}_product_default/_search" -d '{"query":{"terms":{"sku":["24-WG080","24-WG085_Group","GC-BUNDLE-FIXED","WJ02","24-WG01"]}},"_source":["sku","type","inStock","buyable","stock"]}'; echo
           for f in var/log/exception.log var/log/system.log var/log/debug.log php-server.log; do
             [ -f "$f" ] && { echo "== $f"; tail -n 120 "$f"; }
           done

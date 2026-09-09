@@ -331,14 +331,20 @@ installation that holds the package (`MAGENTO_ROOT`, else the project two levels
 `.github/workflows/ci.yml` runs them on the latest Mage-OS release through the
 [graycore actions](https://github.com/graycoreio/github-actions-magento2), then installs
 the sample data with OpenSearch, MySQL and Valkey as service containers, adds the query set's
-fixtures, exports the feeds and runs the parity gate in four price setups: excluding tax,
-catalog prices including tax, both prices displayed, fixed product taxes in the price; each
-as a guest, as a signed-in customer with a Michigan address, and on the store view of a
-second website that sells every product. `dev/parity/freshness.php` then changes a price
-and a fixed product tax, updates the scheduled feed views as the indexer cron does and
-reads the document back: a table the feeds do not watch shows up here. The writer tests
-under `Test/Unit/Model/Document` hold the document contract: a feed batch in, the documents
-out. PHPUnit runs from its phar in both
+fixtures, exports the feeds and runs the parity gate in five setups: excluding tax,
+catalog prices including tax, both prices displayed, fixed product taxes in the price, and a
+fuzz setup of six random settings from the table in `dev/parity/fuzz.php` (the run id is the
+seed, a workflow dispatch replays one; a failing seed becomes a fixed setup); each as a
+guest, as a signed-in customer with a Michigan address, and on the store view of a second
+website that sells every product. `dev/parity/freshness.php` then changes a price and a
+fixed product tax, updates the scheduled feed views as the indexer cron does and reads the
+document back, and puts a product out of stock and flips the out of stock display setting
+through the admin config model, which must invalidate the products and the categories feed
+so the category count follows: a table or a setting the feeds do not watch shows up here.
+The exporter packages test the feed content themselves (products, categories, urls, stock,
+prices per website, invalidation); the gate proves the read side and the module's own
+providers. The writer tests under `Test/Unit/Model/Document` hold the document contract: a
+feed batch in, the documents out. PHPUnit runs from its phar in both
 jobs: Magento's composer.json excludes every `Test` directory from the classmap, which
 drops PHPUnit's own event classes.
 

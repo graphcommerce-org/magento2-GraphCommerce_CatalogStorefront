@@ -62,7 +62,10 @@ passes.
   image URL field, the exporter patch-ups the core feeds need, the model
   builder, `ProductDocuments`, `AttributeDocuments`, the
   configuration (`Model/Config`: storefront indexing, serve GraphQL, the
-  storefront key; the group sits under Catalog >
+  storefront key; `etc/di.xml` maps the out of stock display setting to an
+  invalidation event of the products and the categories feed, since the
+  category count reads it at export time and the exporter's own map rebuilds
+  the products feed only; the group sits under Catalog >
   Catalog in the admin; `Model/Config/Backend/Key` generates the key on a
   save with the field empty), `Model/StorefrontKey` (whether the request
   carries the key in `X-Catalog-Storefront-Key`), `Model/Mode` (the request's
