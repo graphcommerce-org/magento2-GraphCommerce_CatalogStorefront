@@ -19,7 +19,17 @@ if (!isset($loader)) {
 }
 $package = json_decode((string)file_get_contents(dirname(__DIR__, 2) . '/composer.json'), true);
 foreach ($package['autoload']['psr-4'] as $prefix => $path) {
-    $loader->addPsr4($prefix, dirname(__DIR__, 2) . '/' . $path);
+    $directory = dirname(__DIR__, 2) . '/' . $path;
+    $loader->addPsr4($prefix, $directory, true);
+    // An isolated checkout must override the installed package's optimized classmap too.
+    foreach ($loader->getClassMap() as $class => $installedPath) {
+        if (str_starts_with($class, $prefix)) {
+            $localPath = $directory . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+            if (is_file($localPath)) {
+                $loader->addClassMap([$class => $localPath]);
+            }
+        }
+    }
 }
 if (!interface_exists(\Magento\Integration\Api\Data\UserTokenParametersExtensionInterface::class)) {
     require __DIR__ . '/generated/UserTokenParametersExtensionInterface.php';

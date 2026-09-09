@@ -296,6 +296,21 @@ again, up to `--attempts` times (three by default), before its verdict counts: a
 that has not served the shape yet answers from a cold state once. See `CLAUDE.md` for the
 operating notes, the fixtures the query set needs and the known deviations.
 
+Use `--candidate-endpoint=https://candidate.example/graphql` to send document-path
+requests to a separate installation while core requests stay on the positional endpoint.
+Both endpoints must accept the configured storefront key and represent the same catalog,
+store, customer context, and query fixtures. `--warm=2` is the default warmup per path.
+TLS certificates are verified; use `--insecure` only for local development certificates.
+Redirects and non-success HTTP responses fail the gate.
+
+`--report=/existing/directory/parity.json` writes a versioned JSON report containing
+query names, expanded-query SHA-256 hashes, attempt counts, verdicts, and diagnostics.
+The command fails if any query fails or the report cannot be written. Transport failures,
+GraphQL errors, missing data, and empty product results cannot pass by comparing alike.
+Use a fresh report path for each run and check the command exit code: setup failures may
+exit before a report is written. Treat reports and response dumps as diagnostic artifacts;
+they are not publication authorization or proof of customer, catalog, or release identity.
+
 ## Status
 
 ```sh

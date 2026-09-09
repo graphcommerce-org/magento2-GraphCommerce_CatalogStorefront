@@ -18,8 +18,8 @@ use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
- * The parity gate: runs every query of a directory against one GraphQL
- * endpoint on the core path and on the document path, picked per request
+ * The parity gate: runs every query of a directory against a reference GraphQL
+ * endpoint on the core path and a candidate (by default the same endpoint) on the document path, picked per request
  * with the X-Catalog-Storefront header under the storefront key, and diffs
  * the responses. The document path's fallbacks come back in the response
  * extensions and are printed. Every query runs unjudged first so the gate
@@ -40,6 +40,11 @@ class Parity extends Command
     private const WARM = 'warm';
     private const HEADER = 'header';
     private const ATTEMPTS = 'attempts';
+    private const CANDIDATE_ENDPOINT = 'candidate-endpoint';
+    private const REPORT = 'report';
+    private const INSECURE = 'insecure';
+
+    private bool $verifyPeer = true;
 
     /**
      * @param JudgeInterface[] $judges
@@ -58,6 +63,9 @@ class Parity extends Command
         $this->setName('catalog-storefront:parity')
             ->setDescription('Compares the core path and the document path of catalog GraphQL queries')
             ->addArgument(self::ENDPOINT, InputArgument::REQUIRED, 'The GraphQL endpoint, for example https://shop.example/graphql')
+            ->addOption(self::CANDIDATE_ENDPOINT, null, InputOption::VALUE_REQUIRED, 'Document-path endpoint to compare with the reference endpoint; defaults to the reference')
+            ->addOption(self::REPORT, null, InputOption::VALUE_REQUIRED, 'Write a JSON verdict report to this file (its directory must exist)')
+            ->addOption(self::INSECURE, null, InputOption::VALUE_NONE, 'Disable TLS certificate verification for local development endpoints')
             ->addOption(self::QUERIES, null, InputOption::VALUE_REQUIRED, 'Directory of .graphql files', dirname(__DIR__, 4) . '/dev/parity/queries')
             ->addOption(self::DUMP, null, InputOption::VALUE_REQUIRED, 'Directory that keeps both responses of every query')
             ->addOption(self::WARM, null, InputOption::VALUE_REQUIRED, 'Unjudged runs of every query per path before the judged one', '2')
@@ -67,6 +75,7 @@ class Parity extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $this->verifyPeer = !$input->getOption(self::INSECURE);
         $key = $this->config->key();
         if ($key === '') {
             $output->writeln('<error>Save Catalog > Catalog > Catalog Storefront Document Store once to generate the storefront key.</error>');
@@ -74,6 +83,13 @@ class Parity extends Command
             return Command::FAILURE;
         }
         $endpoint = (string)$input->getArgument(self::ENDPOINT);
+        $candidateEndpoint = $input->getOption(self::CANDIDATE_ENDPOINT) ?? $endpoint;
+        if (trim((string)$candidateEndpoint) === '') {
+            $output->writeln('<error>The candidate endpoint must not be empty.</error>');
+
+            return Command::FAILURE;
+        }
+        $endpoints = [Mode::CORE => $endpoint, Mode::DOCUMENTS => (string)$candidateEndpoint];
         $files = glob(rtrim((string)$input->getOption(self::QUERIES), '/') . '/*.graphql') ?: [];
         sort($files);
         if (!$files) {
@@ -91,6 +107,7 @@ class Parity extends Command
         }
 
         $failed = 0;
+        $results = [];
         foreach ($files as $file) {
             $name = basename($file, '.graphql');
             $query = preg_replace_callback(
@@ -108,13 +125,13 @@ class Parity extends Command
             $headers = array_combine(array_column($matches, 1), array_column($matches, 2)) + $shared;
             foreach ([Mode::CORE, Mode::DOCUMENTS] as $mode) {
                 for ($run = 0; $run < $warm; $run++) {
-                    $this->request($endpoint, $query, $mode, $key, $headers);
+                    $this->request($endpoints[$mode], $query, $mode, $key, $headers);
                 }
             }
             for ($attempt = 1; $attempt <= $attempts; $attempt++) {
                 $responses = [];
                 foreach ([Mode::CORE, Mode::DOCUMENTS] as $mode) {
-                    $responses[$mode] = $this->request($endpoint, $query, $mode, $key, $headers);
+                    $responses[$mode] = $this->request($endpoints[$mode], $query, $mode, $key, $headers);
                 }
                 if ($dump) {
                     @mkdir($dump, 0777, true);
@@ -125,13 +142,37 @@ class Parity extends Command
                 $verdict = new BufferedOutput($output->getVerbosity(), $output->isDecorated());
                 $ok = $this->judge($verdict, $name, $responses[Mode::CORE], $responses[Mode::DOCUMENTS]);
                 if ($ok || $attempt === $attempts) {
-                    $output->write($verdict->fetch());
+                    $messages = $verdict->fetch();
+                    $output->write($messages);
+                    $results[] = [
+                        'name' => $name,
+                        'queryHash' => hash('sha256', $query),
+                        'passed' => $ok,
+                        'attempts' => $attempt,
+                        'messages' => $messages,
+                    ];
                     $failed += $ok ? 0 : 1;
                     break;
                 }
             }
         }
         $output->writeln(sprintf("\n%d of %d queries identical", count($files) - $failed, count($files)));
+
+        if ($input->getOption(self::REPORT) !== null) {
+            $path = (string)$input->getOption(self::REPORT);
+            $report = [
+                'schemaVersion' => 1,
+                'total' => count($files),
+                'passed' => count($files) - $failed,
+                'failed' => $failed,
+                'results' => $results,
+            ];
+            if (!$this->writeReport($path, $report)) {
+                $output->writeln('<error>Could not write the parity report.</error>');
+
+                return Command::FAILURE;
+            }
+        }
 
         return $failed > 0 ? Command::FAILURE : Command::SUCCESS;
     }
@@ -145,8 +186,18 @@ class Parity extends Command
 
                 return false;
             }
+            if (!isset($response['data']) || !is_array($response['data']) || $response['data'] === []) {
+                $output->writeln(sprintf('ERROR %s (%s path): no GraphQL data returned', $name, $mode));
+
+                return false;
+            }
             // A query that returns no product compares nothing: a hidden product passes vacuously.
-            if (($response['data']['products']['items'] ?? null) === []) {
+            if (array_key_exists('products', $response['data'])
+                && (!is_array($response['data']['products'])
+                    || (array_key_exists('items', $response['data']['products'])
+                        && (!is_array($response['data']['products']['items'])
+                            || $response['data']['products']['items'] === [])))
+            ) {
                 $output->writeln(sprintf('EMPTY %s (%s path): no products returned', $name, $mode));
 
                 return false;
@@ -186,7 +237,7 @@ class Parity extends Command
     /**
      * @param array<string, string> $headers
      */
-    private function request(string $endpoint, string $query, string $mode, string $key, array $headers): array
+    protected function request(string $endpoint, string $query, string $mode, string $key, array $headers): array
     {
         $headers = ['Content-Type' => 'application/json', Mode::HEADER => $mode, StorefrontKey::HEADER => $key] + $headers;
         $context = stream_context_create(['http' => [
@@ -194,11 +245,51 @@ class Parity extends Command
             'header' => implode('', array_map(static fn($name, $value) => "$name: $value\r\n", array_keys($headers), $headers)),
             'content' => json_encode(['query' => $query]),
             'ignore_errors' => true,
+            'follow_location' => 0,
             'timeout' => 120,
-        ], 'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
+        ], 'ssl' => ['verify_peer' => $this->verifyPeer, 'verify_peer_name' => $this->verifyPeer]]);
         $body = @file_get_contents($endpoint, false, $context);
 
-        return json_decode((string)$body, true) ?? ['errors' => [['message' => 'invalid response: ' . substr((string)$body, 0, 200)]]];
+        $status = 0;
+        foreach ($http_response_header ?? [] as $header) {
+            if (preg_match('#^HTTP/\S+ (\d{3})#', $header, $match)) {
+                $status = (int)$match[1];
+            }
+        }
+
+        return $this->decodeResponse($body, $status);
+    }
+
+    private function decodeResponse(string|false $body, int $status): array
+    {
+        if ($body === false || $status < 200 || $status >= 300) {
+            return ['errors' => [['message' => sprintf('GraphQL transport failed (HTTP %d)', $status)]]];
+        }
+
+        $response = json_decode((string)$body, true);
+
+        return is_array($response) ? $response : ['errors' => [['message' => 'invalid GraphQL response']]];
+    }
+
+    /** @param array<string, mixed> $report */
+    private function writeReport(string $path, array $report): bool
+    {
+        if ($path === '' || !is_dir(dirname($path)) || !is_writable(dirname($path))) {
+            return false;
+        }
+        $temporary = @tempnam(dirname($path), '.parity-');
+        if ($temporary === false) {
+            return false;
+        }
+        try {
+            $json = json_encode($report, JSON_PRETTY_PRINT | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR) . "\n";
+
+            return file_put_contents($temporary, $json) !== false && @rename($temporary, $path);
+        } finally {
+            if (is_file($temporary)) {
+                unlink($temporary);
+            }
+        }
     }
 
     /**
