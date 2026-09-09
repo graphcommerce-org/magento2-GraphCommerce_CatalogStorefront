@@ -3,7 +3,9 @@
  * A random configuration set for the parity gate: `path=value` lines, six
  * rows of the table with a value other than the default. The seed selects
  * the set; CI seeds a push with its run id and a workflow dispatch replays
- * one. A seed that fails the gate becomes a fixed setup of the matrix.
+ * one. A seed that fails the gate becomes a fixed setup of the matrix. Reviews
+ * off is not in the table: core then answers a review list without page_info
+ * and every query that selects it fails on both paths.
  *
  *   php dev/parity/fuzz.php <seed> [<rows>]
  */
@@ -35,7 +37,6 @@ $table = [
     'catalog/layered_navigation/display_category' => ['1', '0'],
     'catalog/layered_navigation/display_product_count' => ['1', '0'],
     'catalog/search/min_query_length' => ['3', '1'],
-    'catalog/review/active' => ['1', '0'],
     'catalog/frontend/flat_catalog_product' => ['0', '1'],
     'catalog/frontend/flat_catalog_category' => ['0', '1'],
     'sales/msrp/enabled' => ['0', '1'],

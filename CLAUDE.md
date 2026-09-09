@@ -748,7 +748,9 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   `product_count` is the count at export time. A grouped
   item's `qty` follows the link attribute; core answers 1 on some queries.
 - rating_summary and review_count are one aggregation over the review
-  documents per page; the reviews field pages by query. Both see a written
+  documents per page; the reviews field pages by query. With reviews disabled
+  core answers items without page_info, and a query that selects it fails on
+  both paths; the fuzz table leaves that setting out. Both see a written
   review after the index refresh, one second by default.
 - The metadata reads (attributes, ratings) page through the index in steps of
   a thousand up to OpenSearch's result window, 10000 documents per store view
