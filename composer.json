@@ -14,6 +14,7 @@
         "magento/module-parent-product-data-exporter": "*",
         "magento/module-product-price-data-exporter": "*",
         "magento/module-inventory-data-exporter": "*",
+        "magento/module-catalog-inventory-data-exporter": "*",
         "magento/module-configurable-product-data-exporter": "*",
         "magento/module-product-variant-data-exporter": "*",
         "magento/module-bundle-product-data-exporter": "*",

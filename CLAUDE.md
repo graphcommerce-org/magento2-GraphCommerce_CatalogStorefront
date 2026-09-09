@@ -724,7 +724,10 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   price range are left out. `--dump=<dir>` keeps both responses of every
   query for a closer look than the diff excerpt.
 - `quantity` is the stock slice's quantity (the inventory stock, all assigned
-  sources); core reads the legacy stock status, the default source only.
+  sources); core reads the legacy stock status, the default source only. A
+  composite on the default stock has no stock slice (no source items), so its
+  salability is the products feed's `inStock` from Magento_CatalogInventoryDataExporter,
+  which the root package requires for that reason.
   `min_sale_qty` and `max_sale_qty` resolve the configured value without a
   customer group, as core's resolvers do. `custom_attributesV2` falls back to
   core for a filter on a property the attribute documents lack

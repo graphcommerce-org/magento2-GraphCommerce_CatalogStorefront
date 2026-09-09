@@ -194,12 +194,13 @@ jobs:
         if: failure()
         working-directory: ${{ steps.magento.outputs.path }}
         run: |
+          set +e
           bin/magento catalog-storefront:status
           # The stock of the composites and one variant: the legacy rows both paths read, the feeds, the documents.
           SKUS="'24-WG080','24-WG085_Group','GC-BUNDLE-FIXED','WJ02','24-WG01'"
           mysql --host 127.0.0.1 --port ${{ job.services.mysql.ports['3306'] }} -u root -prootpassword magento_integration_tests -e "
             SELECT e.sku, e.type_id, s.website_id, s.stock_id, s.stock_status, s.qty, i.is_in_stock, i.qty AS item_qty FROM catalog_product_entity e JOIN cataloginventory_stock_status s ON s.product_id = e.entity_id LEFT JOIN cataloginventory_stock_item i ON i.product_id = e.entity_id WHERE e.sku IN ($SKUS);
-            SELECT feed_data->>'$.sku' AS sku, feed_data->>'$.storeViewCode' AS store, feed_data->>'$.inStock' AS inStock, feed_data->>'$.buyable' AS buyable, modified_at FROM catalog_data_exporter_products WHERE feed_data->>'$.sku' IN ($SKUS);
+            SELECT feed_data->>'$.sku' AS sku, feed_data->>'$.storeViewCode' AS store, feed_data->>'$.inStock' AS inStock, feed_data->>'$.buyable' AS buyable, modified_at FROM cde_products_feed WHERE feed_data->>'$.sku' IN ($SKUS);
             SELECT feed_data->>'$.sku' AS sku, feed_data->>'$.stockId' AS stock, feed_data->>'$.isSalable' AS isSalable, feed_data->>'$.qty' AS qty FROM inventory_data_exporter_stock_status_feed WHERE feed_data->>'$.sku' IN ($SKUS);"
           HOST=$(bin/magento config:show catalog/search/opensearch_server_hostname); PORT=$(bin/magento config:show catalog/search/opensearch_server_port); PREFIX=$(bin/magento config:show catalog/storefront_documents/index_prefix)
           curl -s -H 'Content-Type: application/json' "http://$HOST:$PORT/${PREFIX}_product_default/_search" -d '{"query":{"terms":{"sku":["24-WG080","24-WG085_Group","GC-BUNDLE-FIXED","WJ02","24-WG01"]}},"_source":["sku","type","inStock","buyable","stock"]}'; echo

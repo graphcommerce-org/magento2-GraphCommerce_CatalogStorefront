@@ -589,7 +589,7 @@ query {
           }
         }
       }
-      reviews(pageSize: 3, currentPage: 1) {
+      reviews(pageSize: 20, currentPage: 1) {
         page_info {
           total_pages
           current_page
