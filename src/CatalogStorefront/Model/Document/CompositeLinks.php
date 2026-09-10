@@ -51,6 +51,11 @@ class CompositeLinks
                 }
             }
             if (isset(self::TYPES[$types[$id]])) {
+                // A composite with no values still owns an explicit empty child roster.
+                // Writers must clear a previously stored relation when its last option/value
+                // disappears, and a newly assembled empty composite must remain distinguishable
+                // from a document whose relation slice has never arrived.
+                $childSkus[$id] ??= [];
                 foreach ((array)($row['optionsV2'] ?? []) as $option) {
                     if (($option['type'] ?? null) === $types[$id]) {
                         $childSkus[$id] = array_merge($childSkus[$id] ?? [], array_column((array)($option['values'] ?? []), 'sku'));
