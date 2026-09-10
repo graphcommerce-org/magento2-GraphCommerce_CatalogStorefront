@@ -4,7 +4,7 @@
 Catalog Storefront Views** surface without authenticating a user or issuing an
 HTTP request. It verifies the merged route and ACL, the GET-only controller,
 the factual data sources, the exact merged layout declaration, and independently
-constructs its block to render the four page sections with the Admin theme.
+constructs its block to render the five page sections with the Admin theme.
 Its JSON report contains hashes and public identifiers, not rendered HTML,
 Admin URLs, session data or credentials.
 
@@ -56,18 +56,21 @@ An authenticated browser remains the visual and authorization check. Using an
 existing Admin session, open **Catalog > Catalog Storefront Views** and compare
 the page with the smoke report:
 
-1. Store-view rows contain the Website > Store > Store View hierarchy, locale,
-   base/default/allowed currencies and root category.
-2. Document modes and the search provider match Magento's store-scoped
-   configuration.
-3. Customer groups are described as derived document price keys, including the
-   `all` fallback; they are not presented as independent price books.
-4. Feed indexer rows are statuses only and make no completeness, freshness or
-   Cloud-health claim.
-5. The GraphQL API link is present only when MageOS GraphQL Admin HTML is
-   enabled and the current administrator has its ACL.
-6. The Cloud roadmap has no connected, active, create or external management
-   control.
+1. The page contains exactly Catalog Views, Catalog Sources, Price Books,
+   Catalog Layers and Catalog Policies, in that order.
+2. Views and Sources contain one row per active Magento store view; locale and
+   scope identifiers match Magento configuration.
+3. Price Books contains the real `all` fallback followed by customer-group
+   contexts. Product-price counts remain unavailable because the page does not
+   scan catalog documents.
+4. Catalog Layers reports installed content, inventory and review document
+   contributions as module state. It does not present that state as data health.
+5. Catalog Policies is an explicit planned empty state because Magento has no
+   persisted managed-policy model for this surface.
+6. Black action pills and row ellipsis controls open an availability or details
+   popover; Escape closes it and returns focus. They do not save data.
+7. At narrow widths each table scrolls within its card and does not widen the
+   Admin page.
 
 Do not create a user or reset a password for this check. If the existing session
 opens the sign-in screen, record that authenticated browser evidence is

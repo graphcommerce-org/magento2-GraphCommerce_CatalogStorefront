@@ -1,13 +1,15 @@
 # GraphCommerce_CatalogStorefrontAdminhtml
 
-The read-only **Catalog > Catalog Storefront Views** page explains the catalog
-experience derived from each active Magento store view. It reports Magento
-scope, customer-group pricing keys, configured local document/search paths and
-the state of the feed indexers without scanning the document store.
+The read-only **Catalog > Catalog Storefront Views** page presents five compact
+catalog sections: Views, Sources, Price Books, Layers and Policies. It derives
+store-view sources, customer-group price contexts and installed document
+contributions from Magento configuration. Values that have no persisted Magento
+model, including protection, managed policies and document counts, are shown as
+unavailable rather than inferred.
 
-The Cloud panel describes planned managed capabilities. It does not assert that
-a Cloud service is connected or active. If MageOS_GraphQLAdminHtml is enabled
-and the administrator may use it, the page links to that existing local preview.
+The action and row-detail controls explain that their management workflows are
+planned. They do not save configuration or imply that a managed service is
+connected.
 
 The read-only native render and deployed identity smoke is documented in
 [`dev/admin-views`](../../dev/admin-views/README.md).
