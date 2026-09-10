@@ -189,21 +189,6 @@ class UsedProductsFromDocumentsTest extends TestCase
         $this->assertCount(1, $children, 'a null link is a removed variant, not a missing document');
     }
 
-    public function testChildEntityIdIsWrittenAsAString(): void
-    {
-        // getJsonConfig() puts these straight into JSON. An int renders 1797 where core
-        // renders "1797" — 1,440 bytes of difference on a twelve-card page.
-        $plugin = $this->plugin([7 => []]);
-
-        $plugin->aroundGetUsedProducts(
-            $this->createMock(Configurable::class),
-            $this->proceed(),
-            $this->parent(['v7' => 7])
-        );
-
-        $this->assertContains(['entity_id', '7'], $this->written[7]);
-    }
-
     public function testTierPriceIsEmptiedOnlyWhenTheDocumentCarriesNone(): void
     {
         $plugin = $this->plugin([7 => ['prices' => [['group' => '0', 'regular' => 10.0]]]]);
@@ -255,7 +240,7 @@ class UsedProductsFromDocumentsTest extends TestCase
         // The reason this class exists: a card asks for its children while it renders, so a fetch
         // per parent is a round trip per card.
         $page = new ListingDocuments();
-        $page->set('default', [
+        $page->add('default',[
             100 => ['variantIds' => ['v1' => 1, 'v2' => 2]],
             200 => ['variantIds' => ['v3' => 3]],
         ]);
@@ -282,7 +267,7 @@ class UsedProductsFromDocumentsTest extends TestCase
     {
         // A related or upsell block renders parents the listing fetch never covered.
         $page = new ListingDocuments();
-        $page->set('default', [100 => ['variantIds' => ['v1' => 1]]]);
+        $page->add('default',[100 => ['variantIds' => ['v1' => 1]]]);
 
         $plugin = $this->plugin([1 => [], 9 => []], $page);
         $this->products->expects($this->exactly(2))->method('documents');

@@ -11,9 +11,9 @@ use Magento\Framework\App\RequestInterface;
 use Magento\Store\Model\ScopeInterface;
 
 /**
- * The path of the current listing: documents or core. The store view's Serve
- * Product Listings setting decides, unless the request carries the storefront
- * key and the X-Catalog-Storefront header names a path.
+ * The path of the current page: documents or core. Each rendered surface has its
+ * own store view setting, unless the request carries the storefront key and the
+ * X-Catalog-Storefront header names a path, which switches every surface at once.
  *
  * The same header the GraphQL side reads, so one request switches both.
  */
@@ -24,6 +24,7 @@ class Mode
     public const CORE = 'core';
 
     public const SERVE_PLP = 'catalog/storefront_documents/serve_plp';
+    public const SERVE_PDP = 'catalog/storefront_documents/serve_pdp';
 
     public function __construct(
         private readonly ScopeConfigInterface $scopeConfig,
@@ -33,17 +34,33 @@ class Mode
     }
 
     /**
+     * Whether a category or search listing builds its products from documents.
+     */
+    public function listing(int $storeId): bool
+    {
+        return $this->fromDocuments(self::SERVE_PLP, $storeId);
+    }
+
+    /**
+     * Whether a product detail page takes its product from a document.
+     */
+    public function detail(int $storeId): bool
+    {
+        return $this->fromDocuments(self::SERVE_PDP, $storeId);
+    }
+
+    /**
      * Nothing here is memoised. This object outlives a request in a worker, and a
-     * decision that depends on the request's own headers must not survive it — a
+     * decision that depends on the request's own headers must not survive it: a
      * cached answer from the first request the worker happened to serve would then
      * bind every later one. The reads it makes are a config flag and a header.
      */
-    public function documents(int $storeId): bool
+    private function fromDocuments(string $setting, int $storeId): bool
     {
         return match ($this->requested()) {
             self::DOCUMENTS => true,
             self::CORE => false,
-            default => $this->scopeConfig->isSetFlag(self::SERVE_PLP, ScopeInterface::SCOPE_STORE, $storeId),
+            default => $this->scopeConfig->isSetFlag($setting, ScopeInterface::SCOPE_STORE, $storeId),
         };
     }
 

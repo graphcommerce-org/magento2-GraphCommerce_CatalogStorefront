@@ -16,18 +16,38 @@ class ListingDocumentsTest extends TestCase
     public function testDocumentsAreKeptPerStoreView(): void
     {
         $listing = new ListingDocuments();
-        $listing->set('default', [1 => ['sku' => 'a']]);
-        $listing->set('second', [2 => ['sku' => 'b']]);
+        $listing->add('default', [1 => ['sku' => 'a']]);
+        $listing->add('second', [2 => ['sku' => 'b']]);
 
         $this->assertSame([1 => ['sku' => 'a']], $listing->documents('default'));
         $this->assertSame([2 => ['sku' => 'b']], $listing->documents('second'));
+    }
+
+    public function testEveryRowOfCardsAddsToThePool(): void
+    {
+        // A detail page renders a related row and an upsell row, and a later row must not hide
+        // what an earlier one put there.
+        $listing = new ListingDocuments();
+        $listing->add('default', [1 => ['sku' => 'a']]);
+        $listing->add('default', [2 => ['sku' => 'b']]);
+
+        $this->assertSame([1 => ['sku' => 'a'], 2 => ['sku' => 'b']], $listing->documents('default'));
+    }
+
+    public function testAProductInTwoRowsIsKeptOnce(): void
+    {
+        $listing = new ListingDocuments();
+        $listing->add('default', [1 => ['sku' => 'a']]);
+        $listing->add('default', [1 => ['sku' => 'a'], 2 => ['sku' => 'b']]);
+
+        $this->assertSame([1 => ['sku' => 'a'], 2 => ['sku' => 'b']], $listing->documents('default'));
     }
 
     public function testResetDropsTheDocuments(): void
     {
         // The class outlives a request under an application server.
         $listing = new ListingDocuments();
-        $listing->set('default', [1 => ['sku' => 'a']]);
+        $listing->add('default', [1 => ['sku' => 'a']]);
         $listing->_resetState();
 
         $this->assertSame([], $listing->documents('default'));

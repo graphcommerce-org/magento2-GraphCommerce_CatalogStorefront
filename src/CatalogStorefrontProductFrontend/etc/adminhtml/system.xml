@@ -8,6 +8,11 @@
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                     <comment>Per store view: category and search listing pages build their products from documents instead of loading their attributes. A page with any product missing from the document store loads entirely from the database, so output does not change.</comment>
                 </field>
+                <field id="serve_pdp" translate="label comment" type="select" sortOrder="36" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Serve Product Detail Pages From Documents</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Per store view: a product detail page takes its product from a document, so a configurable builds its variants, its options and its price without a query. The product itself still loads from the database, and a product missing from the document store renders entirely from it, so output does not change.</comment>
+                </field>
             </group>
         </section>
     </system>

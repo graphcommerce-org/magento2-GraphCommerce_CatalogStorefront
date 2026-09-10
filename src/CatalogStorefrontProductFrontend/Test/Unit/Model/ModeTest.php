@@ -25,15 +25,18 @@ class ModeTest extends TestCase
      * The request is built once and its headers changed per call, because that is how a worker
      * sees them: one long-lived object, different values each request.
      */
-    private function mode(bool $servePlp, string $configuredKey = self::KEY): Mode
+    private function mode(bool $servePlp, string $configuredKey = self::KEY, bool $servePdp = false): Mode
     {
         $this->request = $this->createMock(HttpRequest::class);
         $this->request->method('getHeader')->willReturnCallback(
             fn(string $name) => $this->headers[$name] ?? false
         );
 
+        // Each surface reads its own setting, so the mock answers per path rather than per call.
         $scopeConfig = $this->createMock(ScopeConfigInterface::class);
-        $scopeConfig->method('isSetFlag')->willReturn($servePlp);
+        $scopeConfig->method('isSetFlag')->willReturnCallback(
+            static fn(string $path) => $path === Mode::SERVE_PLP ? $servePlp : $servePdp
+        );
 
         $config = $this->createMock(Config::class);
         $config->method('key')->willReturn($configuredKey);
@@ -48,8 +51,34 @@ class ModeTest extends TestCase
 
     public function testTheStoreSettingDecidesWithoutAHeader(): void
     {
-        $this->assertTrue($this->mode(true)->documents(self::STORE_ID));
-        $this->assertFalse($this->mode(false)->documents(self::STORE_ID));
+        $this->assertTrue($this->mode(true)->listing(self::STORE_ID));
+        $this->assertFalse($this->mode(false)->listing(self::STORE_ID));
+    }
+
+    public function testEachSurfaceReadsItsOwnSetting(): void
+    {
+        // A shop may serve listings from documents while detail pages stay on core, and back.
+        $listingOnly = $this->mode(true, self::KEY, false);
+        $this->assertTrue($listingOnly->listing(self::STORE_ID));
+        $this->assertFalse($listingOnly->detail(self::STORE_ID));
+
+        $detailOnly = $this->mode(false, self::KEY, true);
+        $this->assertFalse($detailOnly->listing(self::STORE_ID));
+        $this->assertTrue($detailOnly->detail(self::STORE_ID));
+    }
+
+    public function testTheHeaderSwitchesEverySurfaceAtOnce(): void
+    {
+        // One request picks the whole path, so a gate compares like with like.
+        $mode = $this->mode(false, self::KEY, false);
+        $this->send(Mode::DOCUMENTS);
+
+        $this->assertTrue($mode->listing(self::STORE_ID));
+        $this->assertTrue($mode->detail(self::STORE_ID));
+
+        $this->send(Mode::CORE);
+        $this->assertFalse($mode->listing(self::STORE_ID));
+        $this->assertFalse($mode->detail(self::STORE_ID));
     }
 
     public function testDocumentsHeaderOverridesTheStoreSetting(): void
@@ -57,7 +86,7 @@ class ModeTest extends TestCase
         $mode = $this->mode(false);
         $this->send(Mode::DOCUMENTS);
 
-        $this->assertTrue($mode->documents(self::STORE_ID));
+        $this->assertTrue($mode->listing(self::STORE_ID));
     }
 
     public function testCoreHeaderOverridesTheStoreSetting(): void
@@ -65,7 +94,7 @@ class ModeTest extends TestCase
         $mode = $this->mode(true);
         $this->send(Mode::CORE);
 
-        $this->assertFalse($mode->documents(self::STORE_ID));
+        $this->assertFalse($mode->listing(self::STORE_ID));
     }
 
     public function testHeaderIsIgnoredWithoutTheKey(): void
@@ -73,7 +102,7 @@ class ModeTest extends TestCase
         $mode = $this->mode(false);
         $this->headers = [Mode::HEADER => Mode::DOCUMENTS];
 
-        $this->assertFalse($mode->documents(self::STORE_ID));
+        $this->assertFalse($mode->listing(self::STORE_ID));
         $this->assertNull($mode->requested());
     }
 
@@ -82,7 +111,7 @@ class ModeTest extends TestCase
         $mode = $this->mode(false);
         $this->send(Mode::DOCUMENTS, 'not-the-key');
 
-        $this->assertFalse($mode->documents(self::STORE_ID));
+        $this->assertFalse($mode->listing(self::STORE_ID));
     }
 
     public function testHeaderIsIgnoredWhenNoKeyIsConfigured(): void
@@ -91,7 +120,7 @@ class ModeTest extends TestCase
         $mode = $this->mode(false, '');
         $this->send(Mode::DOCUMENTS, '');
 
-        $this->assertFalse($mode->documents(self::STORE_ID));
+        $this->assertFalse($mode->listing(self::STORE_ID));
     }
 
     public function testAnUnknownHeaderValueFallsBackToTheSetting(): void
@@ -99,7 +128,7 @@ class ModeTest extends TestCase
         $mode = $this->mode(true);
         $this->send('nonsense');
 
-        $this->assertTrue($mode->documents(self::STORE_ID));
+        $this->assertTrue($mode->listing(self::STORE_ID));
         $this->assertNull($mode->requested());
     }
 
@@ -108,7 +137,7 @@ class ModeTest extends TestCase
         $mode = $this->mode(false);
         $this->send('DOCUMENTS');
 
-        $this->assertTrue($mode->documents(self::STORE_ID));
+        $this->assertTrue($mode->listing(self::STORE_ID));
     }
 
     public function testAConsoleRequestNeverReadsHeaders(): void
@@ -122,7 +151,7 @@ class ModeTest extends TestCase
         $mode = new Mode($scopeConfig, $config, $this->createMock(ConsoleRequest::class));
 
         $this->assertNull($mode->requested());
-        $this->assertFalse($mode->documents(self::STORE_ID));
+        $this->assertFalse($mode->listing(self::STORE_ID));
     }
 
     public function testRequestedNamesThePathForThePageCache(): void
@@ -148,12 +177,12 @@ class ModeTest extends TestCase
         $mode = $this->mode(false);
 
         $this->send(Mode::DOCUMENTS);
-        $this->assertTrue($mode->documents(self::STORE_ID), 'first request asked for documents');
+        $this->assertTrue($mode->listing(self::STORE_ID), 'first request asked for documents');
 
         $this->headers = [];
-        $this->assertFalse($mode->documents(self::STORE_ID), 'second request asked for nothing');
+        $this->assertFalse($mode->listing(self::STORE_ID), 'second request asked for nothing');
 
         $this->send(Mode::DOCUMENTS);
-        $this->assertTrue($mode->documents(self::STORE_ID), 'third request asked for documents again');
+        $this->assertTrue($mode->listing(self::STORE_ID), 'third request asked for documents again');
     }
 }

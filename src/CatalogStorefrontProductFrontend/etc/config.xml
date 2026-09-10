@@ -4,6 +4,7 @@
         <catalog>
             <storefront_documents>
                 <serve_plp>0</serve_plp>
+                <serve_pdp>0</serve_pdp>
             </storefront_documents>
         </catalog>
     </default>

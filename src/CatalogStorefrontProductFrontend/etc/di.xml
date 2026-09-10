@@ -6,10 +6,26 @@
                 type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\CollectionFlag"/>
     </type>
 
+    <!-- Marks a related, upsell or crosssell row. A grouped product's children are not marked. -->
+    <type name="Magento\Catalog\Model\ResourceModel\Product\Link\Product\Collection">
+        <plugin name="graphcommerce_catalog_storefront_product_link_collection_flag"
+                type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\LinkCollectionFlag"/>
+    </type>
+
     <!-- Acts only on a marked collection, so nested collections are out of reach. -->
     <type name="Magento\Catalog\Model\ResourceModel\Product\Collection">
         <plugin name="graphcommerce_catalog_storefront_product_listing_hydration"
                 type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\ListingHydration"/>
+    </type>
+
+    <!--
+        Acts only on the product the request renders, so the cart, the wishlist, an order and the
+        admin share the repository without sharing this. The document goes on at the first load,
+        because the page reads the product straight away and a type instance memoises what it built.
+    -->
+    <type name="Magento\Catalog\Api\ProductRepositoryInterface">
+        <plugin name="graphcommerce_catalog_storefront_product_detail_document"
+                type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Detail\ProductDocument"/>
     </type>
 
     <!-- A request that names its own path must not land in the ordinary page's cache slot. -->
@@ -30,10 +46,17 @@
         </arguments>
     </type>
 
+    <type name="GraphCommerce\CatalogStorefrontProductFrontend\Console\Command\ParityDetail">
+        <arguments>
+            <argument name="perRender" xsi:type="array"/>
+        </arguments>
+    </type>
+
     <type name="Magento\Framework\Console\CommandListInterface">
         <arguments>
             <argument name="commands" xsi:type="array">
                 <item name="catalog_storefront_parity_listing" xsi:type="object">GraphCommerce\CatalogStorefrontProductFrontend\Console\Command\ParityListing</item>
+                <item name="catalog_storefront_parity_detail" xsi:type="object">GraphCommerce\CatalogStorefrontProductFrontend\Console\Command\ParityDetail</item>
             </argument>
         </arguments>
     </type>

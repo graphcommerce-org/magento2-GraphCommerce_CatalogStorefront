@@ -107,12 +107,6 @@ class UsedProductsFromDocuments
         $children = [];
         foreach ($expected as $id) {
             $child = $models[$id];
-
-            // A loaded product returns its id as a string, because that is what the database
-            // gives. The model builder casts to int, and getJsonConfig() puts these ids straight
-            // into JSON, so an int renders as 1797 where core renders "1797". Parents avoid this
-            // because ListingHydration overlays the select row over them; children have no row.
-            $child->setData('entity_id', (string)$child->getId());
             $this->applyPriceData($child, $documents[$id], $groupKey);
 
             $children[] = $child;

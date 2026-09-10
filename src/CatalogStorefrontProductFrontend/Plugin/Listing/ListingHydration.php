@@ -58,7 +58,7 @@ class ListingHydration
         }
 
         $storeId = (int)$subject->getStoreId();
-        if (!$this->mode->documents($storeId)) {
+        if (!$this->mode->listing($storeId)) {
             return $proceed($printQuery, $logQuery);
         }
 
@@ -96,8 +96,9 @@ class ListingHydration
         }
 
         // What a card needs beyond its own document, its children above all, is fetched for the
-        // whole page from here.
-        $this->page->set((string)$store->getCode(), $documents);
+        // whole page from here. A page renders as many rows of cards as it likes, so each adds
+        // what it holds rather than replacing what another row put there.
+        $this->page->add((string)$store->getCode(), $documents);
 
         foreach ($rows as $id => $row) {
             $model = $models[$id];

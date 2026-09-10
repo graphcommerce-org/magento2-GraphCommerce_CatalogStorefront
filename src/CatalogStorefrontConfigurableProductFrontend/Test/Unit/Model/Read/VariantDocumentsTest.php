@@ -57,7 +57,7 @@ class VariantDocumentsTest extends TestCase
 
     public function testOneFetchCoversEveryParentOnThePage(): void
     {
-        $this->page->set('default', [
+        $this->page->add('default',[
             100 => ['variantIds' => ['v2' => 2, 'v1' => 1]],
             200 => ['variantIds' => ['v3' => 3]],
         ]);
@@ -72,9 +72,48 @@ class VariantDocumentsTest extends TestCase
         $this->assertSame([3 => ['sku' => 'c']], $variants->documents($this->store(), [3]));
     }
 
+    public function testASecondRowOfCardsIsPickedUp(): void
+    {
+        // A detail page renders a related row and an upsell row, and the second loads after the
+        // first card of the first has already asked for its children.
+        $this->page->add('default', [100 => ['variantIds' => ['v1' => 1]]]);
+
+        $this->products->expects($this->exactly(2))
+            ->method('documents')
+            ->willReturnCallback(
+                static fn(string $code, array $ids) => $ids === [1]
+                    ? [1 => ['sku' => 'a']]
+                    : [2 => ['sku' => 'b']]
+            );
+
+        $variants = $this->variants();
+        $this->assertSame([1 => ['sku' => 'a']], $variants->documents($this->store(), [1]));
+
+        $this->page->add('default', [200 => ['variantIds' => ['v2' => 2]]]);
+
+        $this->assertSame([2 => ['sku' => 'b']], $variants->documents($this->store(), [2]));
+    }
+
+    public function testAChildAlreadyFetchedIsNotFetchedAgain(): void
+    {
+        // The second row asks only for what the first did not already bring back.
+        $this->page->add('default', [100 => ['variantIds' => ['v1' => 1]]]);
+        $this->products->expects($this->once())
+            ->method('documents')
+            ->with('default', [1])
+            ->willReturn([1 => ['sku' => 'a']]);
+
+        $variants = $this->variants();
+        $variants->documents($this->store(), [1]);
+
+        $this->page->add('default', [200 => ['variantIds' => ['v1' => 1]]]);
+
+        $this->assertSame([1 => ['sku' => 'a']], $variants->documents($this->store(), [1]));
+    }
+
     public function testIdsOutsideThePageAreNotCovered(): void
     {
-        $this->page->set('default', [100 => ['variantIds' => ['v1' => 1]]]);
+        $this->page->add('default',[100 => ['variantIds' => ['v1' => 1]]]);
         $this->products->method('documents')->willReturn([1 => ['sku' => 'a']]);
 
         $this->assertNull($this->variants()->documents($this->store(), [1, 9]));
@@ -91,7 +130,7 @@ class VariantDocumentsTest extends TestCase
     public function testACoveredChildWithNoDocumentIsAbsent(): void
     {
         // The caller compares what it asked for against what it got, and falls back to core.
-        $this->page->set('default', [100 => ['variantIds' => ['v1' => 1, 'v2' => 2]]]);
+        $this->page->add('default',[100 => ['variantIds' => ['v1' => 1, 'v2' => 2]]]);
         $this->products->method('documents')->willReturn([1 => ['sku' => 'a']]);
 
         $this->assertSame([1 => ['sku' => 'a']], $this->variants()->documents($this->store(), [1, 2]));
@@ -100,7 +139,7 @@ class VariantDocumentsTest extends TestCase
     public function testAFailedFetchIsAttemptedOnceAndCoversNothing(): void
     {
         // The fetch is an optimisation: every card falls back to its own, none repeats the failure.
-        $this->page->set('default', [100 => ['variantIds' => ['v1' => 1]]]);
+        $this->page->add('default',[100 => ['variantIds' => ['v1' => 1]]]);
         $this->products->expects($this->once())
             ->method('documents')
             ->willThrowException(new \RuntimeException('no alive nodes'));
@@ -114,7 +153,7 @@ class VariantDocumentsTest extends TestCase
     public function testResetDropsThePage(): void
     {
         // The class outlives a request under an application server.
-        $this->page->set('default', [100 => ['variantIds' => ['v1' => 1]]]);
+        $this->page->add('default',[100 => ['variantIds' => ['v1' => 1]]]);
         $this->products->expects($this->exactly(2))
             ->method('documents')
             ->willReturn([1 => ['sku' => 'a']]);
