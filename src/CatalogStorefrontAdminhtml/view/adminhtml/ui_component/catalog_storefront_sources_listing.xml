@@ -1,47 +1,133 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright 2026 GraphCommerce. SPDX-License-Identifier: MIT -->
 <listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
-    <argument name="data" xsi:type="array"><item name="js_config" xsi:type="array"><item name="provider" xsi:type="string">catalog_storefront_sources_listing.catalog_storefront_sources_listing_data_source</item></item></argument>
-    <settings><spinner>catalog_storefront_sources_listing_columns</spinner><deps><dep>catalog_storefront_sources_listing.catalog_storefront_sources_listing_data_source</dep></deps></settings>
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">catalog_storefront_sources_listing.catalog_storefront_sources_listing_data_source</item>
+        </item>
+    </argument>
+    <settings>
+        <spinner>catalog_storefront_sources_listing_columns</spinner>
+        <deps>
+            <dep>catalog_storefront_sources_listing.catalog_storefront_sources_listing_data_source</dep>
+        </deps>
+    </settings>
     <dataSource name="catalog_storefront_sources_listing_data_source" component="Magento_Ui/js/grid/provider">
-        <settings><updateUrl path="mui/index/render"/><storageConfig><param name="indexField" xsi:type="string">code</param></storageConfig></settings>
+        <settings>
+            <updateUrl path="mui/index/render"/>
+            <storageConfig>
+                <param name="indexField" xsi:type="string">code</param>
+            </storageConfig>
+        </settings>
         <aclResource>GraphCommerce_CatalogStorefrontAdminhtml::views</aclResource>
         <dataProvider class="GraphCommerce\CatalogStorefrontAdminhtml\Ui\DataProvider\OverviewDataProvider" name="catalog_storefront_sources_listing_data_source">
-            <settings><requestFieldName>code</requestFieldName><primaryFieldName>code</primaryFieldName></settings>
+            <settings>
+                <requestFieldName>code</requestFieldName>
+                <primaryFieldName>code</primaryFieldName>
+            </settings>
         </dataProvider>
     </dataSource>
     <columns name="catalog_storefront_sources_listing_columns" component="GraphCommerce_CatalogStorefrontAdminhtml/js/grid/listing">
-        <argument name="data" xsi:type="array"><item name="config" xsi:type="array">
+        <argument name="data" xsi:type="array">
+            <item name="config" xsi:type="array">
                 <item name="heading" xsi:type="string" translate="true">Catalog Sources</item>
                 <item name="actionLabel" xsi:type="string" translate="true">Add Catalog Source</item>
                 <item name="dataset" xsi:type="string">sources</item>
-                <item name="dndConfig" xsi:type="array"><item name="enabled" xsi:type="boolean">false</item></item>
-                <item name="editorConfig" xsi:type="array"><item name="enabled" xsi:type="boolean">false</item></item>
-                <item name="resizeConfig" xsi:type="array"><item name="enabled" xsi:type="boolean">false</item></item>
-        </item></argument>
+                <item name="dndConfig" xsi:type="array">
+                    <item name="enabled" xsi:type="boolean">false</item>
+                </item>
+                <item name="editorConfig" xsi:type="array">
+                    <item name="enabled" xsi:type="boolean">false</item>
+                </item>
+                <item name="resizeConfig" xsi:type="array">
+                    <item name="enabled" xsi:type="boolean">false</item>
+                </item>
+            </item>
+        </argument>
         <column name="code" sortOrder="10">
-            <settings><bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/source</bodyTmpl><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Source</label></settings>
+            <settings>
+                <bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/source</bodyTmpl>
+                <sortable>false</sortable>
+                <draggable>false</draggable>
+                <controlVisibility>false</controlVisibility>
+                <label translate="true">Source</label>
+            </settings>
         </column>
         <column name="origin" sortOrder="20">
-            <settings><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Origin</label></settings>
+            <settings>
+                <sortable>false</sortable>
+                <draggable>false</draggable>
+                <controlVisibility>false</controlVisibility>
+                <label translate="true">Origin</label>
+            </settings>
         </column>
         <column name="type" sortOrder="30">
-            <settings><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Type</label></settings>
+            <settings>
+                <sortable>false</sortable>
+                <draggable>false</draggable>
+                <controlVisibility>false</controlVisibility>
+                <label translate="true">Type</label>
+            </settings>
         </column>
         <column name="locale" sortOrder="40">
-            <settings><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Locale</label></settings>
+            <settings>
+                <sortable>false</sortable>
+                <draggable>false</draggable>
+                <controlVisibility>false</controlVisibility>
+                <label translate="true">Locale</label>
+            </settings>
         </column>
         <column name="feedProducts" sortOrder="50">
-            <settings><bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/feed</bodyTmpl><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Products</label><headerTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/columns/number</headerTmpl><fieldClass><class name="catalog-overview-number">true</class><class name="catalog-overview-feed-column">true</class></fieldClass></settings>
+            <settings>
+                <bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/feed</bodyTmpl>
+                <sortable>false</sortable>
+                <draggable>false</draggable>
+                <controlVisibility>false</controlVisibility>
+                <label translate="true">Products</label>
+                <headerTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/columns/number</headerTmpl>
+                <fieldClass>
+                    <class name="catalog-overview-number">true</class>
+                    <class name="catalog-overview-feed-column">true</class>
+                </fieldClass>
+            </settings>
         </column>
         <column name="feedCategories" sortOrder="60">
-            <settings><bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/feed</bodyTmpl><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Categories</label><headerTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/columns/number</headerTmpl><fieldClass><class name="catalog-overview-number">true</class><class name="catalog-overview-feed-column">true</class></fieldClass></settings>
+            <settings>
+                <bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/feed</bodyTmpl>
+                <sortable>false</sortable>
+                <draggable>false</draggable>
+                <controlVisibility>false</controlVisibility>
+                <label translate="true">Categories</label>
+                <headerTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/columns/number</headerTmpl>
+                <fieldClass>
+                    <class name="catalog-overview-number">true</class>
+                    <class name="catalog-overview-feed-column">true</class>
+                </fieldClass>
+            </settings>
         </column>
         <column name="feedAttributes" sortOrder="70">
-            <settings><bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/feed</bodyTmpl><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Attributes</label><headerTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/columns/number</headerTmpl><fieldClass><class name="catalog-overview-number">true</class><class name="catalog-overview-feed-column">true</class></fieldClass></settings>
+            <settings>
+                <bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/feed</bodyTmpl>
+                <sortable>false</sortable>
+                <draggable>false</draggable>
+                <controlVisibility>false</controlVisibility>
+                <label translate="true">Attributes</label>
+                <headerTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/columns/number</headerTmpl>
+                <fieldClass>
+                    <class name="catalog-overview-number">true</class>
+                    <class name="catalog-overview-feed-column">true</class>
+                </fieldClass>
+            </settings>
         </column>
         <column name="actions" component="GraphCommerce_CatalogStorefrontAdminhtml/js/grid/columns/more" sortOrder="80">
-            <settings><bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/more</bodyTmpl><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Actions</label><visible>true</visible></settings>
+            <settings>
+                <bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/more</bodyTmpl>
+                <sortable>false</sortable>
+                <draggable>false</draggable>
+                <controlVisibility>false</controlVisibility>
+                <label translate="true">Actions</label>
+                <visible>true</visible>
+            </settings>
         </column>
     </columns>
 </listing>

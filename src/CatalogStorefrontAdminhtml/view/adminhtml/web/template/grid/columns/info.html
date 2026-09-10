@@ -10,11 +10,13 @@
         _draggable: draggable,
         _ascend: sorting === 'asc',
         _descend: sorting === 'desc'">
-    <span class="data-grid-cell-content" translate="label"></span>
+    <span class="catalog-overview-column-title">
+    <span class="catalog-overview-column-label" translate="label"></span>
     <button type="button"
             class="catalog-overview-info"
             data-bind="click: showInfo, clickBubble: false,
                 attr: { title: $t('Information'), 'aria-label': $t('Information') }">
         <span aria-hidden="true">i</span>
     </button>
+    </span>
 </th>

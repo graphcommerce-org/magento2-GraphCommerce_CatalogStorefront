@@ -6,11 +6,11 @@
 .catalog-overview h2 { margin: 0; font-family: Inter, sans-serif; font-size: 16px; font-weight: 600; line-height: 100%; color: #1b1b1b; }
 .catalog-overview .catalog-overview-count { font-size: 13px; font-weight: 400; line-height: 20px; color: #777; }
 .catalog-overview .admin__data-grid-wrap { margin: 0; padding: 0; }
-.catalog-overview .data-grid { width: 100%; margin: 0; border-collapse: collapse; border: 0; }
+.catalog-overview .data-grid { width: 100%; margin: 0; border-collapse: collapse; border: 0; table-layout: auto; }
 .catalog-overview .data-grid th,
 .catalog-overview .data-grid td { border: 0; border-bottom: 1px solid #e9e9e9; padding: 12px 10px; box-shadow: none; }
 .catalog-overview .data-grid th { background: #f9f9f9; color: #1b1b1b; font-size: 13px; font-weight: 600; line-height: 100%; text-align: left; white-space: nowrap; }
-.catalog-overview .data-grid td { background: #fff; color: #303030; font-size: 13px; font-weight: 400; line-height: 20px; vertical-align: top; }
+.catalog-overview .data-grid td { background: #fff; color: #303030; font-size: 13px; font-weight: 400; line-height: 20px; vertical-align: middle; }
 .catalog-overview .data-grid tbody tr:hover td,
 .catalog-overview .data-grid tbody tr._odd-row td { background: #fff; }
 .catalog-overview .data-grid-th._sortable:hover { background: #f9f9f9; }
@@ -38,8 +38,6 @@
 }
 .catalog-overview button.catalog-overview-action:hover,
 .catalog-overview button.catalog-overview-action:active { background: #303030; border-color: #303030; color: #fff; box-shadow: none; }
-.catalog-overview .data-grid { table-layout: auto; }
-.catalog-overview .data-grid td { vertical-align: middle; }
 .catalog-overview .catalog-overview-panel[data-dataset="catalogViews"] .data-grid td { vertical-align: top; }
 .catalog-overview .catalog-overview-currency-note { display: inline; color: #777; font-size: 12px; line-height: 16px; }
 .catalog-overview .catalog-overview-view,
@@ -61,3 +59,7 @@
 
 .catalog-overview .data-grid tbody tr:last-child td { border-bottom: 1px solid #e9e9e9; }
 .catalog-overview .data-grid .data-grid-tr-no-data td { text-align: center; width: auto; }
+
+.catalog-overview .catalog-overview-column-title { display: inline-flex; align-items: center; gap: 8px; vertical-align: middle; line-height: 16px; }
+/* Magento's Less accessibility helper is not emitted as a standalone class by every Admin theme. */
+.catalog-overview .abs-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
