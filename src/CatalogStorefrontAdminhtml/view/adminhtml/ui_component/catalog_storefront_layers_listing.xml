@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 GraphCommerce. SPDX-License-Identifier: MIT -->
+<listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array"><item name="js_config" xsi:type="array"><item name="provider" xsi:type="string">catalog_storefront_layers_listing.catalog_storefront_layers_listing_data_source</item></item></argument>
+    <settings><spinner>catalog_storefront_layers_listing_columns</spinner><deps><dep>catalog_storefront_layers_listing.catalog_storefront_layers_listing_data_source</dep></deps></settings>
+    <dataSource name="catalog_storefront_layers_listing_data_source" component="Magento_Ui/js/grid/provider">
+        <settings><updateUrl path="mui/index/render"/><storageConfig><param name="indexField" xsi:type="string">name</param></storageConfig></settings>
+        <aclResource>GraphCommerce_CatalogStorefrontAdminhtml::views</aclResource>
+        <dataProvider class="GraphCommerce\CatalogStorefrontAdminhtml\Ui\DataProvider\OverviewDataProvider" name="catalog_storefront_layers_listing_data_source">
+            <argument name="data" xsi:type="array"><item name="config" xsi:type="array"><item name="dataset" xsi:type="string">layers</item></item></argument>
+            <settings><requestFieldName>name</requestFieldName><primaryFieldName>name</primaryFieldName></settings>
+        </dataProvider>
+    </dataSource>
+    <columns name="catalog_storefront_layers_listing_columns" component="GraphCommerce_CatalogStorefrontAdminhtml/js/grid/listing">
+        <argument name="data" xsi:type="array"><item name="config" xsi:type="array">
+                <item name="heading" xsi:type="string" translate="true">Catalog Layers</item>
+                <item name="actionLabel" xsi:type="string" translate="true">Add Catalog Layer</item>
+                <item name="infoText" xsi:type="string" translate="true">These rows show installed Magento document contributions. Ordered priorities and editable layer records are not available.</item>
+                <item name="dataset" xsi:type="string">layers</item>
+                <item name="dndConfig" xsi:type="array"><item name="enabled" xsi:type="boolean">false</item></item>
+                <item name="editorConfig" xsi:type="array"><item name="enabled" xsi:type="boolean">false</item></item>
+                <item name="resizeConfig" xsi:type="array"><item name="enabled" xsi:type="boolean">false</item></item>
+        </item></argument>
+        <column name="name" sortOrder="10">
+            <settings><bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/source</bodyTmpl><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Layer</label></settings>
+        </column>
+        <column name="status" sortOrder="20">
+            <settings><bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/badge</bodyTmpl><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Status</label></settings>
+        </column>
+        <column name="order" sortOrder="30">
+            <settings><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Priority</label><fieldClass><class name="catalog-overview-number">true</class></fieldClass></settings>
+        </column>
+        <column name="groups" sortOrder="40">
+            <settings><bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/fields</bodyTmpl><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Fields</label></settings>
+        </column>
+        <column name="locale" sortOrder="50">
+            <settings><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Locale</label></settings>
+        </column>
+        <column name="managedBy" sortOrder="60">
+            <settings><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Managed By</label></settings>
+        </column>
+        <column name="feedRecords" sortOrder="70">
+            <settings><bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/feed</bodyTmpl><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Records</label><fieldClass><class name="catalog-overview-number">true</class></fieldClass></settings>
+        </column>
+        <column name="actions" component="GraphCommerce_CatalogStorefrontAdminhtml/js/grid/columns/more" sortOrder="80">
+            <settings><bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/more</bodyTmpl><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Actions</label><visible>true</visible></settings>
+        </column>
+    </columns>
+</listing>
