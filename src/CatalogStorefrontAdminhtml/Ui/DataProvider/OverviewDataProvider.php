@@ -5,6 +5,7 @@ namespace GraphCommerce\CatalogStorefrontAdminhtml\Ui\DataProvider;
 
 use GraphCommerce\CatalogStorefrontAdminhtml\Model\DerivedViews;
 use GraphCommerce\CatalogStorefrontAdminhtml\Model\OverviewData;
+use Magento\Framework\Api\Filter;
 use Magento\Ui\DataProvider\AbstractDataProvider;
 
 /**
@@ -62,5 +63,34 @@ class OverviewDataProvider extends AbstractDataProvider
     public function count(): int
     {
         return $this->getData()['totalRecords'];
+    }
+
+    /**
+     * The overview listings intentionally expose no filtering controls.
+     */
+    public function addFilter(Filter $filter): void
+    {
+    }
+
+    /**
+     * The factual provider order is part of the overview presentation.
+     * Columns are configured as non-sortable in the UI component definitions.
+     */
+    public function addOrder($field, $direction): void
+    {
+    }
+
+    /**
+     * The bounded overview datasets are rendered without paging controls.
+     */
+    public function setLimit($offset, $size): void
+    {
+    }
+
+    /**
+     * No collection field selection is required for array-backed rows.
+     */
+    public function addField($field, $alias = null): void
+    {
     }
 }

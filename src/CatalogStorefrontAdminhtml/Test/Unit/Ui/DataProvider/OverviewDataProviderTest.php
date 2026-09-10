@@ -5,6 +5,7 @@ namespace GraphCommerce\CatalogStorefrontAdminhtml\Test\Unit\Ui\DataProvider;
 
 use GraphCommerce\CatalogStorefrontAdminhtml\Model\DerivedViews;
 use GraphCommerce\CatalogStorefrontAdminhtml\Ui\DataProvider\OverviewDataProvider;
+use Magento\Framework\Api\Filter;
 use PHPUnit\Framework\TestCase;
 
 class OverviewDataProviderTest extends TestCase
@@ -53,6 +54,15 @@ class OverviewDataProviderTest extends TestCase
             'totalRecords' => 1,
         ], $provider->getData());
         self::assertSame(1, $provider->count());
+
+        // Magento's optional listing processors must remain harmless if a
+        // request supplies their parameters although this dashboard exposes
+        // no filters, sorting or paging controls.
+        $provider->addFilter($this->createStub(Filter::class));
+        $provider->addOrder('code', 'DESC');
+        $provider->setLimit(2, 20);
+        $provider->addField('code');
+        self::assertSame(1, $provider->getData()['totalRecords']);
     }
 
     public function testRejectsMissingOrUnknownDataset(): void

@@ -2,7 +2,6 @@
 declare(strict_types=1);
 
 use Composer\InstalledVersions;
-use GraphCommerce\CatalogStorefrontAdminhtml\Block\Adminhtml\Views;
 use GraphCommerce\CatalogStorefrontAdminhtml\Controller\Adminhtml\Views\Index;
 use GraphCommerce\CatalogStorefrontAdminhtml\Model\DerivedViews;
 use Magento\Framework\Acl\AclResource\ProviderInterface as AclResourceProviderInterface;
@@ -20,9 +19,14 @@ use Magento\Framework\View\Result\PageFactory;
 const MODULE = 'GraphCommerce_CatalogStorefrontAdminhtml';
 const ACL = 'GraphCommerce_CatalogStorefrontAdminhtml::views';
 const HANDLE = 'catalog_storefront_views_index';
-const BLOCK = 'catalog.storefront.views';
+const COMPONENTS = [
+    'catalog_storefront_views_listing',
+    'catalog_storefront_sources_listing',
+    'catalog_storefront_books_listing',
+    'catalog_storefront_layers_listing',
+    'catalog_storefront_policies_listing',
+];
 const PACKAGE = 'graphcommerce/magento-catalog-storefront';
-const TEMPLATE = 'GraphCommerce_CatalogStorefrontAdminhtml::views.phtml';
 
 if ((getenv('CATALOG_VIEWS_SMOKE') ?: '') !== 'read-only') {
     fwrite(STDERR, "Refusing to run without CATALOG_VIEWS_SMOKE=read-only\n");
@@ -184,54 +188,39 @@ try {
     $stage = 'layout';
     $layout = $page->getLayout();
     $layout->publicBuild();
-    $declarations = $layout->getUpdate()->asSimplexml()->xpath('//block[@name="' . BLOCK . '"]');
-    $declared = is_array($declarations)
-        && count($declarations) === 1
-        && (string)$declarations[0]['class'] === Views::class
-        && (string)$declarations[0]['template'] === TEMPLATE;
-    if (!$declared) {
-        $failure('layout', 'merged layout does not contain the exact Views block declaration');
+    $declarations = $layout->getUpdate()->asSimplexml()->xpath('//uiComponent');
+    $declaredNames = is_array($declarations)
+        ? array_map(static fn(SimpleXMLElement $component): string => (string)$component['name'], $declarations)
+        : [];
+    $declaredNames = array_values(array_filter(
+        $declaredNames,
+        static fn(string $name): bool => str_starts_with($name, 'catalog_storefront_'),
+    ));
+    if ($declaredNames !== COMPONENTS) {
+        $failure('layout', 'merged layout does not contain the exact five overview listings in order');
     } else {
         $pass('layout', [
             'handle' => HANDLE,
             'pageLayout' => $layout->getUpdate()->getPageLayout(),
-            'block' => BLOCK,
-            'class' => Views::class,
-            'template' => TEMPLATE,
+            'components' => $declaredNames,
         ]);
     }
 
     $stage = 'render';
-    $block = $layout->createBlock(Views::class, BLOCK . '.smoke');
-    if (!$block instanceof Views) {
-        $failure('render', 'Views block cannot be constructed in the Admin layout');
-    } else {
-        $block->setTemplate(TEMPLATE);
-        $html = $block->toHtml();
-        $required = [
-            'Catalog Views',
-            'Catalog Sources',
-            'Price Books',
-            'Catalog Layers',
-            'Catalog Policies',
-        ];
-        $missing = array_values(array_filter(
-            $required,
-            static fn(string $text): bool => !str_contains($html, $text),
-        ));
-        if ($html !== '' && $missing === []) {
-            $pass('render', [
-                'bytes' => strlen($html),
-                'sha256' => hash('sha256', $html),
-                'sections' => count($required),
-                'managementActionsExplainAvailability' => str_contains(
-                    $html,
-                    'This management workflow is not available yet.',
-                ),
-            ]);
-        } else {
-            $failure('render', 'Views template rendered empty or omitted required page sections');
+    $rendered = [];
+    foreach (COMPONENTS as $componentName) {
+        $html = $layout->renderElement($componentName);
+        if ($html === '') {
+            $failure('render', 'one or more native overview listings rendered empty');
+            break;
         }
+        $rendered[$componentName] = [
+            'bytes' => strlen($html),
+            'sha256' => hash('sha256', $html),
+        ];
+    }
+    if (count($rendered) === count(COMPONENTS)) {
+        $pass('render', ['components' => $rendered]);
     }
 } catch (Throwable $error) {
     $failure($stage, get_class($error));
