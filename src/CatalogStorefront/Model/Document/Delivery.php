@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefront\Model\Document;
 
 use GraphCommerce\CatalogStorefront\Model\Config;
+use GraphCommerce\CatalogStorefrontApi\Document\FeedWriteAcceptanceInterface;
 use GraphCommerce\CatalogStorefrontApi\Document\FeedWriterInterface;
 use Magento\DataExporter\Model\ExportFeedInterface;
 use Magento\DataExporter\Model\FeedExportStatus;
@@ -19,8 +20,10 @@ use Psr\Log\LoggerInterface;
  * writer registered for its feed name (di.xml `writers`), which writes its
  * slice of the documents. A feed without a writer is accepted and only
  * persisted in its feed table, as is every feed while storefront indexing is
- * off. A storage failure reports status 500, so the feed machinery retries the
- * batch by cron.
+ * off. A storage failure reports status 500 for the exporter's retry bookkeeping.
+ * After a registered writer succeeds, an optional feed acceptor can durably record
+ * the batch. Acceptor failures escape so the calling indexer can retain or requeue
+ * its source work; they are not reduced to a feed-table status.
  *
  * Every write is logged at debug level with its row count and duration, so
  * an export's time splits between the exporter and the store. After a write, the cache tags of the entities the batch touched (di.xml
@@ -37,6 +40,7 @@ class Delivery implements ExportFeedInterface
     /**
      * @param FeedWriterInterface[] $writers by feed name
      * @param array<string, array<string, string[]>> $identities feed name to cache tag to row keys
+     * @param FeedWriteAcceptanceInterface[] $acceptors by feed name
      */
     public function __construct(
         private readonly FeedExportStatusBuilder $feedExportStatusBuilder,
@@ -47,6 +51,7 @@ class Delivery implements ExportFeedInterface
         private readonly CacheInterface $cache,
         private readonly array $writers = [],
         private readonly array $identities = [],
+        private readonly array $acceptors = [],
     ) {
     }
 
@@ -63,6 +68,9 @@ class Delivery implements ExportFeedInterface
             $this->logger->error(sprintf('catalog-storefront: storing feed "%s" failed: %s', $feed, $e->getMessage()));
 
             return $this->feedExportStatusBuilder->build(self::STATUS_RETRY, $e->getMessage());
+        }
+        if (isset($this->writers[$feed], $this->acceptors[$feed])) {
+            $this->acceptors[$feed]->accept($data, $metadata);
         }
         if (isset($this->writers[$feed])) {
             $this->logger->debug(sprintf(
