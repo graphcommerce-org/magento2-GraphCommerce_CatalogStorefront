@@ -18,6 +18,18 @@
                 type="GraphCommerce\CatalogStorefrontProductListing\Plugin\PageCacheIdentifier"/>
     </type>
 
+    <!--
+        The gate's per-render patterns, for a theme whose markup carries its own. Declared even
+        though it is empty: a constructor array the compiled factory cannot resolve is passed as
+        null, and every CLI command then fails at Application::init() because the console builds
+        every command before it runs one.
+    -->
+    <type name="GraphCommerce\CatalogStorefrontProductListing\Console\Command\ParityListing">
+        <arguments>
+            <argument name="perRender" xsi:type="array"/>
+        </arguments>
+    </type>
+
     <type name="Magento\Framework\Console\CommandListInterface">
         <arguments>
             <argument name="commands" xsi:type="array">

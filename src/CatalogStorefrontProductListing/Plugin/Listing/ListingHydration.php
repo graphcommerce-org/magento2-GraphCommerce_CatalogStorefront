@@ -6,6 +6,7 @@ namespace GraphCommerce\CatalogStorefrontProductListing\Plugin\Listing;
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
 use GraphCommerce\CatalogStorefrontApi\Storage\ProductDocumentStorageInterface;
 use GraphCommerce\CatalogStorefrontProductListing\Model\Mode;
+use GraphCommerce\CatalogStorefrontProductListing\Model\Read\ListingDocuments;
 use Magento\Catalog\Model\Product;
 use Magento\Catalog\Model\ResourceModel\Product\Collection;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
@@ -33,6 +34,7 @@ class ListingHydration
         private readonly ProductDocumentsInterface $products,
         private readonly Mode $mode,
         private readonly StoreManagerInterface $storeManager,
+        private readonly ListingDocuments $page,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -92,6 +94,10 @@ class ListingHydration
 
             return $proceed($printQuery, $logQuery);
         }
+
+        // What a card needs beyond its own document, its children above all, is fetched for the
+        // whole page from here.
+        $this->page->set((string)$store->getCode(), $documents);
 
         foreach ($rows as $id => $row) {
             $model = $models[$id];
