@@ -134,13 +134,7 @@ try {
     $data = $objects->get(DerivedViews::class);
     $views = $data->views();
     $groups = $data->groups();
-    $engine = $data->searchEngine();
-    $indexers = $data->indexers();
-    $allIndexersAvailable = array_reduce(
-        $indexers,
-        static fn(bool $available, array $indexer): bool => $available && $indexer['available'],
-        true,
-    );
+    $contributions = $data->contributions();
     $viewShapeReady = array_reduce($views, static function (bool $valid, array $view): bool {
         return $valid
             && isset($view['id'], $view['code'], $view['name'], $view['website']['id'], $view['website']['code'])
@@ -155,16 +149,13 @@ try {
         && $viewShapeReady
         && $groups['available']
         && $groups['items'] !== []
-        && $engine['available']
-        && $indexers !== []
-        && $allIndexersAvailable;
+        && $contributions !== [];
     if ($dataReady || !$requireData) {
         $pass('data', [
             'ready' => $dataReady,
             'activeStoreViews' => count($views),
             'customerGroups' => count($groups['items']),
-            'searchEngine' => $engine['id'] ?? null,
-            'feedIndexers' => count($indexers),
+            'catalogLayerContributions' => count($contributions),
         ]);
     } else {
         $checks['data'] = [
@@ -172,11 +163,7 @@ try {
             'reason' => 'one or more factual Admin data sources are unavailable',
             'activeStoreViews' => count($views),
             'customerGroupsAvailable' => $groups['available'],
-            'searchEngineAvailable' => $engine['available'],
-            'unavailableIndexerIds' => array_values(array_column(array_filter(
-                $indexers,
-                static fn(array $indexer): bool => !$indexer['available'],
-            ), 'id')),
+            'catalogLayerContributions' => count($contributions),
         ];
     }
 
@@ -222,10 +209,11 @@ try {
         $block->setTemplate(TEMPLATE);
         $html = $block->toHtml();
         $required = [
-            'Derived catalog views',
-            'Group-derived pricing',
-            'Synchronization checks',
-            'Catalog Storefront Cloud roadmap',
+            'Catalog Views',
+            'Catalog Sources',
+            'Price Books',
+            'Catalog Layers',
+            'Catalog Policies',
         ];
         $missing = array_values(array_filter(
             $required,
@@ -235,7 +223,11 @@ try {
             $pass('render', [
                 'bytes' => strlen($html),
                 'sha256' => hash('sha256', $html),
-                'explorerLinkRendered' => str_contains($html, 'Open GraphQL API'),
+                'sections' => count($required),
+                'managementActionsExplainAvailability' => str_contains(
+                    $html,
+                    'This management workflow is not available yet.',
+                ),
             ]);
         } else {
             $failure('render', 'Views template rendered empty or omitted required page sections');

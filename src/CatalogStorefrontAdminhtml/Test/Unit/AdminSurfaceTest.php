@@ -46,14 +46,21 @@ class AdminSurfaceTest extends TestCase
         self::assertStringNotContainsString('<?= $group', $template);
         self::assertStringNotContainsString('<?= $indexer', $template);
         self::assertStringContainsString('$escaper->escapeHtml(', $template);
-        self::assertStringContainsString('$escaper->escapeUrl(', $template);
-        self::assertStringNotContainsString('Create Catalog View', $template);
-        self::assertStringNotContainsString('Add Catalog Source', $template);
-        foreach (['Catalog Views', 'Catalog Sources', 'Price Books', 'Catalog Layers', 'Inventory', 'Reviews', 'Catalog Policies', 'Synchronization Checks'] as $heading) {
+        self::assertStringContainsString('$escaper->escapeHtmlAttr(', $template);
+        foreach (['Catalog Views', 'Catalog Sources', 'Price Books', 'Catalog Layers', 'Catalog Policies'] as $heading) {
             self::assertStringContainsString($heading, $template);
         }
-        self::assertStringContainsString('Module enabled', $template);
-        self::assertStringContainsString('Module unavailable', $template);
+        self::assertStringNotContainsString('<h2 id="catalog-storefront-inventory', $template);
+        self::assertStringNotContainsString('<h2 id="catalog-storefront-reviews', $template);
+        self::assertStringNotContainsString('Synchronization Checks', $template);
+        foreach (['Create Catalog View', 'Add Catalog Source', 'Add Price Book', 'Add Catalog Layer', 'Add Policy'] as $action) {
+            self::assertStringContainsString($action, $template);
+        }
+        self::assertSame(5, substr_count($template, '<section class="catalog-storefront-panel"'));
+        self::assertStringContainsString('popovertarget=', $template);
+        self::assertStringContainsString('This management workflow is not available yet.', $template);
+        self::assertStringContainsString('MODULE ENABLED', $template);
+        self::assertStringContainsString('MODULE UNAVAILABLE', $template);
     }
 
     private function xml(string $path): \SimpleXMLElement
