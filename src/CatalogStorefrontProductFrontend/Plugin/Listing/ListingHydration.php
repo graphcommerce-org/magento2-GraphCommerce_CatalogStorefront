@@ -1,12 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontProductListing\Plugin\Listing;
+namespace GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing;
 
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
 use GraphCommerce\CatalogStorefrontApi\Storage\ProductDocumentStorageInterface;
-use GraphCommerce\CatalogStorefrontProductListing\Model\Mode;
-use GraphCommerce\CatalogStorefrontProductListing\Model\Read\ListingDocuments;
+use GraphCommerce\CatalogStorefrontProductFrontend\Model\Mode;
+use GraphCommerce\CatalogStorefrontProductFrontend\Model\Read\ListingDocuments;
 use Magento\Catalog\Model\Product;
 use Magento\Catalog\Model\ResourceModel\Product\Collection;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;

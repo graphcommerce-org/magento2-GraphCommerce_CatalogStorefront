@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontConfigurableProductListing\Test\Unit\Model\Read;
+namespace GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Test\Unit\Model\Read;
 
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
-use GraphCommerce\CatalogStorefrontConfigurableProductListing\Model\Read\VariantDocuments;
-use GraphCommerce\CatalogStorefrontProductListing\Model\Read\ListingDocuments;
+use GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Model\Read\VariantDocuments;
+use GraphCommerce\CatalogStorefrontProductFrontend\Model\Read\ListingDocuments;
 use Magento\Store\Api\Data\StoreInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontProductListing\Plugin\Listing;
+namespace GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing;
 
 use Magento\Catalog\Model\Layer\Search\ItemCollectionProvider;
 use Magento\Catalog\Model\ResourceModel\Product\Collection;

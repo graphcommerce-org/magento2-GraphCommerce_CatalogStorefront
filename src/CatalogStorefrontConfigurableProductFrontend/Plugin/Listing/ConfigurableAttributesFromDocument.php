@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontConfigurableProductListing\Plugin\Listing;
+namespace GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Plugin\Listing;
 
 use GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Read\ConfigurableOptions;
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;

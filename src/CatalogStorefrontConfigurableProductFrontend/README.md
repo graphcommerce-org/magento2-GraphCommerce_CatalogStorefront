@@ -1,6 +1,8 @@
-# GraphCommerce_CatalogStorefrontConfigurableProductListing
+# GraphCommerce_CatalogStorefrontConfigurableProductFrontend
 
-The configurable card of a listing page from documents, where core pays queries per card.
+A configurable on a rendered page from documents, where core pays queries per product. Each seam
+acts on a product that carries a document, so it serves a listing card and a product detail page
+alike.
 
 - `getUsedProducts()`: the children from the `variantIds` of the parent document, in one read.
 - `getConfigurableAttributes()`: the super attribute models from the `configurableOptions` of the document.

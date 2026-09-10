@@ -1,6 +1,6 @@
 {
-    "name": "graphcommerce/module-catalog-storefront-product-listing",
-    "description": "Serves rendered product listing pages from the catalog read model documents",
+    "name": "graphcommerce/module-catalog-storefront-product-frontend",
+    "description": "Serves rendered catalog pages from the catalog read model documents",
     "type": "magento2-module",
     "license": "MIT",
     "require": {
@@ -17,7 +17,7 @@
             "registration.php"
         ],
         "psr-4": {
-            "GraphCommerce\\CatalogStorefrontProductListing\\": ""
+            "GraphCommerce\\CatalogStorefrontProductFrontend\\": ""
         }
     }
 }

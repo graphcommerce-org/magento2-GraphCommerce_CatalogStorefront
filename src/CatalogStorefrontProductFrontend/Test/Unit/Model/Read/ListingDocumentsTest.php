@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontProductListing\Test\Unit\Model\Read;
+namespace GraphCommerce\CatalogStorefrontProductFrontend\Test\Unit\Model\Read;
 
-use GraphCommerce\CatalogStorefrontProductListing\Model\Read\ListingDocuments;
+use GraphCommerce\CatalogStorefrontProductFrontend\Model\Read\ListingDocuments;
 use PHPUnit\Framework\TestCase;
 
 class ListingDocumentsTest extends TestCase

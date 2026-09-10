@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontConfigurableProductListing\Test\Unit\Model\Read;
+namespace GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Test\Unit\Model\Read;
 
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
-use GraphCommerce\CatalogStorefrontConfigurableProductListing\Model\Read\DocumentLowestPriceOptionsProvider;
+use GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Model\Read\DocumentLowestPriceOptionsProvider;
 use Magento\Catalog\Model\Product;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 use Magento\ConfigurableProduct\Pricing\Price\LowestPriceOptionsProvider;

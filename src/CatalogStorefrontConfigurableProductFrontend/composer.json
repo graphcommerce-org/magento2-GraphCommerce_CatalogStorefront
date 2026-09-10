@@ -1,6 +1,6 @@
 {
-    "name": "graphcommerce/module-catalog-storefront-configurable-product-listing",
-    "description": "Serves a configurable's variants, super attributes and lowest price on a listing page from documents",
+    "name": "graphcommerce/module-catalog-storefront-configurable-product-frontend",
+    "description": "Serves a configurable's variants, super attributes and lowest price on a rendered page from documents",
     "type": "magento2-module",
     "license": "MIT",
     "require": {
@@ -12,14 +12,14 @@
         "magento/module-eav": "*",
         "magento/module-store": "*",
         "graphcommerce/module-catalog-storefront-configurable-product": "self.version",
-        "graphcommerce/module-catalog-storefront-product-listing": "self.version"
+        "graphcommerce/module-catalog-storefront-product-frontend": "self.version"
     },
     "autoload": {
         "files": [
             "registration.php"
         ],
         "psr-4": {
-            "GraphCommerce\\CatalogStorefrontConfigurableProductListing\\": ""
+            "GraphCommerce\\CatalogStorefrontConfigurableProductFrontend\\": ""
         }
     }
 }

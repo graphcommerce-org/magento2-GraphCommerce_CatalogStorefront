@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontProductListing\Model\Read;
+namespace GraphCommerce\CatalogStorefrontProductFrontend\Model\Read;
 
 use Magento\Framework\ObjectManager\ResetAfterRequestInterface;
 

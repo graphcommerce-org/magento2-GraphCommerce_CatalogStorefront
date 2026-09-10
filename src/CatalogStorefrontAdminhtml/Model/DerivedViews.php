@@ -27,7 +27,7 @@ class DerivedViews
     private const DEFAULT_CURRENCY = 'currency/options/default';
     private const ALLOWED_CURRENCIES = 'currency/options/allow';
     private const SERVE_PLP = 'catalog/storefront_documents/serve_plp';
-    private const PRODUCT_LISTING_MODULE = 'GraphCommerce_CatalogStorefrontProductListing';
+    private const PRODUCT_LISTING_MODULE = 'GraphCommerce_CatalogStorefrontProductFrontend';
     private const INVENTORY_MODULE = 'GraphCommerce_CatalogStorefrontInventory';
     private const REVIEW_MODULE = 'GraphCommerce_CatalogStorefrontReview';
 

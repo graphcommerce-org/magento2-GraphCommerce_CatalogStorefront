@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontProductListing\Plugin;
+namespace GraphCommerce\CatalogStorefrontProductFrontend\Plugin;
 
-use GraphCommerce\CatalogStorefrontProductListing\Model\Mode;
+use GraphCommerce\CatalogStorefrontProductFrontend\Model\Mode;
 use Magento\Framework\App\PageCache\Identifier;
 
 /**

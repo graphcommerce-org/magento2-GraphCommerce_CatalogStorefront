@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontConfigurableProductListing\Plugin\Listing;
+namespace GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Plugin\Listing;
 
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
-use GraphCommerce\CatalogStorefrontConfigurableProductListing\Model\Read\VariantDocuments;
+use GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Model\Read\VariantDocuments;
 use Magento\Catalog\Model\Product;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 use Magento\Customer\Model\Session as CustomerSession;

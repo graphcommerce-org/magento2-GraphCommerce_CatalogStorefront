@@ -195,7 +195,7 @@ passes.
   `EntityMappings`), the rating documents reader, the feed table schema / the
   reviews prefiller (one aggregation per page), the reviews resolver (a query
   per page).
-- `CatalogStorefrontProductListing`: rendered category and search listing
+- `CatalogStorefrontProductFrontend`: rendered category and search listing
   pages from documents, for a Luma or Hyvä theme, off by default
   (`Model/Mode`: the store view's Serve Product Listings setting, or the
   `X-Catalog-Storefront` header under the key, which is part of the page cache
@@ -219,8 +219,10 @@ passes.
   misses only: measure warm and cold apart. The module names no theme class;
   a theme's own classes, templates or config would go to a module with the
   theme as suffix.
-- `CatalogStorefrontConfigurableProductListing`: the configurable card of that
-  page. `getUsedProducts()` builds the children from the parent document's
+- `CatalogStorefrontConfigurableProductFrontend`: a configurable on a rendered
+  page. Every seam acts on a product that carries a document, so it serves a
+  listing card and a product detail page alike.
+  `getUsedProducts()` builds the children from the parent document's
   `variantIds` in one read and sets each child's catalog rule price and empty
   tier prices, so a child's price info costs no query; `getConfigurableAttributes()`
   builds the super attribute models from `configurableOptions`, which the

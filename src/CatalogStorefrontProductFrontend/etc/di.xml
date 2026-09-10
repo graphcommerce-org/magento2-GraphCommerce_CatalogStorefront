@@ -3,19 +3,19 @@
     <!-- Marks the listing collection. ElasticSuite's category layer is a virtualType of this class. -->
     <type name="Magento\Catalog\Model\Layer\Search\ItemCollectionProvider">
         <plugin name="graphcommerce_catalog_storefront_product_listing_collection_flag"
-                type="GraphCommerce\CatalogStorefrontProductListing\Plugin\Listing\CollectionFlag"/>
+                type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\CollectionFlag"/>
     </type>
 
     <!-- Acts only on a marked collection, so nested collections are out of reach. -->
     <type name="Magento\Catalog\Model\ResourceModel\Product\Collection">
         <plugin name="graphcommerce_catalog_storefront_product_listing_hydration"
-                type="GraphCommerce\CatalogStorefrontProductListing\Plugin\Listing\ListingHydration"/>
+                type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\ListingHydration"/>
     </type>
 
     <!-- A request that names its own path must not land in the ordinary page's cache slot. -->
     <type name="Magento\Framework\App\PageCache\Identifier">
         <plugin name="graphcommerce_catalog_storefront_product_listing_page_cache_identifier"
-                type="GraphCommerce\CatalogStorefrontProductListing\Plugin\PageCacheIdentifier"/>
+                type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\PageCacheIdentifier"/>
     </type>
 
     <!--
@@ -24,7 +24,7 @@
         null, and every CLI command then fails at Application::init() because the console builds
         every command before it runs one.
     -->
-    <type name="GraphCommerce\CatalogStorefrontProductListing\Console\Command\ParityListing">
+    <type name="GraphCommerce\CatalogStorefrontProductFrontend\Console\Command\ParityListing">
         <arguments>
             <argument name="perRender" xsi:type="array"/>
         </arguments>
@@ -33,7 +33,7 @@
     <type name="Magento\Framework\Console\CommandListInterface">
         <arguments>
             <argument name="commands" xsi:type="array">
-                <item name="catalog_storefront_parity_listing" xsi:type="object">GraphCommerce\CatalogStorefrontProductListing\Console\Command\ParityListing</item>
+                <item name="catalog_storefront_parity_listing" xsi:type="object">GraphCommerce\CatalogStorefrontProductFrontend\Console\Command\ParityListing</item>
             </argument>
         </arguments>
     </type>

@@ -3,12 +3,12 @@
     <!-- Both act only on a product that carries a document, so a core-served page is untouched. -->
     <type name="Magento\ConfigurableProduct\Model\Product\Type\Configurable">
         <plugin name="graphcommerce_catalog_storefront_used_products"
-                type="GraphCommerce\CatalogStorefrontConfigurableProductListing\Plugin\Listing\UsedProductsFromDocuments"/>
+                type="GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Plugin\Listing\UsedProductsFromDocuments"/>
         <plugin name="graphcommerce_catalog_storefront_configurable_attributes"
-                type="GraphCommerce\CatalogStorefrontConfigurableProductListing\Plugin\Listing\ConfigurableAttributesFromDocument"/>
+                type="GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Plugin\Listing\ConfigurableAttributesFromDocument"/>
     </type>
 
     <!-- Wraps core's provider rather than replacing it: anything it cannot serve goes there. -->
     <preference for="Magento\ConfigurableProduct\Pricing\Price\LowestPriceOptionsProviderInterface"
-                type="GraphCommerce\CatalogStorefrontConfigurableProductListing\Model\Read\DocumentLowestPriceOptionsProvider"/>
+                type="GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Model\Read\DocumentLowestPriceOptionsProvider"/>
 </config>

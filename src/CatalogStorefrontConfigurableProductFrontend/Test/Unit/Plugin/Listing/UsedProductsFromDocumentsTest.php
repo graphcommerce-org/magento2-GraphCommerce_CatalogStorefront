@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontConfigurableProductListing\Test\Unit\Plugin\Listing;
+namespace GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Test\Unit\Plugin\Listing;
 
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
-use GraphCommerce\CatalogStorefrontConfigurableProductListing\Model\Read\VariantDocuments;
-use GraphCommerce\CatalogStorefrontConfigurableProductListing\Plugin\Listing\UsedProductsFromDocuments;
-use GraphCommerce\CatalogStorefrontProductListing\Model\Read\ListingDocuments;
+use GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Model\Read\VariantDocuments;
+use GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Plugin\Listing\UsedProductsFromDocuments;
+use GraphCommerce\CatalogStorefrontProductFrontend\Model\Read\ListingDocuments;
 use Magento\Catalog\Model\Product;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 use Magento\Customer\Model\Session as CustomerSession;

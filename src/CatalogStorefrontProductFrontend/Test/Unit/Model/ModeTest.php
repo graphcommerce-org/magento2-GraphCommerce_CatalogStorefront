@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontProductListing\Test\Unit\Model;
+namespace GraphCommerce\CatalogStorefrontProductFrontend\Test\Unit\Model;
 
 use GraphCommerce\CatalogStorefront\Model\Config;
 use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
-use GraphCommerce\CatalogStorefrontProductListing\Model\Mode;
+use GraphCommerce\CatalogStorefrontProductFrontend\Model\Mode;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\Console\Request as ConsoleRequest;
 use Magento\Framework\App\Request\Http as HttpRequest;

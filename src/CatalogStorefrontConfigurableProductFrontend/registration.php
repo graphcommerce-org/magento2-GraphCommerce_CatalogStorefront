@@ -5,6 +5,6 @@ use Magento\Framework\Component\ComponentRegistrar;
 
 ComponentRegistrar::register(
     ComponentRegistrar::MODULE,
-    'GraphCommerce_CatalogStorefrontConfigurableProductListing',
+    'GraphCommerce_CatalogStorefrontConfigurableProductFrontend',
     __DIR__
 );

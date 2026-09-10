@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontProductListing\Console\Command;
+namespace GraphCommerce\CatalogStorefrontProductFrontend\Console\Command;
 
 use GraphCommerce\CatalogStorefront\Model\Config;
 use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
-use GraphCommerce\CatalogStorefrontProductListing\Model\Mode;
+use GraphCommerce\CatalogStorefrontProductFrontend\Model\Mode;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;

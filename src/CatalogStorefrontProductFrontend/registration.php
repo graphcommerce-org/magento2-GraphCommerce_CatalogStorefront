@@ -3,4 +3,4 @@ declare(strict_types=1);
 
 use Magento\Framework\Component\ComponentRegistrar;
 
-ComponentRegistrar::register(ComponentRegistrar::MODULE, 'GraphCommerce_CatalogStorefrontProductListing', __DIR__);
+ComponentRegistrar::register(ComponentRegistrar::MODULE, 'GraphCommerce_CatalogStorefrontProductFrontend', __DIR__);
