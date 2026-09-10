@@ -33,10 +33,11 @@
         <plugin name="graphcommerce_catalog_storefront_reset_current_currency" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Store\ResetCurrentCurrency"/>
     </type>
 
-    <!-- Refresh changed config before request state, sessions and store context initialize. The proxy breaks the reload composite's plugin cycle. -->
+    <!-- Refresh changed config before request state, sessions and store context initialize. After the current headers are registered, clear any path and report decisions made during application construction or the reload. The proxies break the request and reload plugin cycles. -->
     <type name="GraphCommerce\CatalogStorefrontWorker\Plugin\State\ReloadPerGeneration">
         <arguments>
             <argument name="reloadProcessor" xsi:type="object">Magento\Framework\App\State\ReloadProcessorInterface\Proxy</argument>
+            <argument name="requestDecisions" xsi:type="object">GraphCommerce\CatalogStorefrontWorker\Model\State\RequestDecisions\Proxy</argument>
         </arguments>
     </type>
     <type name="Opengento\Application\App\Request\RequestRegistry">
