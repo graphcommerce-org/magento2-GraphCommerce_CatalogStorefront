@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <preference for="Magento\CatalogGraphQl\DataProvider\Product\LayeredNavigation\AttributeOptionProvider" type="GraphCommerce\CatalogStorefrontGraphQl\Model\Layer\ProductAttributeOptionProvider"/>
     <preference for="GraphCommerce\CatalogStorefrontGraphQlApi\Read\HydrationInterface" type="GraphCommerce\CatalogStorefrontGraphQl\Model\DocumentHydration"/>
 
     <!-- One bearer token read per request; the JWT reader first, so the storefront's token skips the opaque token lookup. -->

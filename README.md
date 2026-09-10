@@ -231,6 +231,15 @@ next request: the reload processors (system config, stores, search request confi
 config generation, so what is left is the object manager's own reset with its three garbage
 collection runs.
 
+The package replaces Magento's `AttributeOptionProvider` on the normal GraphQL path too. Core's
+query has no EAV entity-type predicate and groups by attribute code, so an equally named customer
+attribute can leak an option into a product facet. It also leaves equal merchant sort positions
+unordered. The replacement restricts the query to product attributes and orders ties by numeric
+option id; plugins declared for Magento's provider remain in its inherited interceptor chain.
+Another module that declares a preference for the same concrete provider conflicts by Magento's
+normal DI merge rules. Attribute metadata must be rebuilt before the document path has the added
+facet sort order; older documents keep their existing option order until then.
+
 A page beyond hit 10 000 of a listing is where OpenSearch's result window ends. Core's adapter
 opens a point in time and walks the result in windows of 10 000 hits until it reaches the page,
 with the layered navigation counts computed again in every window: page 2000 of an unfiltered

@@ -59,11 +59,25 @@ class AttributeOptionsFromDocuments
         $result = [];
         foreach ($attributes as $code => $attribute) {
             $withoutResults = (int)($attribute['filterableMode'] ?? 0) === FacetDocuments::FILTERABLE_WITHOUT_RESULTS;
-            $options = [];
+            $documentOptions = [];
             foreach ((array)($attribute['options'] ?? []) as $option) {
                 if ($withoutResults || isset($requested[(string)$option['id']])) {
-                    $options[(string)$option['id']] = $option['label'];
+                    $documentOptions[] = $option;
                 }
+            }
+            $hasCompleteFacetOrder = $documentOptions && count(array_filter(
+                $documentOptions,
+                static fn(array $option): bool => isset($option['facetSortOrder'])
+            )) === count($documentOptions);
+            if ($hasCompleteFacetOrder) {
+                usort($documentOptions, static function (array $left, array $right): int {
+                    return ((int)$left['facetSortOrder'] <=> (int)$right['facetSortOrder'])
+                        ?: ((int)$left['id'] <=> (int)$right['id']);
+                });
+            }
+            $options = [];
+            foreach ($documentOptions as $option) {
+                $options[(string)$option['id']] = $option['label'];
             }
             $listed = $options || $withoutResults
                 || (in_array($code, $attributeCodes, true) && in_array($attribute['frontendInput'] ?? '', ['boolean', 'price'], true));

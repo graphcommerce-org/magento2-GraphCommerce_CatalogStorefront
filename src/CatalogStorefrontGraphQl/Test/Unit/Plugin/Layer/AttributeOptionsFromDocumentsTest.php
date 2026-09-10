@@ -31,7 +31,13 @@ class AttributeOptionsFromDocumentsTest extends TestCase
         $storeManager->method('getStore')->with(1)->willReturn($store);
         $mode = $this->createMock(Mode::class);
         $mode->method('documents')->willReturn(true);
-        $this->plugin = new AttributeOptionsFromDocuments($this->facets, $this->storage, $storeManager, $mode, $this->strict);
+        $this->plugin = new AttributeOptionsFromDocuments(
+            $this->facets,
+            $this->storage,
+            $storeManager,
+            $mode,
+            $this->strict
+        );
     }
 
     public function testTheCorePathRunsCore(): void
@@ -39,9 +45,20 @@ class AttributeOptionsFromDocumentsTest extends TestCase
         $mode = $this->createMock(Mode::class);
         $mode->method('documents')->willReturn(false);
         $this->storage->expects(self::never())->method('any');
-        $plugin = new AttributeOptionsFromDocuments($this->facets, $this->storage, $this->createMock(StoreManagerInterface::class), $mode, $this->strict);
+        $plugin = new AttributeOptionsFromDocuments(
+            $this->facets,
+            $this->storage,
+            $this->createMock(StoreManagerInterface::class),
+            $mode,
+            $this->strict
+        );
 
-        self::assertSame(['core'], $plugin->aroundGetOptions($this->createMock(AttributeOptionProvider::class), static fn() => ['core'], [5], 1));
+        self::assertSame(['core'], $plugin->aroundGetOptions(
+            $this->createMock(AttributeOptionProvider::class),
+            static fn() => ['core'],
+            [5],
+            1
+        ));
     }
 
     public function testOneQueryFetchesTheOwnersTheUnfilteredAndTheRequestedBooleanAttributes(): void
@@ -99,6 +116,56 @@ class AttributeOptionsFromDocumentsTest extends TestCase
 
         self::assertSame(['color'], array_keys($result));
         self::assertSame(['5' => 'Red'], $result['color']['options']);
+    }
+
+    public function testDocumentOrderWinsOverRequestedOrderForTiedOptions(): void
+    {
+        $this->facets->method('attributes')->willReturn([
+            'material' => [
+                'attributeId' => 147,
+                'label' => 'Material',
+                'frontendInput' => 'multiselect',
+                'filterableMode' => 1,
+                'options' => [
+                    ['id' => 146, 'label' => 'Jersey', 'facetSortOrder' => 4],
+                    ['id' => 35, 'label' => 'Leather', 'facetSortOrder' => 4],
+                ],
+            ],
+        ]);
+
+        $result = $this->plugin->aroundGetOptions(
+            $this->createMock(AttributeOptionProvider::class),
+            static fn() => self::fail('core must not run'),
+            [146, 35],
+            1,
+            ['material']
+        );
+
+        self::assertSame([35, 146], array_keys($result['material']['options']));
+    }
+
+    public function testAProductOptionWithAnEmptyLabelIsStillListed(): void
+    {
+        $this->facets->method('attributes')->willReturn([
+            'material' => [
+                'attributeId' => 147,
+                'label' => 'Material',
+                'frontendInput' => 'select',
+                'filterableMode' => 1,
+                'options' => [['id' => 35, 'label' => '', 'facetSortOrder' => 4]],
+            ],
+        ]);
+
+        $result = $this->plugin->aroundGetOptions(
+            $this->createMock(AttributeOptionProvider::class),
+            static fn() => self::fail('core must not run'),
+            [35],
+            1,
+            ['material']
+        );
+
+        self::assertArrayHasKey(35, $result['material']['options']);
+        self::assertSame('', $result['material']['options'][35]);
     }
 
     public function testAnEmptyStoreViewFallsBackToCoreAndAnEmptyMatchDoesNot(): void

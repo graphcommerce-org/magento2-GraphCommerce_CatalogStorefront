@@ -39,6 +39,7 @@
     <record name="ProductAttributeOption">
         <field name="id" type="ID"/>
         <field name="label" type="String"/>
+        <field name="facetSortOrder" type="Int"/>
     </record>
     <record name="ProductAttributeMetadata">
         <field name="attributeId" type="Int" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeLayer">
