@@ -5,6 +5,7 @@ namespace GraphCommerce\CatalogStorefrontConfigurableProductListing\Plugin\Listi
 
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
+use GraphCommerce\CatalogStorefrontConfigurableProductListing\Model\Read\VariantDocuments;
 use Magento\Catalog\Model\Product;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 use Magento\Customer\Model\Session as CustomerSession;
@@ -29,6 +30,7 @@ class UsedProductsFromDocuments
 
     public function __construct(
         private readonly ProductDocumentsInterface $products,
+        private readonly VariantDocuments $variants,
         private readonly ProductPrice $productPrice,
         private readonly StoreManagerInterface $storeManager,
         private readonly CustomerSession $customerSession,
@@ -61,7 +63,9 @@ class UsedProductsFromDocuments
             return $proceed($product, $requiredAttributeIds);
         }
 
-        $expected = $this->expectedChildIds($product);
+        $expected = VariantDocuments::childIds(
+            (array)$product->getData(ProductDocumentsInterface::DOCUMENT_KEY)
+        );
         if ($expected === []) {
             return $proceed($product, $requiredAttributeIds);
         }
@@ -70,7 +74,8 @@ class UsedProductsFromDocuments
 
         try {
             $store = $this->storeManager->getStore($storeId);
-            $documents = $this->products->documents((string)$store->getCode(), $expected);
+            $documents = $this->variants->documents($store, $expected)
+                ?? $this->products->documents((string)$store->getCode(), $expected);
             $models = $this->products->build($store, $documents);
         } catch (\Throwable $e) {
             $this->logger->warning(
@@ -154,27 +159,5 @@ class UsedProductsFromDocuments
         if (empty($row['tierPrices'])) {
             $child->setData('tier_price', []);
         }
-    }
-
-    /**
-     * The children the parent document says it has, in ascending id order, so a partially indexed
-     * parent falls back rather than rendering a short option list.
-     *
-     * @return int[]
-     */
-    private function expectedChildIds(Product $product): array
-    {
-        $document = (array)$product->getData(ProductDocumentsInterface::DOCUMENT_KEY);
-
-        // Keys are prefixed ("v123") to keep the map a JSON object; a null value is a link the
-        // feed reported removed.
-        $ids = array_map(
-            'intval',
-            array_filter((array)($document['variantIds'] ?? []), static fn($id) => $id !== null)
-        );
-        $ids = array_values(array_unique($ids));
-        sort($ids);
-
-        return $ids;
     }
 }

@@ -5,7 +5,9 @@ namespace GraphCommerce\CatalogStorefrontConfigurableProductListing\Test\Unit\Pl
 
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
+use GraphCommerce\CatalogStorefrontConfigurableProductListing\Model\Read\VariantDocuments;
 use GraphCommerce\CatalogStorefrontConfigurableProductListing\Plugin\Listing\UsedProductsFromDocuments;
+use GraphCommerce\CatalogStorefrontProductListing\Model\Read\ListingDocuments;
 use Magento\Catalog\Model\Product;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 use Magento\Customer\Model\Session as CustomerSession;
@@ -26,8 +28,9 @@ class UsedProductsFromDocumentsTest extends TestCase
 
     /**
      * @param array<int, array> $documents child documents by id
+     * @param ListingDocuments|null $page the listing page, where one is being rendered
      */
-    private function plugin(array $documents): UsedProductsFromDocuments
+    private function plugin(array $documents, ?ListingDocuments $page = null): UsedProductsFromDocuments
     {
         $this->products = $this->createMock(ProductDocumentsInterface::class);
         $this->products->method('documents')->willReturn($documents);
@@ -52,12 +55,15 @@ class UsedProductsFromDocumentsTest extends TestCase
         $session = $this->createMock(CustomerSession::class);
         $session->method('getCustomerGroupId')->willReturn(0);
 
+        $logger = $this->createMock(LoggerInterface::class);
+
         return new UsedProductsFromDocuments(
             $this->products,
+            new VariantDocuments($this->products, $page ?? new ListingDocuments(), $logger),
             new ProductPrice(),
             $storeManager,
             $session,
-            $this->createMock(LoggerInterface::class)
+            $logger
         );
     }
 
@@ -80,12 +86,12 @@ class UsedProductsFromDocumentsTest extends TestCase
      * @param array<string, int|null> $variantIds as the feed writes them: "v<id>" keys, a null
      *                                            value for a link the feed reported removed
      */
-    private function parent(?array $variantIds, bool $memoised = false): Product
+    private function parent(?array $variantIds, bool $memoised = false, int $id = 100): Product
     {
         $document = $variantIds === null ? null : ['variantIds' => $variantIds];
 
         $product = $this->createMock(Product::class);
-        $product->method('getId')->willReturn(100);
+        $product->method('getId')->willReturn($id);
         $product->method('getStoreId')->willReturn(1);
         $product->method('hasData')->willReturnCallback(
             static fn(string $key) => $key === self::MEMO && $memoised
@@ -242,6 +248,52 @@ class UsedProductsFromDocumentsTest extends TestCase
         );
 
         $this->assertContains(['catalog_rule_price', null], $this->written[7]);
+    }
+
+    public function testEveryParentOnThePageIsServedByOneFetch(): void
+    {
+        // The reason this class exists: a card asks for its children while it renders, so a fetch
+        // per parent is a round trip per card.
+        $page = new ListingDocuments();
+        $page->set('default', [
+            100 => ['variantIds' => ['v1' => 1, 'v2' => 2]],
+            200 => ['variantIds' => ['v3' => 3]],
+        ]);
+
+        $plugin = $this->plugin([1 => [], 2 => [], 3 => []], $page);
+        $this->products->expects($this->once())->method('documents')->with('default', [1, 2, 3]);
+
+        $first = $plugin->aroundGetUsedProducts(
+            $this->createMock(Configurable::class),
+            $this->proceed(),
+            $this->parent(['v1' => 1, 'v2' => 2])
+        );
+        $second = $plugin->aroundGetUsedProducts(
+            $this->createMock(Configurable::class),
+            $this->proceed(),
+            $this->parent(['v3' => 3], false, 200)
+        );
+
+        $this->assertSame([1, 2], array_map(static fn(Product $c) => $c->getId(), $first));
+        $this->assertSame([3], array_map(static fn(Product $c) => $c->getId(), $second));
+    }
+
+    public function testAParentOutsideThePageFetchesItsOwnChildren(): void
+    {
+        // A related or upsell block renders parents the listing fetch never covered.
+        $page = new ListingDocuments();
+        $page->set('default', [100 => ['variantIds' => ['v1' => 1]]]);
+
+        $plugin = $this->plugin([1 => [], 9 => []], $page);
+        $this->products->expects($this->exactly(2))->method('documents');
+
+        $children = $plugin->aroundGetUsedProducts(
+            $this->createMock(Configurable::class),
+            $this->proceed(),
+            $this->parent(['v9' => 9], false, 300)
+        );
+
+        $this->assertSame([9], array_map(static fn(Product $c) => $c->getId(), $children));
     }
 
     public function testCatalogRulePriceComesFromTheTaggedDiscount(): void
