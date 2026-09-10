@@ -31,6 +31,12 @@ class Variants implements FeedWriterInterface
     {
         $links = [];
         foreach ($rows as $row) {
+            if (!empty($row['deleted']) && (empty($row['parentId']) || empty($row['productId']))) {
+                throw new \RuntimeException(
+                    'A deleted variants feed row has no productId or parentId; rebuild the product documents '
+                    . 'so the variants feed retains deletion identities.'
+                );
+            }
             if (empty($row['parentId']) || empty($row['productId'])) {
                 continue;
             }

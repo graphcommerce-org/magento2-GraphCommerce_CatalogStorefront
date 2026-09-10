@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- A removed relation is reconstructed from this retained payload after its provider returns no row. -->
+    <virtualType name="Magento\ProductVariantDataExporter\Model\Indexer\ProductVariantFeedIndexMetadata"
+                 type="Magento\DataExporter\Model\Indexer\FeedIndexMetadata">
+        <arguments>
+            <argument name="minimalPayload" xsi:type="array">
+                <item name="parentId" xsi:type="string">parentId</item>
+            </argument>
+        </arguments>
+    </virtualType>
     <type name="GraphCommerce\CatalogStorefront\Model\Document\Delivery">
         <arguments>
             <argument name="writers" xsi:type="array">
