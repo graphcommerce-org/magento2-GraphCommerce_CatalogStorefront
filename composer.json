@@ -52,6 +52,7 @@
         "graphcommerce/module-catalog-storefront-downloadable-graph-ql": "self.version",
         "graphcommerce/module-catalog-storefront-review": "self.version",
         "graphcommerce/module-catalog-storefront-review-graph-ql": "self.version",
+        "graphcommerce/module-catalog-storefront-review-frontend": "self.version",
         "graphcommerce/module-catalog-storefront-profiler": "self.version",
         "graphcommerce/module-catalog-storefront-search": "self.version"
     },

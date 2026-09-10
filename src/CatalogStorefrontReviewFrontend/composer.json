@@ -1,0 +1,19 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-review-frontend",
+    "description": "What the package changes about core's rendered review blocks",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-review": "*"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontReviewFrontend\\": ""
+        }
+    }
+}
