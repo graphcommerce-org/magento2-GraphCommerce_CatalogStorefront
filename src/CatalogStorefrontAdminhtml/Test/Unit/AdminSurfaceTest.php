@@ -9,7 +9,7 @@ use PHPUnit\Framework\TestCase;
 
 class AdminSurfaceTest extends TestCase
 {
-    public function testRouteMenuAclAndLayoutDeclareOneReadOnlyPage(): void
+    public function testRouteMenuAclAndLayoutDeclareFiveReadOnlyListings(): void
     {
         $module = dirname(__DIR__, 2);
         $route = $this->xml($module . '/etc/adminhtml/routes.xml');
@@ -24,43 +24,37 @@ class AdminSurfaceTest extends TestCase
             Index::ADMIN_RESOURCE,
             (string)$acl->acl->resources->resource->resource->resource['id'],
         );
-        self::assertSame(
-            'GraphCommerce\\CatalogStorefrontAdminhtml\\Block\\Adminhtml\\Views',
-            (string)$layout->body->referenceContainer->block['class'],
-        );
-        self::assertSame(
-            'GraphCommerce_CatalogStorefrontAdminhtml::css/views.css',
-            (string)$layout->head->css['src'],
-        );
+        $expected = [
+            'catalog_storefront_views_listing' => 'catalogViews',
+            'catalog_storefront_sources_listing' => 'sources',
+            'catalog_storefront_books_listing' => 'books',
+            'catalog_storefront_layers_listing' => 'layers',
+            'catalog_storefront_policies_listing' => 'policies',
+        ];
+        $declared = $layout->xpath('//uiComponent');
+        self::assertIsArray($declared);
+        self::assertSame(array_keys($expected), array_map(
+            static fn(\SimpleXMLElement $component): string => (string)$component['name'],
+            $declared,
+        ));
+        self::assertSame([], $layout->xpath('//block'));
+        foreach ($expected as $component => $dataset) {
+            $path = $module . '/view/adminhtml/ui_component/' . $component . '.xml';
+            self::assertFileExists($path);
+            $contents = (string)file_get_contents($path);
+            self::assertStringContainsString(
+                'GraphCommerce\\CatalogStorefrontAdminhtml\\Ui\\DataProvider\\OverviewDataProvider',
+                $contents,
+            );
+            self::assertStringContainsString('<item name="dataset" xsi:type="string">' . $dataset . '</item>', $contents);
+            self::assertStringNotContainsString('<listingToolbar', $contents);
+            self::assertStringNotContainsString('<massaction', $contents);
+        }
         self::assertContains(HttpGetActionInterface::class, class_implements(Index::class));
         self::assertSame(
             [$module . '/Controller/Adminhtml/Views/Index.php'],
             glob($module . '/Controller/Adminhtml/*/*.php'),
         );
-    }
-
-    public function testEveryDynamicTemplateValueUsesTheEscaper(): void
-    {
-        $template = (string)file_get_contents(dirname(__DIR__, 2) . '/view/adminhtml/templates/views.phtml');
-        self::assertStringNotContainsString('<?= $view', $template);
-        self::assertStringNotContainsString('<?= $group', $template);
-        self::assertStringNotContainsString('<?= $indexer', $template);
-        self::assertStringContainsString('$escaper->escapeHtml(', $template);
-        self::assertStringContainsString('$escaper->escapeHtmlAttr(', $template);
-        foreach (['Catalog Views', 'Catalog Sources', 'Price Books', 'Catalog Layers', 'Catalog Policies'] as $heading) {
-            self::assertStringContainsString($heading, $template);
-        }
-        self::assertStringNotContainsString('<h2 id="catalog-storefront-inventory', $template);
-        self::assertStringNotContainsString('<h2 id="catalog-storefront-reviews', $template);
-        self::assertStringNotContainsString('Synchronization Checks', $template);
-        foreach (['Create Catalog View', 'Add Catalog Source', 'Add Price Book', 'Add Catalog Layer', 'Add Policy'] as $action) {
-            self::assertStringContainsString($action, $template);
-        }
-        self::assertSame(5, substr_count($template, '<section class="catalog-storefront-panel"'));
-        self::assertStringContainsString('popovertarget=', $template);
-        self::assertStringContainsString('This management workflow is not available yet.', $template);
-        self::assertStringContainsString('MODULE ENABLED', $template);
-        self::assertStringContainsString('MODULE UNAVAILABLE', $template);
     }
 
     private function xml(string $path): \SimpleXMLElement

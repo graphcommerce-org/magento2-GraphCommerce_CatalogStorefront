@@ -1,0 +1,48 @@
+<!--
+/**
+ * Copyright 2026 GraphCommerce
+ * SPDX-License-Identifier: MIT
+ */
+-->
+<section class="catalog-overview-panel" attr="'data-dataset': dataset">
+    <header class="catalog-overview-header">
+        <div class="catalog-overview-title">
+            <h2 text="heading"></h2>
+            <button if="infoText"
+                    type="button"
+                    class="catalog-overview-info"
+                    click="showInfo"
+                    attr="title: $t('Information'), 'aria-label': $t('Information')">
+                <span aria-hidden="true">i</span>
+            </button>
+            <span class="catalog-overview-count">
+                <span text="getRecordCount() + ' ' + $t('records')"></span>
+            </span>
+        </div>
+        <button if="actionLabel"
+                type="button"
+                class="catalog-overview-action action-primary"
+                click="showUnavailable"
+                text="actionLabel"></button>
+    </header>
+
+    <div class="admin__data-grid-wrap" data-role="grid-wrapper">
+        <table class="data-grid" data-role="grid">
+            <thead>
+                <tr each="data: getVisible(), as: '$col'" render="getHeader()"></tr>
+            </thead>
+            <tbody>
+                <tr if="rows" class="data-row" repeat="foreach: rows, item: '$row'" css="'_odd-row': $index % 2">
+                    <td if="$row()"
+                        outerfasteach="data: getVisible(), as: '$col'"
+                        css="getFieldClass($row())"
+                        click="getFieldHandler($row())"
+                        template="getBody()"></td>
+                </tr>
+                <tr ifnot="hasData()" class="data-grid-tr-no-data">
+                    <td attr="colspan: countVisible()" translate="'We couldn\'t find any records.'"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
