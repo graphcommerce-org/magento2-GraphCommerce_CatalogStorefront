@@ -28,6 +28,8 @@ class DerivedViews
     private const ALLOWED_CURRENCIES = 'currency/options/allow';
     private const SERVE_PLP = 'catalog/storefront_documents/serve_plp';
     private const PRODUCT_LISTING_MODULE = 'GraphCommerce_CatalogStorefrontProductListing';
+    private const INVENTORY_MODULE = 'GraphCommerce_CatalogStorefrontInventory';
+    private const REVIEW_MODULE = 'GraphCommerce_CatalogStorefrontReview';
 
     public function __construct(
         private readonly StoreManagerInterface $storeManager,
@@ -203,6 +205,35 @@ class DerivedViews
         usort($indexers, static fn(array $a, array $b): int => [$a['name'], $a['id']] <=> [$b['name'], $b['id']]);
 
         return $indexers;
+    }
+
+    /**
+     * Installed document contributions. These are not independently managed content layers.
+     *
+     * @return array<string, array{name: string, source: string, fields: string, available: bool}>
+     */
+    public function contributions(): array
+    {
+        return [
+            'content' => [
+                'name' => 'Store-view content',
+                'source' => 'Magento catalog feeds',
+                'fields' => 'Store-scoped product, category and attribute values',
+                'available' => true,
+            ],
+            'inventory' => [
+                'name' => 'Inventory',
+                'source' => 'Magento inventory stock-status feed',
+                'fields' => 'The stock slice of product documents',
+                'available' => $this->moduleManager->isEnabled(self::INVENTORY_MODULE),
+            ],
+            'reviews' => [
+                'name' => 'Reviews',
+                'source' => 'Magento review and rating feeds',
+                'fields' => 'Visible review and rating documents',
+                'available' => $this->moduleManager->isEnabled(self::REVIEW_MODULE),
+            ],
+        ];
     }
 
     /**

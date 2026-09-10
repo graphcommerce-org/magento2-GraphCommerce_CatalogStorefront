@@ -28,6 +28,10 @@ class AdminSurfaceTest extends TestCase
             'GraphCommerce\\CatalogStorefrontAdminhtml\\Block\\Adminhtml\\Views',
             (string)$layout->body->referenceContainer->block['class'],
         );
+        self::assertSame(
+            'GraphCommerce_CatalogStorefrontAdminhtml::css/views.css',
+            (string)$layout->head->css['src'],
+        );
         self::assertContains(HttpGetActionInterface::class, class_implements(Index::class));
         self::assertSame(
             [$module . '/Controller/Adminhtml/Views/Index.php'],
@@ -43,6 +47,13 @@ class AdminSurfaceTest extends TestCase
         self::assertStringNotContainsString('<?= $indexer', $template);
         self::assertStringContainsString('$escaper->escapeHtml(', $template);
         self::assertStringContainsString('$escaper->escapeUrl(', $template);
+        self::assertStringNotContainsString('Create Catalog View', $template);
+        self::assertStringNotContainsString('Add Catalog Source', $template);
+        foreach (['Catalog Views', 'Catalog Sources', 'Price Books', 'Catalog Layers', 'Inventory', 'Reviews', 'Catalog Policies', 'Synchronization Checks'] as $heading) {
+            self::assertStringContainsString($heading, $template);
+        }
+        self::assertStringContainsString('Module enabled', $template);
+        self::assertStringContainsString('Module unavailable', $template);
     }
 
     private function xml(string $path): \SimpleXMLElement

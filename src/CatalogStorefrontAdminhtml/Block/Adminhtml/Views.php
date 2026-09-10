@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontAdminhtml\Block\Adminhtml;
 
+use GraphCommerce\CatalogStorefrontAdminhtml\Model\AdminLinks;
 use GraphCommerce\CatalogStorefrontAdminhtml\Model\DerivedViews;
 use GraphCommerce\CatalogStorefrontAdminhtml\Model\ExplorerLink;
 use Magento\Backend\Block\Template;
@@ -16,6 +17,7 @@ class Views extends Template
         Template\Context $context,
         private readonly DerivedViews $derivedViews,
         private readonly ExplorerLink $explorerLink,
+        private readonly AdminLinks $adminLinks,
         array $data = [],
     ) {
         parent::__construct($context, $data);
@@ -45,8 +47,24 @@ class Views extends Template
         return $this->derivedViews->indexers();
     }
 
+    /** @return array<string, array{name: string, source: string, fields: string, available: bool}> */
+    public function contributions(): array
+    {
+        return $this->derivedViews->contributions();
+    }
+
     public function explorerUrl(): ?string
     {
         return $this->explorerLink->url();
+    }
+
+    /** @return array{stores: string|null, configuration: string|null, indexers: string|null} */
+    public function adminLinks(): array
+    {
+        return [
+            'stores' => $this->adminLinks->stores(),
+            'configuration' => $this->adminLinks->configuration(),
+            'indexers' => $this->adminLinks->indexers(),
+        ];
     }
 }

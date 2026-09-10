@@ -1,0 +1,146 @@
+.catalog-storefront-admin {
+    color: #303030;
+    display: grid;
+    gap: 1.6rem;
+}
+
+.catalog-storefront-admin__intro {
+    color: #666;
+    font-size: 1.4rem;
+    margin: -.4rem 0 .4rem;
+    max-width: 90rem;
+}
+
+.catalog-storefront-card {
+    background: #fff;
+    border-radius: 1.6rem;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, .04);
+    overflow: hidden;
+    padding: 2.4rem;
+}
+
+.catalog-storefront-card-grid {
+    display: grid;
+    gap: 1.6rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.catalog-storefront-card__header {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.2rem;
+    justify-content: space-between;
+    margin-bottom: 1.6rem;
+}
+
+.catalog-storefront-card__heading {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.2rem;
+}
+
+.catalog-storefront-card__heading h2 {
+    font-size: 1.8rem;
+    margin: 0;
+}
+
+.catalog-storefront-card__count,
+.catalog-storefront-muted {
+    color: #777;
+    font-size: 1.3rem;
+}
+
+.catalog-storefront-card__description {
+    margin: 0 0 1.6rem;
+}
+
+.catalog-storefront-table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.catalog-storefront-table th {
+    background: #f1f1f1;
+    color: #1b1b1b;
+    font-size: 1.3rem;
+    font-weight: 600;
+    text-align: left;
+}
+
+.catalog-storefront-table th,
+.catalog-storefront-table td {
+    border-bottom: 1px solid #e9e9e9;
+    padding: 1.2rem 1rem;
+    vertical-align: top;
+}
+
+.catalog-storefront-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.catalog-storefront-table__title {
+    color: #1b1b1b;
+    display: block;
+    font-weight: 600;
+    margin-bottom: .2rem;
+}
+
+.catalog-storefront-table__line {
+    display: block;
+    line-height: 1.55;
+}
+
+.catalog-storefront-pill {
+    background: #f1f1f1;
+    border: 1px solid #c7c7c7;
+    border-radius: 2rem;
+    color: #303030;
+    display: inline-block;
+    font-size: 1.2rem;
+    font-weight: 600;
+    line-height: 1.6rem;
+    margin: 0 .4rem .5rem 0;
+    padding: .2rem .8rem;
+}
+
+.catalog-storefront-pill--enabled {
+    background: #eef7e8;
+    border-color: #85b969;
+    color: #315b22;
+}
+
+.catalog-storefront-pill--unavailable {
+    background: #fff4e5;
+    border-color: #d6a65d;
+    color: #6b4918;
+}
+
+.catalog-storefront-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .8rem;
+}
+
+.catalog-storefront-note {
+    background: #f7f7f7;
+    border-left: .4rem solid #007dbd;
+    margin-top: 1.6rem;
+    padding: 1.2rem 1.6rem;
+}
+
+@media (max-width: 1024px) {
+    .catalog-storefront-card-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .catalog-storefront-table {
+        min-width: 86rem;
+    }
+
+    .catalog-storefront-card__table {
+        overflow-x: auto;
+    }
+}

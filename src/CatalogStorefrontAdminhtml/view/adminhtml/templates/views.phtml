@@ -7,76 +7,64 @@ $views = $block->views();
 $groups = $block->groups();
 $search = $block->searchEngine();
 $indexers = $block->indexers();
+$contributions = $block->contributions();
 $explorerUrl = $block->explorerUrl();
-$yes = static fn(bool $value) => $value ? __('Enabled') : __('Disabled');
+$links = $block->adminLinks();
 $source = static fn(bool $value) => $value ? __('Documents') : __('Database');
 ?>
 
-<div class="admin__fieldset-wrapper">
-    <div class="admin__fieldset-wrapper-title">
-        <strong class="title"><span><?= $escaper->escapeHtml(__('Derived catalog views')) ?></span></strong>
-    </div>
-    <div class="admin__fieldset-wrapper-content">
-        <p><?= $escaper->escapeHtml(__('Each active Magento store view defines one read-only catalog experience. These rows describe current Magento configuration; they are not separately saved channel views.')) ?></p>
-        <?php if ($views === []): ?>
-            <div class="message message-notice notice">
-                <div><?= $escaper->escapeHtml(__('No active store views are available.')) ?></div>
+<div class="catalog-storefront-admin">
+    <p class="catalog-storefront-admin__intro">
+        <?= $escaper->escapeHtml(__('Each active Magento store view defines one read-only catalog experience. Values shown below come from current Magento configuration and feed state.')) ?>
+    </p>
+
+    <section class="catalog-storefront-card" aria-labelledby="catalog-storefront-views-heading">
+        <div class="catalog-storefront-card__header">
+            <div class="catalog-storefront-card__heading">
+                <h2 id="catalog-storefront-views-heading"><?= $escaper->escapeHtml(__('Catalog Views')) ?></h2>
+                <span class="catalog-storefront-card__count"><?= $escaper->escapeHtml(__('%1 records', count($views))) ?></span>
             </div>
+            <?php if ($links['stores'] !== null): ?>
+                <a class="action-primary" href="<?= $escaper->escapeUrl($links['stores']) ?>"><?= $escaper->escapeHtml(__('Manage Store Views')) ?></a>
+            <?php endif; ?>
+        </div>
+
+        <?php if ($views === []): ?>
+            <div class="message message-notice notice"><div><?= $escaper->escapeHtml(__('No active store views are available.')) ?></div></div>
         <?php else: ?>
-            <div class="admin__data-grid-wrap admin__data-grid-wrap-static">
-                <table class="data-grid">
-                    <thead>
-                    <tr>
-                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Derived view')) ?></th>
-                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Assembly')) ?></th>
-                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Configured serving')) ?></th>
-                    </tr>
-                    </thead>
+            <div class="catalog-storefront-card__table">
+                <table class="catalog-storefront-table">
+                    <thead><tr>
+                        <th scope="col"><?= $escaper->escapeHtml(__('View')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Magento Scope')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Configured Serving')) ?></th>
+                    </tr></thead>
                     <tbody>
                     <?php foreach ($views as $view): ?>
                         <tr>
                             <td>
-                                <strong><?= $escaper->escapeHtml($view['name']) ?></strong><br>
-                                <span><?= $escaper->escapeHtml(__('Store view: %1 (ID %2)', $view['code'], $view['id'])) ?></span><br>
-                                <span><?= $escaper->escapeHtml(__('Store: %1 [%2] (ID %3)', $view['store']['name'], $view['store']['code'], $view['store']['id'])) ?></span><br>
-                                <span><?= $escaper->escapeHtml(__('Website: %1 [%2] (ID %3)', $view['website']['name'], $view['website']['code'], $view['website']['id'])) ?></span>
+                                <strong class="catalog-storefront-table__title"><?= $escaper->escapeHtml($view['name']) ?></strong>
+                                <code class="catalog-storefront-table__line"><?= $escaper->escapeHtml($view['code']) ?></code>
+                                <span class="catalog-storefront-table__line catalog-storefront-muted"><?= $escaper->escapeHtml(__('Store view ID %1', $view['id'])) ?></span>
+                                <span class="catalog-storefront-table__line"><?= $escaper->escapeHtml(__('%1 · %2', $view['website']['name'], $view['store']['name'])) ?></span>
                             </td>
                             <td>
-                                <strong><?= $escaper->escapeHtml(__('Source')) ?>:</strong>
-                                <?= $escaper->escapeHtml(__('Magento store view %1', $view['code'])) ?><br>
-                                <strong><?= $escaper->escapeHtml(__('Assortment')) ?>:</strong>
-                                <?= $escaper->escapeHtml(__('Website assignment with store-view status and visibility; root category ID %1', $view['store']['rootCategoryId'])) ?><br>
-                                <strong><?= $escaper->escapeHtml(__('Pricing')) ?>:</strong>
-                                <?php if ($view['customerGroupsAvailable'] && $view['defaultCustomerGroup']['available']): ?>
-                                    <?= $escaper->escapeHtml(__('%1 Magento customer groups; default %2 (key %3)', $view['customerGroupCount'], $view['defaultCustomerGroup']['code'], $view['defaultCustomerGroup']['key'])) ?><br>
-                                <?php else: ?>
-                                    <?= $escaper->escapeHtml(__('Unavailable')) ?><br>
-                                <?php endif; ?>
-                                <strong><?= $escaper->escapeHtml(__('Content')) ?>:</strong>
-                                <?= $escaper->escapeHtml(__('Store-view values in locale %1', $view['locale'] !== '' ? $view['locale'] : __('Unavailable'))) ?><br>
-                                <strong><?= $escaper->escapeHtml(__('Currency')) ?>:</strong>
-                                <?= $escaper->escapeHtml(__(
-                                    'Base %1; default %2; allowed %3',
-                                    $view['currency']['base'] !== '' ? $view['currency']['base'] : __('Unavailable'),
-                                    $view['currency']['default'] !== '' ? $view['currency']['default'] : __('Unavailable'),
-                                    $view['currency']['allowed'] !== [] ? implode(', ', $view['currency']['allowed']) : __('Unavailable'),
-                                )) ?>
+                                <span class="catalog-storefront-table__line"><?= $escaper->escapeHtml(__('Website: %1 [%2]', $view['website']['name'], $view['website']['code'])) ?></span>
+                                <span class="catalog-storefront-table__line"><?= $escaper->escapeHtml(__('Store: %1 [%2]', $view['store']['name'], $view['store']['code'])) ?></span>
+                                <span class="catalog-storefront-table__line"><?= $escaper->escapeHtml(__('Root category ID %1', $view['store']['rootCategoryId'])) ?></span>
+                                <span class="catalog-storefront-table__line"><?= $escaper->escapeHtml(__('Locale: %1', $view['locale'] !== '' ? $view['locale'] : __('Unavailable'))) ?></span>
                             </td>
                             <td>
-                                <strong><?= $escaper->escapeHtml(__('Storefront indexing')) ?>:</strong>
-                                <?= $escaper->escapeHtml($yes($view['indexing'])) ?><br>
-                                <strong><?= $escaper->escapeHtml(__('GraphQL products and categories')) ?>:</strong>
-                                <?= $escaper->escapeHtml($source($view['graphqlDocuments'])) ?><br>
-                                <strong><?= $escaper->escapeHtml(__('Rendered product listings')) ?>:</strong>
-                                <?php if ($view['productListingDocuments'] === null): ?>
-                                    <?= $escaper->escapeHtml(__('Module unavailable')) ?><br>
-                                <?php else: ?>
-                                    <?= $escaper->escapeHtml($source($view['productListingDocuments'])) ?><br>
-                                <?php endif; ?>
-                                <strong><?= $escaper->escapeHtml(__('Catalog search provider')) ?>:</strong>
-                                <?= $escaper->escapeHtml($search['available'] ? $search['id'] : __('Unavailable')) ?><br>
-                                <strong><?= $escaper->escapeHtml(__('Named search profile')) ?>:</strong>
-                                <?= $escaper->escapeHtml(__('Not provided by the open-source package')) ?>
+                                <span class="catalog-storefront-pill<?= $escaper->escapeHtmlAttr($view['indexing'] ? ' catalog-storefront-pill--enabled' : '') ?>"><?= $escaper->escapeHtml($view['indexing'] ? __('Indexing enabled') : __('Indexing disabled')) ?></span>
+                                <span class="catalog-storefront-table__line"><?= $escaper->escapeHtml(__('GraphQL: %1', $source($view['graphqlDocuments']))) ?></span>
+                                <span class="catalog-storefront-table__line">
+                                    <?php if ($view['productListingDocuments'] === null): ?>
+                                        <?= $escaper->escapeHtml(__('Product listings: module unavailable')) ?>
+                                    <?php else: ?>
+                                        <?= $escaper->escapeHtml(__('Product listings: %1', $source($view['productListingDocuments']))) ?>
+                                    <?php endif; ?>
+                                </span>
+                                <span class="catalog-storefront-table__line"><?= $escaper->escapeHtml(__('Search: %1', $search['available'] ? $search['id'] : __('Unavailable'))) ?></span>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -84,31 +72,71 @@ $source = static fn(bool $value) => $value ? __('Documents') : __('Database');
                 </table>
             </div>
         <?php endif; ?>
-    </div>
-</div>
 
-<div class="admin__fieldset-wrapper">
-    <div class="admin__fieldset-wrapper-title">
-        <strong class="title"><span><?= $escaper->escapeHtml(__('Group-derived pricing')) ?></span></strong>
-    </div>
-    <div class="admin__fieldset-wrapper-content">
-        <p><?= $escaper->escapeHtml(__('Magento customer groups supply the price context for every derived view. Documents use the group key below; when a product has no group-specific row, the document writer resolves its all-groups fallback into that group’s price index entry. This page does not create independent price books.')) ?></p>
-        <?php if (!$groups['available']): ?>
-            <div class="message message-warning warning">
-                <div><?= $escaper->escapeHtml(__('Customer-group pricing information is unavailable.')) ?></div>
+        <div class="catalog-storefront-note"><?= $escaper->escapeHtml(__('Serving settings are local Magento configuration. Managed Cloud activation is not changed from this page.')) ?></div>
+    </section>
+
+    <section class="catalog-storefront-card" aria-labelledby="catalog-storefront-sources-heading">
+        <div class="catalog-storefront-card__header">
+            <div class="catalog-storefront-card__heading">
+                <h2 id="catalog-storefront-sources-heading"><?= $escaper->escapeHtml(__('Catalog Sources')) ?></h2>
+                <span class="catalog-storefront-card__count"><?= $escaper->escapeHtml(__('%1 records', count($views))) ?></span>
             </div>
-        <?php else: ?>
-            <div class="admin__data-grid-wrap admin__data-grid-wrap-static">
-                <table class="data-grid">
+        </div>
+        <p class="catalog-storefront-card__description"><?= $escaper->escapeHtml(__('Each source uses a Magento store view’s catalog, locale and website assortment.')) ?></p>
+        <?php if ($views !== []): ?>
+            <div class="catalog-storefront-card__table">
+                <table class="catalog-storefront-table">
                     <thead><tr>
-                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Customer group')) ?></th>
-                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('ID')) ?></th>
-                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Document price key')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Source')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Origin')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Type')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Locale')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Assortment Scope')) ?></th>
+                    </tr></thead>
+                    <tbody>
+                    <?php foreach ($views as $view): ?>
+                        <tr>
+                            <td><strong><?= $escaper->escapeHtml($view['code']) ?></strong></td>
+                            <td><?= $escaper->escapeHtml(__('Store view %1 (ID %2)', $view['name'], $view['id'])) ?></td>
+                            <td><?= $escaper->escapeHtml(__('Magento Store View Catalog')) ?></td>
+                            <td><?= $escaper->escapeHtml($view['locale'] !== '' ? $view['locale'] : __('Unavailable')) ?></td>
+                            <td><?= $escaper->escapeHtml(__('Website %1; root category ID %2', $view['website']['name'], $view['store']['rootCategoryId'])) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </section>
+
+    <section class="catalog-storefront-card" aria-labelledby="catalog-storefront-pricing-heading">
+        <div class="catalog-storefront-card__header">
+            <div class="catalog-storefront-card__heading">
+                <h2 id="catalog-storefront-pricing-heading"><?= $escaper->escapeHtml(__('Price Books · Group-derived Pricing')) ?></h2>
+                <?php if ($groups['available']): ?>
+                    <span class="catalog-storefront-card__count"><?= $escaper->escapeHtml(__('%1 records', count($groups['items']))) ?></span>
+                <?php endif; ?>
+            </div>
+            <?php if ($links['configuration'] !== null): ?>
+                <a class="action-secondary" href="<?= $escaper->escapeUrl($links['configuration']) ?>"><?= $escaper->escapeHtml(__('Catalog Configuration')) ?></a>
+            <?php endif; ?>
+        </div>
+        <p class="catalog-storefront-card__description"><?= $escaper->escapeHtml(__('Magento customer groups provide the current price contexts. Independent price books are planned.')) ?></p>
+        <?php if (!$groups['available']): ?>
+            <div class="message message-warning warning"><div><?= $escaper->escapeHtml(__('Customer-group pricing information is unavailable.')) ?></div></div>
+        <?php else: ?>
+            <div class="catalog-storefront-card__table">
+                <table class="catalog-storefront-table">
+                    <thead><tr>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Customer Group')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('ID')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Document Price Key')) ?></th>
                     </tr></thead>
                     <tbody>
                     <?php foreach ($groups['items'] as $group): ?>
                         <tr>
-                            <td><?= $escaper->escapeHtml($group['code']) ?></td>
+                            <td><strong><?= $escaper->escapeHtml($group['code']) ?></strong></td>
                             <td><?= $escaper->escapeHtml((string)$group['id']) ?></td>
                             <td><code><?= $escaper->escapeHtml($group['key']) ?></code></td>
                         </tr>
@@ -116,36 +144,131 @@ $source = static fn(bool $value) => $value ? __('Documents') : __('Database');
                     </tbody>
                 </table>
             </div>
-            <p><?= $escaper->escapeHtml(__('Fallback document row key: %1', $groups['fallback'])) ?></p>
+            <p class="catalog-storefront-muted"><?= $escaper->escapeHtml(__('Fallback document row key: %1', $groups['fallback'])) ?></p>
         <?php endif; ?>
-    </div>
-</div>
+    </section>
 
-<div class="admin__fieldset-wrapper">
-    <div class="admin__fieldset-wrapper-title">
-        <strong class="title"><span><?= $escaper->escapeHtml(__('Synchronization checks')) ?></span></strong>
-    </div>
-    <div class="admin__fieldset-wrapper-content">
-        <p><?= $escaper->escapeHtml(__('These are the current Magento feed indexer states. They do not prove document completeness, freshness, or Cloud health.')) ?></p>
-        <?php if ($indexers === []): ?>
-            <div class="message message-notice notice">
-                <div><?= $escaper->escapeHtml(__('No Catalog Storefront feed indexers are registered.')) ?></div>
+    <section class="catalog-storefront-card" aria-labelledby="catalog-storefront-layers-heading">
+        <div class="catalog-storefront-card__header">
+            <div class="catalog-storefront-card__heading">
+                <h2 id="catalog-storefront-layers-heading"><?= $escaper->escapeHtml(__('Catalog Layers')) ?></h2>
+                <span class="catalog-storefront-card__count"><?= $escaper->escapeHtml(__('Planned capability')) ?></span>
             </div>
-        <?php else: ?>
-            <div class="admin__data-grid-wrap admin__data-grid-wrap-static">
-                <table class="data-grid">
+        </div>
+        <p class="catalog-storefront-card__description"><?= $escaper->escapeHtml(__('The current base contribution comes from Magento store-view values. Ordered content overrides are planned.')) ?></p>
+        <div class="catalog-storefront-card__table">
+            <table class="catalog-storefront-table">
+                <thead><tr>
+                    <th scope="col"><?= $escaper->escapeHtml(__('Current Base Contribution')) ?></th>
+                    <th scope="col"><?= $escaper->escapeHtml(__('Source')) ?></th>
+                    <th scope="col"><?= $escaper->escapeHtml(__('Document Scope')) ?></th>
+                    <th scope="col"><?= $escaper->escapeHtml(__('State')) ?></th>
+                </tr></thead>
+                <tbody>
+                <tr>
+                    <td><strong><?= $escaper->escapeHtml($contributions['content']['name']) ?></strong></td>
+                    <td><?= $escaper->escapeHtml($contributions['content']['source']) ?></td>
+                    <td><?= $escaper->escapeHtml($contributions['content']['fields']) ?></td>
+                    <td><span class="catalog-storefront-pill catalog-storefront-pill--enabled"><?= $escaper->escapeHtml(__('Current Magento source')) ?></span></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="catalog-storefront-card-grid">
+    <?php foreach (['inventory' => __('Inventory'), 'reviews' => __('Reviews')] as $key => $heading): ?>
+        <?php $contribution = $contributions[$key]; ?>
+        <section class="catalog-storefront-card" aria-labelledby="catalog-storefront-<?= $escaper->escapeHtmlAttr($key) ?>-heading">
+            <div class="catalog-storefront-card__header">
+                <div class="catalog-storefront-card__heading">
+                    <h2 id="catalog-storefront-<?= $escaper->escapeHtmlAttr($key) ?>-heading"><?= $escaper->escapeHtml($heading) ?></h2>
+                    <span class="catalog-storefront-pill<?= $escaper->escapeHtmlAttr($contribution['available'] ? ' catalog-storefront-pill--enabled' : ' catalog-storefront-pill--unavailable') ?>"><?= $escaper->escapeHtml($contribution['available'] ? __('Module enabled') : __('Module unavailable')) ?></span>
+                </div>
+            </div>
+            <div class="catalog-storefront-card__table">
+                <table class="catalog-storefront-table">
                     <thead><tr>
-                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Feed')) ?></th>
-                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Indexer ID')) ?></th>
-                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('State')) ?></th>
-                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Update mode')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Source')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Document Scope')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Meaning of State')) ?></th>
+                    </tr></thead>
+                    <tbody><tr>
+                        <td><?= $escaper->escapeHtml($contribution['source']) ?></td>
+                        <td><?= $escaper->escapeHtml($contribution['fields']) ?></td>
+                        <td><?= $escaper->escapeHtml(__('The state reports module availability only; it does not prove document health or completeness.')) ?></td>
+                    </tr></tbody>
+                </table>
+            </div>
+        </section>
+    <?php endforeach; ?>
+    </div>
+
+    <section class="catalog-storefront-card" aria-labelledby="catalog-storefront-policies-heading">
+        <div class="catalog-storefront-card__header">
+            <div class="catalog-storefront-card__heading">
+                <h2 id="catalog-storefront-policies-heading"><?= $escaper->escapeHtml(__('Catalog Policies')) ?></h2>
+                <span class="catalog-storefront-card__count"><?= $escaper->escapeHtml(__('%1 derived scopes', count($views))) ?></span>
+            </div>
+        </div>
+        <p class="catalog-storefront-card__description"><?= $escaper->escapeHtml(__('Current assortment follows website assignments, store-view product status and visibility, and root categories. Independent policies are planned.')) ?></p>
+        <?php if ($views !== []): ?>
+            <div class="catalog-storefront-card__table">
+                <table class="catalog-storefront-table">
+                    <thead><tr>
+                        <th scope="col"><?= $escaper->escapeHtml(__('View')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Website Assignment')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Product Scope')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Category Root')) ?></th>
+                    </tr></thead>
+                    <tbody>
+                    <?php foreach ($views as $view): ?>
+                        <tr>
+                            <td><strong><?= $escaper->escapeHtml($view['name']) ?></strong><br><code><?= $escaper->escapeHtml($view['code']) ?></code></td>
+                            <td><?= $escaper->escapeHtml(__('%1 [%2]', $view['website']['name'], $view['website']['code'])) ?></td>
+                            <td><?= $escaper->escapeHtml(__('Store-view status and visibility')) ?></td>
+                            <td><?= $escaper->escapeHtml(__('ID %1', $view['store']['rootCategoryId'])) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </section>
+
+    <section class="catalog-storefront-card" aria-labelledby="catalog-storefront-sync-heading">
+        <div class="catalog-storefront-card__header">
+            <div class="catalog-storefront-card__heading">
+                <h2 id="catalog-storefront-sync-heading"><?= $escaper->escapeHtml(__('Synchronization Checks')) ?></h2>
+                <span class="catalog-storefront-card__count"><?= $escaper->escapeHtml(__('%1 records', count($indexers))) ?></span>
+            </div>
+            <div class="catalog-storefront-actions">
+                <?php if ($explorerUrl !== null): ?>
+                    <a class="action-secondary" href="<?= $escaper->escapeUrl($explorerUrl) ?>"><?= $escaper->escapeHtml(__('Open GraphQL API')) ?></a>
+                <?php endif; ?>
+                <?php if ($links['indexers'] !== null): ?>
+                    <a class="action-primary" href="<?= $escaper->escapeUrl($links['indexers']) ?>"><?= $escaper->escapeHtml(__('Index Management')) ?></a>
+                <?php endif; ?>
+            </div>
+        </div>
+        <p class="catalog-storefront-card__description"><?= $escaper->escapeHtml(__('These are the current Magento feed indexer states. They do not prove document completeness, freshness, or Cloud health.')) ?></p>
+        <?php if ($indexers === []): ?>
+            <div class="message message-notice notice"><div><?= $escaper->escapeHtml(__('No Catalog Storefront feed indexers are registered.')) ?></div></div>
+        <?php else: ?>
+            <div class="catalog-storefront-card__table">
+                <table class="catalog-storefront-table">
+                    <thead><tr>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Feed')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Indexer ID')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('State')) ?></th>
+                        <th scope="col"><?= $escaper->escapeHtml(__('Update Mode')) ?></th>
                     </tr></thead>
                     <tbody>
                     <?php foreach ($indexers as $indexer): ?>
                         <tr>
-                            <td><?= $escaper->escapeHtml($indexer['name']) ?></td>
+                            <td><strong><?= $escaper->escapeHtml($indexer['name']) ?></strong></td>
                             <td><code><?= $escaper->escapeHtml($indexer['id']) ?></code></td>
-                            <td><?= $escaper->escapeHtml($indexer['status']) ?></td>
+                            <td><span class="catalog-storefront-pill<?= $escaper->escapeHtmlAttr($indexer['available'] && strtolower($indexer['status']) === 'valid' ? ' catalog-storefront-pill--enabled' : ' catalog-storefront-pill--unavailable') ?>"><?= $escaper->escapeHtml($indexer['status']) ?></span></td>
                             <td><?= $escaper->escapeHtml($indexer['schedule']) ?></td>
                         </tr>
                     <?php endforeach; ?>
@@ -153,26 +276,5 @@ $source = static fn(bool $value) => $value ? __('Documents') : __('Database');
                 </table>
             </div>
         <?php endif; ?>
-    </div>
-</div>
-
-<?php if ($explorerUrl !== null): ?>
-    <div class="admin__fieldset-wrapper">
-        <div class="admin__fieldset-wrapper-title">
-            <strong class="title"><span><?= $escaper->escapeHtml(__('Local preview')) ?></span></strong>
-        </div>
-        <div class="admin__fieldset-wrapper-content">
-            <p><?= $escaper->escapeHtml(__('Use the existing GraphQL API explorer to select a store view and compare its configured database and document paths.')) ?></p>
-            <p><a class="action-default" href="<?= $escaper->escapeUrl($explorerUrl) ?>"><?= $escaper->escapeHtml(__('Open GraphQL API')) ?></a></p>
-        </div>
-    </div>
-<?php endif; ?>
-
-<div class="admin__fieldset-wrapper">
-    <div class="admin__fieldset-wrapper-title">
-        <strong class="title"><span><?= $escaper->escapeHtml(__('Catalog Storefront Cloud roadmap')) ?></span></strong>
-    </div>
-    <div class="admin__fieldset-wrapper-content">
-        <p><?= $escaper->escapeHtml(__('Managed synchronization and recovery operations, advanced discovery profiles, channel-specific catalog controls, and additional serving regions are planned Cloud capabilities. This page does not report a Cloud connection or activation state.')) ?></p>
-    </div>
+    </section>
 </div>

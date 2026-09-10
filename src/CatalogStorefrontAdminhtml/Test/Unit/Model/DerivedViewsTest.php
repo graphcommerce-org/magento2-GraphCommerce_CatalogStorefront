@@ -141,6 +141,21 @@ class DerivedViewsTest extends TestCase
         self::assertSame(['available' => false], $provider->searchEngine());
     }
 
+    public function testDocumentContributionsReportInstalledModulesWithoutInventingLayerRecords(): void
+    {
+        $modules = $this->createStub(ModuleManager::class);
+        $modules->method('isEnabled')->willReturnCallback(
+            static fn(string $module): bool => $module !== 'GraphCommerce_CatalogStorefrontReview',
+        );
+        $provider = $this->provider(moduleManager: $modules);
+
+        self::assertSame([
+            'content' => ['name' => 'Store-view content', 'source' => 'Magento catalog feeds', 'fields' => 'Store-scoped product, category and attribute values', 'available' => true],
+            'inventory' => ['name' => 'Inventory', 'source' => 'Magento inventory stock-status feed', 'fields' => 'The stock slice of product documents', 'available' => true],
+            'reviews' => ['name' => 'Reviews', 'source' => 'Magento review and rating feeds', 'fields' => 'Visible review and rating documents', 'available' => false],
+        ], $provider->contributions());
+    }
+
     private function provider(
         ?StoreManagerInterface $storeManager = null,
         ?ScopeConfigInterface $scope = null,
@@ -148,6 +163,7 @@ class DerivedViewsTest extends TestCase
         ?EngineResolverInterface $engineResolver = null,
         ?IndexerRegistry $indexerRegistry = null,
         ?Feeds $feeds = null,
+        ?ModuleManager $moduleManager = null,
     ): DerivedViews {
         if ($storeManager === null) {
             $storeManager = $this->createStub(StoreManagerInterface::class);
@@ -168,8 +184,10 @@ class DerivedViewsTest extends TestCase
             $feeds = $this->createStub(Feeds::class);
             $feeds->method('byEntity')->willReturn([]);
         }
-        $modules = $this->createStub(ModuleManager::class);
-        $modules->method('isEnabled')->willReturn(true);
+        if ($moduleManager === null) {
+            $moduleManager = $this->createStub(ModuleManager::class);
+            $moduleManager->method('isEnabled')->willReturn(true);
+        }
 
         return new DerivedViews(
             $storeManager,
@@ -179,7 +197,7 @@ class DerivedViewsTest extends TestCase
             $engineResolver,
             $indexerRegistry,
             $feeds,
-            $modules,
+            $moduleManager,
         );
     }
 

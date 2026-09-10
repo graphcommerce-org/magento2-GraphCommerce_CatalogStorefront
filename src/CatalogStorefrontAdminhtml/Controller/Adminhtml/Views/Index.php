@@ -17,7 +17,7 @@ class Index extends Action implements HttpGetActionInterface
         /** @var Page $page */
         $page = $this->resultFactory->create(ResultFactory::TYPE_PAGE);
         $page->setActiveMenu(self::ADMIN_RESOURCE);
-        $page->getConfig()->getTitle()->prepend((string)__('Catalog Storefront Views'));
+        $page->getConfig()->getTitle()->prepend((string)__('Catalog Storefront'));
 
         return $page;
     }
