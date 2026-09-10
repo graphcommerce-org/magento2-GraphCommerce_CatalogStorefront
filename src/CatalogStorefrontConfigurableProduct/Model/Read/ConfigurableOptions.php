@@ -12,19 +12,28 @@ namespace GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Read;
 class ConfigurableOptions
 {
     /**
-     * @return array[]|null null when the document carries no configurableOptions
+     * @return array[]|null null when the document carries no configurableOptions, or carries them
+     *                      without an attribute id or a value index
      */
     public function attributes(array $document): ?array
     {
-        if (!isset($document['configurableOptions'])) {
+        if (!isset($document['configurableOptions'], $document['productId'])) {
             return null;
         }
         $productId = (int)$document['productId'];
         $options = [];
         foreach ((array)$document['configurableOptions'] as $option) {
+            // An option identifies its super attribute, and a value its index. Without either, the
+            // whole set goes to core: a short option list renders a product that cannot be bought.
+            if (!isset($option['attribute'])) {
+                return null;
+            }
             $attributeId = (int)$option['attribute'];
             $values = [];
             foreach ((array)($option['values'] ?? []) as $optionValue) {
+                if (!isset($optionValue['index'])) {
+                    return null;
+                }
                 $defaultLabel = $optionValue['defaultLabel'] ?? $optionValue['label'] ?? null;
                 $values[] = [
                     'value_index' => (string)$optionValue['index'],
