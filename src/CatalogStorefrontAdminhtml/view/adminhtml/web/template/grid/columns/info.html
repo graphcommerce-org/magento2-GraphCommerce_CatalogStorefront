@@ -1,0 +1,20 @@
+<!--
+/**
+ * Copyright 2026 GraphCommerce
+ * SPDX-License-Identifier: MIT
+ */
+-->
+<th class="data-grid-th" click="sort"
+    css="
+        _sortable: sortable,
+        _draggable: draggable,
+        _ascend: sorting === 'asc',
+        _descend: sorting === 'desc'">
+    <span class="data-grid-cell-content" translate="label"></span>
+    <button type="button"
+            class="catalog-overview-info"
+            data-bind="click: showInfo, clickBubble: false,
+                attr: { title: $t('Information'), 'aria-label': $t('Information') }">
+        <span aria-hidden="true">i</span>
+    </button>
+</th>

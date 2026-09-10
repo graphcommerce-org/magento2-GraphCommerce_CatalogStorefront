@@ -11,6 +11,7 @@ define([
 
     return Column.extend({
         defaults: {
+            headerTmpl: 'GraphCommerce_CatalogStorefrontAdminhtml/grid/columns/more',
             bodyTmpl: 'GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/more',
             sortable: false,
             controlVisibility: false,
