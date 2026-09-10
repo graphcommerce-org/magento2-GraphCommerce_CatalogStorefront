@@ -63,6 +63,7 @@ class OverviewDataTest extends TestCase
         self::assertSame('—', $overview['catalogViews'][0]['policies']);
         self::assertSame('Store-view content', $overview['catalogViews'][0]['layers']);
         self::assertSame('nl_NL', $overview['sources'][0]['locale']);
+        self::assertSame('Store view nl_store (ID 3)', $overview['sources'][0]['origin']);
         self::assertSame('—', $overview['sources'][0]['feedProducts']['value']);
         self::assertFalse($overview['sources'][0]['feedProducts']['hasBadge']);
 
@@ -71,6 +72,8 @@ class OverviewDataTest extends TestCase
         self::assertSame(['0px', '12px', '12px'], array_column($overview['books'], 'indent'));
         self::assertSame(['Fallback', 'Child', 'Child'], array_column($overview['books'], 'role'));
         self::assertSame('EUR', $overview['books'][2]['currency']);
+        self::assertSame('', $overview['books'][0]['currencyNote']);
+        self::assertSame('', $overview['books'][2]['currencyNote']);
         self::assertSame('—', $overview['books'][2]['feedPrices']['value']);
 
         self::assertSame(['MODULE ENABLED', 'MODULE UNAVAILABLE'], array_column($overview['layers'], 'status'));

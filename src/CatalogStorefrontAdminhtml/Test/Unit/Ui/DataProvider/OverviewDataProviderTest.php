@@ -53,7 +53,7 @@ class OverviewDataProviderTest extends TestCase
             'items' => [[
                 'code' => 'default',
                 'type' => 'Magento Store View Catalog',
-                'origin' => 'Store view Default Store View (ID 1)',
+                'origin' => 'Store view default (ID 1)',
                 'locale' => 'en_US',
                 'feedProducts' => $this->emptyFeed(),
                 'feedCategories' => $this->emptyFeed(),
