@@ -28,7 +28,7 @@
             <settings><bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/badge</bodyTmpl><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Protection</label></settings>
         </column>
         <column name="source" sortOrder="30">
-            <settings><bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/source</bodyTmpl><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Catalog Source</label></settings>
+            <settings><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Catalog Source</label></settings>
         </column>
         <column name="bookMode" sortOrder="40">
             <settings><bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/books</bodyTmpl><sortable>false</sortable><draggable>false</draggable><controlVisibility>false</controlVisibility><label translate="true">Price Books</label></settings>

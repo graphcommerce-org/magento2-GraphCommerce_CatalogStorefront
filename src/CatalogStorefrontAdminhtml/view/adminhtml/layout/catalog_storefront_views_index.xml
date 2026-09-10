@@ -1,11 +1,15 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0"?>
 <page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
-    <head>
-        <css src="GraphCommerce_CatalogStorefrontAdminhtml::css/views.css"/>
-    </head>
+    <head><css src="GraphCommerce_CatalogStorefrontAdminhtml::css/overview.css"/></head>
     <body>
         <referenceContainer name="content">
-            <block class="GraphCommerce\CatalogStorefrontAdminhtml\Block\Adminhtml\Views" name="catalog.storefront.views" template="GraphCommerce_CatalogStorefrontAdminhtml::views.phtml"/>
+            <container name="catalog.storefront.overview" htmlTag="div" htmlClass="catalog-overview">
+                <uiComponent name="catalog_storefront_views_listing"/>
+                <uiComponent name="catalog_storefront_sources_listing"/>
+                <uiComponent name="catalog_storefront_books_listing"/>
+                <uiComponent name="catalog_storefront_layers_listing"/>
+                <uiComponent name="catalog_storefront_policies_listing"/>
+            </container>
         </referenceContainer>
     </body>
 </page>

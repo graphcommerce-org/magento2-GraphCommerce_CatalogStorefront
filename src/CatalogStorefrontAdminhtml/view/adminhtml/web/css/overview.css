@@ -1,0 +1,63 @@
+/* Catalog overview: Magento UI listings styled to the supplied Admin design. */
+.catalog-overview { display: flex; flex-direction: column; gap: 8px; }
+.catalog-overview .catalog-overview-panel { background: #fff; border-radius: 16px; padding: 24px; margin: 0; }
+.catalog-overview .catalog-overview-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-bottom: 16px; }
+.catalog-overview .catalog-overview-title { display: inline-flex; align-items: center; gap: 12px; margin: 0; }
+.catalog-overview h2 { margin: 0; font-family: Inter, sans-serif; font-size: 16px; font-weight: 600; line-height: 100%; color: #1b1b1b; }
+.catalog-overview .catalog-overview-count { font-size: 13px; font-weight: 400; line-height: 20px; color: #777; }
+.catalog-overview .admin__data-grid-wrap { margin: 0; padding: 0; }
+.catalog-overview .data-grid { width: 100%; margin: 0; border-collapse: collapse; border: 0; }
+.catalog-overview .data-grid th,
+.catalog-overview .data-grid td { border: 0; border-bottom: 1px solid #e9e9e9; padding: 12px 10px; box-shadow: none; }
+.catalog-overview .data-grid th { background: #f9f9f9; color: #1b1b1b; font-size: 13px; font-weight: 600; line-height: 100%; text-align: left; white-space: nowrap; }
+.catalog-overview .data-grid td { background: #fff; color: #303030; font-size: 13px; font-weight: 400; line-height: 20px; vertical-align: top; }
+.catalog-overview .data-grid tbody tr:hover td,
+.catalog-overview .data-grid tbody tr._odd-row td { background: #fff; }
+.catalog-overview .data-grid-th._sortable:hover { background: #f9f9f9; }
+.catalog-overview .catalog-overview-name { color: #1b1b1b; font-size: 13px; font-weight: 600; line-height: 20px; }
+.catalog-overview .catalog-overview-subline { color: #777; font-size: 12px; font-weight: 400; line-height: 16px; display: block; }
+.catalog-overview .catalog-overview-badge { display: inline-block; border: 1px solid #c7c7c7; background: #f1f1f1; color: #303030; border-radius: 32px; padding: 2px 8px; font-weight: 600; font-size: 12px; line-height: 16px; white-space: nowrap; }
+.catalog-overview .catalog-overview-number { text-align: right; white-space: nowrap; }
+.catalog-overview .data-grid th.catalog-overview-number,
+.catalog-overview .data-grid td.catalog-overview-number { text-align: right; }
+.catalog-overview .catalog-overview-book { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.catalog-overview .catalog-overview-book-glyph { color: #a0a0a0; font-size: 13px; line-height: 20px; }
+.catalog-overview button.catalog-overview-more { all: unset; color: #777; font: inherit; letter-spacing: .14em; cursor: pointer; }
+.catalog-overview button.catalog-overview-info { all: unset; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 16px; height: 16px; border: 1px solid #a0a0a0; border-radius: 32px; font: 400 11px/1 Inter, sans-serif; color: #777; cursor: help; }
+.catalog-overview button.catalog-overview-info:focus-visible,
+.catalog-overview button.catalog-overview-more:focus-visible,
+.catalog-overview button.catalog-overview-action:focus-visible { outline: 2px solid #0074e9; outline-offset: 3px; }
+.catalog-overview .data-grid-tr-no-data td { background: #fff; color: #777; text-align: center; }
+.catalog-overview button.catalog-overview-action {
+    display: inline-flex; flex-direction: row; align-items: center; justify-content: center;
+    box-sizing: border-box; height: 40px; min-height: 0; min-width: 0; width: auto;
+    padding: 9px 24px; border-radius: 32px; border: 1px solid #1b1b1b;
+    background: #1b1b1b; color: #fff; box-shadow: none;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 500; font-size: 14px; line-height: 20px; white-space: nowrap; cursor: pointer;
+}
+.catalog-overview button.catalog-overview-action:hover,
+.catalog-overview button.catalog-overview-action:active { background: #303030; border-color: #303030; color: #fff; box-shadow: none; }
+.catalog-overview .data-grid { table-layout: auto; }
+.catalog-overview .data-grid td { vertical-align: middle; }
+.catalog-overview .catalog-overview-panel[data-dataset="catalogViews"] .data-grid td { vertical-align: top; }
+.catalog-overview .catalog-overview-currency-note { display: inline; color: #777; font-size: 12px; line-height: 16px; }
+.catalog-overview .catalog-overview-view,
+.catalog-overview .catalog-overview-books { display: flex; flex-direction: column; gap: 2px; }
+.catalog-overview .catalog-overview-fields { display: flex; flex-direction: column; gap: 6px; }
+.catalog-overview .catalog-overview-feed { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; white-space: nowrap; }
+
+/* Remove inline-block baseline space introduced by the native grid cell. */
+.catalog-overview .data-grid .data-grid-cell-content { display: block; }
+.catalog-overview .data-grid th .data-grid-cell-content { line-height: 13px; }
+.catalog-overview .catalog-overview-feed,
+.catalog-overview .catalog-overview-book,
+.catalog-overview .catalog-overview-badge { vertical-align: middle; }
+.catalog-overview .data-grid td.catalog-overview-feed-column,
+.catalog-overview .data-grid th.catalog-overview-feed-column { border-left: 1px solid #f1f1f1; }
+.catalog-overview .data-grid tr.data-row td:last-child,
+.catalog-overview .data-grid th:last-child { text-align: right; width: 24px; }
+.catalog-overview .data-grid .data-grid-tr-no-data td { padding: 24px 10px; }
+
+.catalog-overview .data-grid tbody tr:last-child td { border-bottom: 1px solid #e9e9e9; }
+.catalog-overview .data-grid .data-grid-tr-no-data td { text-align: center; width: auto; }

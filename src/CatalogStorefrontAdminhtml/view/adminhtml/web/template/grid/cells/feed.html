@@ -1,12 +1,12 @@
 <div class="catalog-overview-feed catalog-overview-number"
-     data-bind="with: { data: $col.getLabel($row()), as: '$feed' }">
-    <span if="$feed.hasBadge"
+     data-bind="with: $col.getLabel($row())">
+    <span if="$data.hasBadge"
           class="catalog-overview-badge"
           ko-style="{
-              'background-color': $feed.badgeBg,
-              'border-color': $feed.badgeBorder,
-              color: $feed.badgeFg
+              'background-color': $data.badgeBg,
+              'border-color': $data.badgeBorder,
+              color: $data.badgeFg
           }"
-          text="$feed.badgeLabel"></span>
-    <span text="$feed.value"></span>
+          text="$data.badgeLabel"></span>
+    <span text="$data.value"></span>
 </div>
