@@ -39,7 +39,16 @@ class OverviewDataProvider extends AbstractDataProvider
         array $data = [],
     ) {
         parent::__construct($name, $primaryFieldName, $requestFieldName, $meta, $data);
-        $dataset = $data['config']['dataset'] ?? null;
+        // Magento's UI definition converter supplies provider data from the
+        // dataSource settings; custom dataProvider child arguments are omitted.
+        $dataset = $data['config']['dataset'] ?? match ($name) {
+            'catalog_storefront_views_listing_data_source' => 'catalogViews',
+            'catalog_storefront_sources_listing_data_source' => 'sources',
+            'catalog_storefront_books_listing_data_source' => 'books',
+            'catalog_storefront_layers_listing_data_source' => 'layers',
+            'catalog_storefront_policies_listing_data_source' => 'policies',
+            default => null,
+        };
         if (!is_string($dataset) || !in_array($dataset, self::DATASETS, true)) {
             throw new \InvalidArgumentException('A supported Catalog Storefront overview dataset is required.');
         }
