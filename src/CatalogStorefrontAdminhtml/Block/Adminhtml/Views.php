@@ -6,6 +6,7 @@ namespace GraphCommerce\CatalogStorefrontAdminhtml\Block\Adminhtml;
 use GraphCommerce\CatalogStorefrontAdminhtml\Model\AdminLinks;
 use GraphCommerce\CatalogStorefrontAdminhtml\Model\DerivedViews;
 use GraphCommerce\CatalogStorefrontAdminhtml\Model\ExplorerLink;
+use GraphCommerce\CatalogStorefrontAdminhtml\Model\OverviewData;
 use Magento\Backend\Block\Template;
 
 class Views extends Template
@@ -51,6 +52,12 @@ class Views extends Template
     public function contributions(): array
     {
         return $this->derivedViews->contributions();
+    }
+
+    /** @return array<string, mixed> */
+    public function overview(): array
+    {
+        return OverviewData::build($this->views(), $this->groups(), $this->contributions());
     }
 
     public function explorerUrl(): ?string
