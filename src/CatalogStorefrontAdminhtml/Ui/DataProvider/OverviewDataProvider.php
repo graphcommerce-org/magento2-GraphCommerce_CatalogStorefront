@@ -1,0 +1,66 @@
+<?php
+declare(strict_types=1);
+
+namespace GraphCommerce\CatalogStorefrontAdminhtml\Ui\DataProvider;
+
+use GraphCommerce\CatalogStorefrontAdminhtml\Model\DerivedViews;
+use GraphCommerce\CatalogStorefrontAdminhtml\Model\OverviewData;
+use Magento\Ui\DataProvider\AbstractDataProvider;
+
+/**
+ * Read-only array provider for the five Catalog Storefront Admin listings.
+ */
+class OverviewDataProvider extends AbstractDataProvider
+{
+    private const DATASETS = [
+        'catalogViews',
+        'sources',
+        'books',
+        'layers',
+        'policies',
+    ];
+
+    private string $dataset;
+
+    /**
+     * @param string $name
+     * @param string $primaryFieldName
+     * @param string $requestFieldName
+     * @param array<string, mixed> $meta
+     * @param array<string, mixed> $data
+     */
+    public function __construct(
+        $name,
+        $primaryFieldName,
+        $requestFieldName,
+        private readonly DerivedViews $derivedViews,
+        array $meta = [],
+        array $data = [],
+    ) {
+        parent::__construct($name, $primaryFieldName, $requestFieldName, $meta, $data);
+        $dataset = $data['config']['dataset'] ?? null;
+        if (!is_string($dataset) || !in_array($dataset, self::DATASETS, true)) {
+            throw new \InvalidArgumentException('A supported Catalog Storefront overview dataset is required.');
+        }
+        $this->dataset = $dataset;
+    }
+
+    /** @return array{items: array<int, array<string, mixed>>, totalRecords: int} */
+    public function getData(): array
+    {
+        $overview = OverviewData::build(
+            $this->derivedViews->views(),
+            $this->derivedViews->groups(),
+            $this->derivedViews->contributions(),
+        );
+        /** @var array<int, array<string, mixed>> $items */
+        $items = $overview[$this->dataset];
+        return ['items' => $items, 'totalRecords' => count($items)];
+    }
+
+    #[\ReturnTypeWillChange]
+    public function count(): int
+    {
+        return $this->getData()['totalRecords'];
+    }
+}
