@@ -45,7 +45,9 @@ class ProductModelBuilder
         }
 
         $data = [
-            'entity_id' => (int)$document['productId'],
+            // The string the entity table gives. getJsonConfig() puts an id into the rendered JSON
+            // as it is, so an int renders as 1812 where a loaded product renders "1812".
+            'entity_id' => (string)$document['productId'],
             'sku' => $document['sku'],
             'name' => $document['name'] ?? null,
             'type_id' => ($document['type'] ?? 'simple') === 'bundle_fixed' ? 'bundle' : ($document['type'] ?? 'simple'),
@@ -70,6 +72,9 @@ class ProductModelBuilder
             ],
             'is_salable' => (int)($document['stock']['isSalable'] ?? $document['inStock'] ?? false),
             'tax_class_id' => $document['taxClassId'] ?? null,
+            // A loaded product carries its custom options as a list, and a detail page counts them.
+            // A document that holds any is not built at all, so the list is empty here.
+            'options' => [],
         ];
 
         if (in_array($document['type'] ?? '', ['bundle', 'bundle_fixed'], true)) {
@@ -107,6 +112,13 @@ class ProductModelBuilder
 
         $product = $this->productFactory->create();
         $product->setData($data);
+
+        // The document is what was stored, so the model holds it as its original values too.
+        // Without them every comparison against them reads as a change: getIdentities() takes a
+        // changed status to mean the product moved category and adds a cache tag per category, so
+        // a page built here is purged by more than the same page loaded from the database.
+        $product->setOrigData();
+
         $product->setData(ProductDocumentsInterface::DOCUMENT_KEY, $document);
         $product->setStoreId($storeId);
         $product->setHasDataChanges(false);
