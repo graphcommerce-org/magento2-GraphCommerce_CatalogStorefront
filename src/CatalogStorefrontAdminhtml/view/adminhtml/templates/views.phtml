@@ -1,0 +1,178 @@
+<?php
+/**
+ * @var \GraphCommerce\CatalogStorefrontAdminhtml\Block\Adminhtml\Views $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+$views = $block->views();
+$groups = $block->groups();
+$search = $block->searchEngine();
+$indexers = $block->indexers();
+$explorerUrl = $block->explorerUrl();
+$yes = static fn(bool $value) => $value ? __('Enabled') : __('Disabled');
+$source = static fn(bool $value) => $value ? __('Documents') : __('Database');
+?>
+
+<div class="admin__fieldset-wrapper">
+    <div class="admin__fieldset-wrapper-title">
+        <strong class="title"><span><?= $escaper->escapeHtml(__('Derived catalog views')) ?></span></strong>
+    </div>
+    <div class="admin__fieldset-wrapper-content">
+        <p><?= $escaper->escapeHtml(__('Each active Magento store view defines one read-only catalog experience. These rows describe current Magento configuration; they are not separately saved channel views.')) ?></p>
+        <?php if ($views === []): ?>
+            <div class="message message-notice notice">
+                <div><?= $escaper->escapeHtml(__('No active store views are available.')) ?></div>
+            </div>
+        <?php else: ?>
+            <div class="admin__data-grid-wrap admin__data-grid-wrap-static">
+                <table class="data-grid">
+                    <thead>
+                    <tr>
+                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Derived view')) ?></th>
+                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Assembly')) ?></th>
+                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Configured serving')) ?></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($views as $view): ?>
+                        <tr>
+                            <td>
+                                <strong><?= $escaper->escapeHtml($view['name']) ?></strong><br>
+                                <span><?= $escaper->escapeHtml(__('Store view: %1 (ID %2)', $view['code'], $view['id'])) ?></span><br>
+                                <span><?= $escaper->escapeHtml(__('Store: %1 [%2] (ID %3)', $view['store']['name'], $view['store']['code'], $view['store']['id'])) ?></span><br>
+                                <span><?= $escaper->escapeHtml(__('Website: %1 [%2] (ID %3)', $view['website']['name'], $view['website']['code'], $view['website']['id'])) ?></span>
+                            </td>
+                            <td>
+                                <strong><?= $escaper->escapeHtml(__('Source')) ?>:</strong>
+                                <?= $escaper->escapeHtml(__('Magento store view %1', $view['code'])) ?><br>
+                                <strong><?= $escaper->escapeHtml(__('Assortment')) ?>:</strong>
+                                <?= $escaper->escapeHtml(__('Website assignment with store-view status and visibility; root category ID %1', $view['store']['rootCategoryId'])) ?><br>
+                                <strong><?= $escaper->escapeHtml(__('Pricing')) ?>:</strong>
+                                <?php if ($view['customerGroupsAvailable'] && $view['defaultCustomerGroup']['available']): ?>
+                                    <?= $escaper->escapeHtml(__('%1 Magento customer groups; default %2 (key %3)', $view['customerGroupCount'], $view['defaultCustomerGroup']['code'], $view['defaultCustomerGroup']['key'])) ?><br>
+                                <?php else: ?>
+                                    <?= $escaper->escapeHtml(__('Unavailable')) ?><br>
+                                <?php endif; ?>
+                                <strong><?= $escaper->escapeHtml(__('Content')) ?>:</strong>
+                                <?= $escaper->escapeHtml(__('Store-view values in locale %1', $view['locale'] !== '' ? $view['locale'] : __('Unavailable'))) ?><br>
+                                <strong><?= $escaper->escapeHtml(__('Currency')) ?>:</strong>
+                                <?= $escaper->escapeHtml(__(
+                                    'Base %1; default %2; allowed %3',
+                                    $view['currency']['base'] !== '' ? $view['currency']['base'] : __('Unavailable'),
+                                    $view['currency']['default'] !== '' ? $view['currency']['default'] : __('Unavailable'),
+                                    $view['currency']['allowed'] !== [] ? implode(', ', $view['currency']['allowed']) : __('Unavailable'),
+                                )) ?>
+                            </td>
+                            <td>
+                                <strong><?= $escaper->escapeHtml(__('Storefront indexing')) ?>:</strong>
+                                <?= $escaper->escapeHtml($yes($view['indexing'])) ?><br>
+                                <strong><?= $escaper->escapeHtml(__('GraphQL products and categories')) ?>:</strong>
+                                <?= $escaper->escapeHtml($source($view['graphqlDocuments'])) ?><br>
+                                <strong><?= $escaper->escapeHtml(__('Rendered product listings')) ?>:</strong>
+                                <?php if ($view['productListingDocuments'] === null): ?>
+                                    <?= $escaper->escapeHtml(__('Module unavailable')) ?><br>
+                                <?php else: ?>
+                                    <?= $escaper->escapeHtml($source($view['productListingDocuments'])) ?><br>
+                                <?php endif; ?>
+                                <strong><?= $escaper->escapeHtml(__('Catalog search provider')) ?>:</strong>
+                                <?= $escaper->escapeHtml($search['available'] ? $search['id'] : __('Unavailable')) ?><br>
+                                <strong><?= $escaper->escapeHtml(__('Named search profile')) ?>:</strong>
+                                <?= $escaper->escapeHtml(__('Not provided by the open-source package')) ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<div class="admin__fieldset-wrapper">
+    <div class="admin__fieldset-wrapper-title">
+        <strong class="title"><span><?= $escaper->escapeHtml(__('Group-derived pricing')) ?></span></strong>
+    </div>
+    <div class="admin__fieldset-wrapper-content">
+        <p><?= $escaper->escapeHtml(__('Magento customer groups supply the price context for every derived view. Documents use the group key below; when a product has no group-specific row, the document writer resolves its all-groups fallback into that group’s price index entry. This page does not create independent price books.')) ?></p>
+        <?php if (!$groups['available']): ?>
+            <div class="message message-warning warning">
+                <div><?= $escaper->escapeHtml(__('Customer-group pricing information is unavailable.')) ?></div>
+            </div>
+        <?php else: ?>
+            <div class="admin__data-grid-wrap admin__data-grid-wrap-static">
+                <table class="data-grid">
+                    <thead><tr>
+                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Customer group')) ?></th>
+                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('ID')) ?></th>
+                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Document price key')) ?></th>
+                    </tr></thead>
+                    <tbody>
+                    <?php foreach ($groups['items'] as $group): ?>
+                        <tr>
+                            <td><?= $escaper->escapeHtml($group['code']) ?></td>
+                            <td><?= $escaper->escapeHtml((string)$group['id']) ?></td>
+                            <td><code><?= $escaper->escapeHtml($group['key']) ?></code></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <p><?= $escaper->escapeHtml(__('Fallback document row key: %1', $groups['fallback'])) ?></p>
+        <?php endif; ?>
+    </div>
+</div>
+
+<div class="admin__fieldset-wrapper">
+    <div class="admin__fieldset-wrapper-title">
+        <strong class="title"><span><?= $escaper->escapeHtml(__('Synchronization checks')) ?></span></strong>
+    </div>
+    <div class="admin__fieldset-wrapper-content">
+        <p><?= $escaper->escapeHtml(__('These are the current Magento feed indexer states. They do not prove document completeness, freshness, or Cloud health.')) ?></p>
+        <?php if ($indexers === []): ?>
+            <div class="message message-notice notice">
+                <div><?= $escaper->escapeHtml(__('No Catalog Storefront feed indexers are registered.')) ?></div>
+            </div>
+        <?php else: ?>
+            <div class="admin__data-grid-wrap admin__data-grid-wrap-static">
+                <table class="data-grid">
+                    <thead><tr>
+                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Feed')) ?></th>
+                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Indexer ID')) ?></th>
+                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('State')) ?></th>
+                        <th class="data-grid-th"><?= $escaper->escapeHtml(__('Update mode')) ?></th>
+                    </tr></thead>
+                    <tbody>
+                    <?php foreach ($indexers as $indexer): ?>
+                        <tr>
+                            <td><?= $escaper->escapeHtml($indexer['name']) ?></td>
+                            <td><code><?= $escaper->escapeHtml($indexer['id']) ?></code></td>
+                            <td><?= $escaper->escapeHtml($indexer['status']) ?></td>
+                            <td><?= $escaper->escapeHtml($indexer['schedule']) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<?php if ($explorerUrl !== null): ?>
+    <div class="admin__fieldset-wrapper">
+        <div class="admin__fieldset-wrapper-title">
+            <strong class="title"><span><?= $escaper->escapeHtml(__('Local preview')) ?></span></strong>
+        </div>
+        <div class="admin__fieldset-wrapper-content">
+            <p><?= $escaper->escapeHtml(__('Use the existing GraphQL API explorer to select a store view and compare its configured database and document paths.')) ?></p>
+            <p><a class="action-default" href="<?= $escaper->escapeUrl($explorerUrl) ?>"><?= $escaper->escapeHtml(__('Open GraphQL API')) ?></a></p>
+        </div>
+    </div>
+<?php endif; ?>
+
+<div class="admin__fieldset-wrapper">
+    <div class="admin__fieldset-wrapper-title">
+        <strong class="title"><span><?= $escaper->escapeHtml(__('Catalog Storefront Cloud roadmap')) ?></span></strong>
+    </div>
+    <div class="admin__fieldset-wrapper-content">
+        <p><?= $escaper->escapeHtml(__('Managed synchronization and recovery operations, advanced discovery profiles, channel-specific catalog controls, and additional serving regions are planned Cloud capabilities. This page does not report a Cloud connection or activation state.')) ?></p>
+    </div>
+</div>
