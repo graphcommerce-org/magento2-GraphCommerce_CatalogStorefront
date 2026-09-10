@@ -20,6 +20,7 @@ identity() {
         podReady: any(.status.conditions[]?; .type == "Ready" and .status == "True"),
         image: ([.spec.containers[] | select(.name == $container) | .image][0] // null),
         imageID: ([.status.containerStatuses[] | select(.name == $container) | .imageID][0] // null),
+        containerID: ([.status.containerStatuses[] | select(.name == $container) | .containerID][0] // null),
         containerReady: ([.status.containerStatuses[] | select(.name == $container) | .ready][0] // false),
         restartCount: ([.status.containerStatuses[] | select(.name == $container) | .restartCount][0] // null)
     }'
@@ -75,6 +76,10 @@ combined=$(printf '%s\n%s\n%s\n' "$report" "$before" "$after" | jq -s \
         and $after.uid == $expectedPodUID
         and $before.imageID == $expectedImageID
         and $after.imageID == $expectedImageID
+        and ($before.containerID | type) == "string"
+        and $before.containerID == $after.containerID
+        and ($before.restartCount | type) == "number"
+        and $before.restartCount == $after.restartCount
         and $before.deletionTimestamp == null
         and $after.deletionTimestamp == null
         and $after.phase == "Running"
@@ -90,6 +95,8 @@ combined=$(printf '%s\n%s\n%s\n' "$report" "$before" "$after" | jq -s \
             uid: $after.uid,
             image: $after.image,
             imageID: $after.imageID,
+            containerIDBefore: $before.containerID,
+            containerIDAfter: $after.containerID,
             restartCountBefore: $before.restartCount,
             restartCountAfter: $after.restartCount,
             identityStable: $identityStable
