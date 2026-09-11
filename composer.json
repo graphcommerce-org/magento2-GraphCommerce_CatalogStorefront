@@ -93,7 +93,8 @@
             "src/CatalogStorefrontDownloadable/registration.php",
             "src/CatalogStorefrontDownloadableGraphQl/registration.php",
             "src/CatalogStorefrontReview/registration.php",
-            "src/CatalogStorefrontReviewGraphQl/registration.php"
+            "src/CatalogStorefrontReviewGraphQl/registration.php",
+            "src/CatalogStorefrontReviewFrontend/registration.php"
         ],
         "psr-4": {
             "GraphCommerce\\CatalogStorefrontApi\\": "src/CatalogStorefrontApi/",
@@ -122,6 +123,7 @@
             "GraphCommerce\\CatalogStorefrontDownloadableGraphQl\\": "src/CatalogStorefrontDownloadableGraphQl/",
             "GraphCommerce\\CatalogStorefrontReview\\": "src/CatalogStorefrontReview/",
             "GraphCommerce\\CatalogStorefrontReviewGraphQl\\": "src/CatalogStorefrontReviewGraphQl/",
+            "GraphCommerce\\CatalogStorefrontReviewFrontend\\": "src/CatalogStorefrontReviewFrontend/",
             "GraphCommerce\\CatalogStorefrontSearch\\": "src/CatalogStorefrontSearch/"
         }
     }

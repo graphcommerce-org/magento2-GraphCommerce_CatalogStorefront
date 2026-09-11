@@ -1,22 +1,19 @@
 # Catalog Storefront Admin
 
-**Catalog > Catalog Storefront** contains six native UI listings backed by stored
-Views, Catalog Sources, Price Books, Stocks, Layers and Catalog Policies. Create
-and Edit open native UI forms; Delete is confirmed and submitted through POST.
-Read, create/edit and delete have separate ACL permissions.
+**Catalog > Catalog Storefront** contains six native UI listings: Views, Catalog
+Sources, Price Books, Stocks, Layers and Catalog Policies. Display names use
+MageOS or Magento according to the installed base distribution.
 
-Generic and platform-specific types share the same registry. Display names use
-MageOS or Magento according to the installed base distribution. Native records
-are imported once, then remain independently stored. No rows are recreated on
-page reads. Stock Inventory Sources are distinct from Catalog Sources.
+In Open Source these sections present existing native configuration read-only.
+The shared forms show the configuration available through Catalog Cloud. The
+Open Source provider cannot create, edit or delete independent resources; that
+implementation is supplied separately, not enabled by a UI flag.
 
-Source counters show latest accepted non-deleted product/category/attribute feed
-records with separate pending and failed counts. Stock-feed counters belong to
-Stocks. Unknown counts are not represented as zero. Pending does not establish an
-active worker lease. Layers represent configured field ownership, not a list of
-installed modules. Price Books can exist with no own prices.
+Source counters show accepted product/category/attribute feed records with
+separate pending and failed counts. Stock counters belong to Stocks. Unknown
+counts are not represented as zero. Inventory Sources are distinct from Catalog
+Sources.
 
-Saving resource configuration does not publish it to live search or enable new
-routing/protection policies. The form states this boundary. See the
-[registry contract](../../docs/catalog-resource-registry.md) for relationships,
-adapter types, validation and the local CRUD/render checks.
+The native UI uses service interfaces and retains Admin authentication, form keys
+and ACL checks. See [catalog resource administration](../../docs/catalog-resource-registry.md)
+for the package boundary and local rendering checks.
