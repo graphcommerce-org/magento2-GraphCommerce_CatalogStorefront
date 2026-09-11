@@ -1,6 +1,6 @@
 {
     "name": "graphcommerce/module-catalog-storefront-adminhtml",
-    "description": "Read-only derived catalog views and health in Magento Admin",
+    "description": "Stored catalog resources and native Admin CRUD for Magento / MageOS",
     "type": "magento2-module",
     "license": "MIT",
     "require": {

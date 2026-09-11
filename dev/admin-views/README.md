@@ -4,7 +4,7 @@
 Catalog Storefront Views** surface without authenticating a user or issuing an
 HTTP request. It verifies the merged route and ACL, the GET-only controller,
 the factual data sources, the exact merged layout declaration, and renders each
-of the five native Magento UI listings with the Admin theme. This exercises the
+of the six native Magento UI listings with the Admin theme. This exercises the
 listing data providers without issuing an HTTP request.
 Its JSON report contains hashes and public identifiers, not rendered HTML,
 Admin URLs, session data or credentials.
@@ -58,7 +58,7 @@ existing Admin session, open **Catalog > Catalog Storefront Views** and compare
 the page with the smoke report:
 
 1. The page contains exactly Catalog Views, Catalog Sources, Price Books,
-   Catalog Layers and Catalog Policies, in that order.
+   Stocks, Catalog Layers and Catalog Policies, in that order.
 2. Views and Sources contain one row per active Magento store view; locale and
    scope identifiers match Magento configuration.
 3. Price Books contains the real `all` fallback followed by customer-group
@@ -66,10 +66,9 @@ the page with the smoke report:
    scan catalog documents.
 4. Catalog Layers is empty until independent layers exist. Installed content,
    inventory and review modules must not appear as layer records.
-5. Catalog Policies is an explicit planned empty state because Magento has no
-   persisted managed-policy model for this surface.
+5. Catalog Policies shows the derived in-stock-only rule where configured; there is no independently managed policy registry.
 6. Unavailable management actions are disabled and do not save data.
-7. The five sections retain the supplied compact table hierarchy at narrow
+7. The six sections retain the supplied compact table hierarchy at narrow
    widths without widening the Admin page.
 
 Do not create a user or reset a password for this check. If the existing session
@@ -84,3 +83,11 @@ MAGENTO_ROOT=/path/to/magento php dev/admin-views/verify-source-feed-counts.php 
 ```
 
 The in-stock-only policy is derived from the source store configuration. It does not imply a managed policy registry or an immediate change to an already published search generation.
+
+The Stocks section uses real MSI configuration when the inventory adapter is enabled. Verify Inventory Sources (distinct from Catalog Sources), linked Views and stock-scoped receipts. Without that adapter, Stocks is empty and View Stock values are unavailable; no default Stock is fabricated.
+
+Stock receipt scope and acknowledged-delete behavior can be verified with the rollback-only local probe:
+
+```sh
+MAGENTO_ROOT=/path/to/magento php dev/admin-views/verify-stock-feed-counts.php 1
+```

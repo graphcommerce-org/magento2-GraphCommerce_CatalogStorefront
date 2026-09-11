@@ -20,14 +20,14 @@
             </storageConfig>
         </settings>
         <aclResource>GraphCommerce_CatalogStorefrontAdminhtml::views</aclResource>
-        <dataProvider class="GraphCommerce\CatalogStorefrontAdminhtml\Ui\DataProvider\OverviewDataProvider" name="catalog_storefront_sources_listing_data_source">
+        <dataProvider class="GraphCommerce\CatalogStorefrontAdminhtml\Ui\DataProvider\RegistryListing" name="catalog_storefront_sources_listing_data_source">
             <settings>
                 <requestFieldName>code</requestFieldName>
                 <primaryFieldName>code</primaryFieldName>
             </settings>
         </dataProvider>
     </dataSource>
-    <columns name="catalog_storefront_sources_listing_columns" component="GraphCommerce_CatalogStorefrontAdminhtml/js/grid/listing">
+    <columns class="GraphCommerce\CatalogStorefrontAdminhtml\Ui\Component\RegistryColumns" name="catalog_storefront_sources_listing_columns" component="GraphCommerce_CatalogStorefrontAdminhtml/js/grid/listing">
         <argument name="data" xsi:type="array">
             <item name="config" xsi:type="array">
                 <item name="heading" xsi:type="string" translate="true">Catalog Sources</item>
@@ -119,15 +119,9 @@
                 </fieldClass>
             </settings>
         </column>
-        <column name="actions" component="GraphCommerce_CatalogStorefrontAdminhtml/js/grid/columns/more" sortOrder="80">
-            <settings>
-                <bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/more</bodyTmpl>
-                <sortable>false</sortable>
-                <draggable>false</draggable>
-                <controlVisibility>false</controlVisibility>
-                <label translate="true">Actions</label>
-                <visible>true</visible>
-            </settings>
-        </column>
+        <actionsColumn name="actions" class="GraphCommerce\CatalogStorefrontAdminhtml\Ui\Component\ResourceActions" sortOrder="100">
+            <argument name="data" xsi:type="array"><item name="config" xsi:type="array"><item name="resourceKind" xsi:type="string">sources</item></item></argument>
+            <settings><indexField>id</indexField><label translate="true">Actions</label></settings>
+        </actionsColumn>
     </columns>
 </listing>

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 GraphCommerce. SPDX-License-Identifier: MIT -->
+<listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">catalog_storefront_stocks_listing.catalog_storefront_stocks_listing_data_source</item>
+        </item>
+    </argument>
+    <settings>
+        <spinner>catalog_storefront_stocks_listing_columns</spinner>
+        <deps>
+            <dep>catalog_storefront_stocks_listing.catalog_storefront_stocks_listing_data_source</dep>
+        </deps>
+    </settings>
+    <dataSource name="catalog_storefront_stocks_listing_data_source" component="Magento_Ui/js/grid/provider">
+        <settings>
+            <updateUrl path="mui/index/render"/>
+            <storageConfig>
+                <param name="indexField" xsi:type="string">id</param>
+            </storageConfig>
+        </settings>
+        <aclResource>GraphCommerce_CatalogStorefrontAdminhtml::views</aclResource>
+        <dataProvider class="GraphCommerce\CatalogStorefrontAdminhtml\Ui\DataProvider\RegistryListing" name="catalog_storefront_stocks_listing_data_source">
+            <settings>
+                <requestFieldName>id</requestFieldName>
+                <primaryFieldName>id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <columns class="GraphCommerce\CatalogStorefrontAdminhtml\Ui\Component\RegistryColumns" name="catalog_storefront_stocks_listing_columns" component="GraphCommerce_CatalogStorefrontAdminhtml/js/grid/listing">
+        <argument name="data" xsi:type="array">
+            <item name="config" xsi:type="array">
+                <item name="heading" xsi:type="string" translate="true">Stocks</item>
+                <item name="infoText" xsi:type="string" translate="true">Stored stocks and their resource relationships.</item>
+                <item name="actionLabel" xsi:type="string" translate="true">Add Stock</item>
+                <item name="dataset" xsi:type="string">stocks</item>
+                <item name="dndConfig" xsi:type="array">
+                    <item name="enabled" xsi:type="boolean">false</item>
+                </item>
+                <item name="editorConfig" xsi:type="array">
+                    <item name="enabled" xsi:type="boolean">false</item>
+                </item>
+                <item name="resizeConfig" xsi:type="array">
+                    <item name="enabled" xsi:type="boolean">false</item>
+                </item>
+            </item>
+        </argument>
+        <column name="name" sortOrder="10">
+            <settings>
+                <bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/source</bodyTmpl>
+                <sortable>false</sortable>
+                <draggable>false</draggable>
+                <controlVisibility>false</controlVisibility>
+                <label translate="true">Stock</label>
+            </settings>
+        </column>
+        <column name="type" sortOrder="20">
+            <settings>
+                <sortable>false</sortable>
+                <draggable>false</draggable>
+                <controlVisibility>false</controlVisibility>
+                <label translate="true">Type</label>
+            </settings>
+        </column>
+        <column name="inventorySources" sortOrder="30">
+            <settings>
+                <bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/inventory-sources</bodyTmpl>
+                <sortable>false</sortable>
+                <draggable>false</draggable>
+                <controlVisibility>false</controlVisibility>
+                <label translate="true">Inventory Sources</label>
+            </settings>
+        </column>
+        <column name="linkedViews" sortOrder="40">
+            <settings>
+                <sortable>false</sortable>
+                <draggable>false</draggable>
+                <controlVisibility>false</controlVisibility>
+                <label translate="true">Linked Views</label>
+            </settings>
+        </column>
+        <column name="feedStock" sortOrder="50">
+            <settings>
+                <bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/feed</bodyTmpl>
+                <sortable>false</sortable>
+                <draggable>false</draggable>
+                <controlVisibility>false</controlVisibility>
+                <label translate="true">Stock Records</label>
+                <headerTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/columns/number</headerTmpl>
+                <fieldClass><class name="catalog-overview-number">true</class><class name="catalog-overview-feed-column">true</class></fieldClass>
+            </settings>
+        </column>
+    <actionsColumn name="actions" class="GraphCommerce\CatalogStorefrontAdminhtml\Ui\Component\ResourceActions" sortOrder="100"><argument name="data" xsi:type="array"><item name="config" xsi:type="array"><item name="resourceKind" xsi:type="string">stocks</item></item></argument><settings><indexField>id</indexField><label translate="true">Actions</label></settings></actionsColumn></columns>
+</listing>

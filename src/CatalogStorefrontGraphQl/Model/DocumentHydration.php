@@ -68,11 +68,15 @@ class DocumentHydration implements HydrationInterface
         ?ContextInterface $context,
         array $requestedFields = [],
     ): ?SearchResultsInterface {
+        if (!$ids) {
+            $result = $this->searchResultsFactory->create();
+            $result->setSearchCriteria($searchCriteria);
+            $result->setItems([]);
+            $result->setTotalCount($totalCount);
+            return $result;
+        }
         try {
             $store = $context?->getExtensionAttributes()->getStore() ?? $this->storeManager->getStore();
-            if (!$ids) {
-                return null;
-            }
             $groupKey = $this->groupKey($context);
             $withPrices = array_intersect($this->priceFields, $requestedFields) !== [];
             [$documents, $priceData] = $this->storage->listing(

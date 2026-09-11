@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontAdminhtml\Test\Unit;
@@ -9,7 +10,7 @@ use PHPUnit\Framework\TestCase;
 
 class AdminSurfaceTest extends TestCase
 {
-    public function testRouteMenuAclAndLayoutDeclareFiveReadOnlyListings(): void
+    public function testRouteMenuAclAndLayoutDeclareSixStoredListings(): void
     {
         $module = dirname(__DIR__, 2);
         $route = $this->xml($module . '/etc/adminhtml/routes.xml');
@@ -28,6 +29,7 @@ class AdminSurfaceTest extends TestCase
             'catalog_storefront_views_listing' => 'catalogViews',
             'catalog_storefront_sources_listing' => 'sources',
             'catalog_storefront_books_listing' => 'books',
+            'catalog_storefront_stocks_listing' => 'stocks',
             'catalog_storefront_layers_listing' => 'layers',
             'catalog_storefront_policies_listing' => 'policies',
         ];
@@ -43,18 +45,20 @@ class AdminSurfaceTest extends TestCase
             self::assertFileExists($path);
             $contents = (string)file_get_contents($path);
             self::assertStringContainsString(
-                'GraphCommerce\\CatalogStorefrontAdminhtml\\Ui\\DataProvider\\OverviewDataProvider',
+                'GraphCommerce\\CatalogStorefrontAdminhtml\\Ui\\DataProvider\\RegistryListing',
                 $contents,
             );
             self::assertStringContainsString('<item name="dataset" xsi:type="string">' . $dataset . '</item>', $contents);
             self::assertStringNotContainsString('<listingToolbar', $contents);
             self::assertStringNotContainsString('<massaction', $contents);
         }
+        $form = (string)file_get_contents($module . '/view/adminhtml/ui_component/catalog_storefront_resource_form.xml');
+        self::assertStringContainsString('<aclResource>GraphCommerce_CatalogStorefrontAdminhtml::views</aclResource>', $form);
         self::assertContains(HttpGetActionInterface::class, class_implements(Index::class));
-        self::assertSame(
-            [$module . '/Controller/Adminhtml/Views/Index.php'],
-            glob($module . '/Controller/Adminhtml/*/*.php'),
-        );
+        foreach ([\GraphCommerce\CatalogStorefrontAdminhtml\Controller\Adminhtml\Resource\Save::class, \GraphCommerce\CatalogStorefrontAdminhtml\Controller\Adminhtml\Resource\Delete::class] as $controller) {
+            self::assertContains(\Magento\Framework\App\Action\HttpPostActionInterface::class, class_implements($controller));
+            self::assertNotSame(Index::ADMIN_RESOURCE, $controller::ADMIN_RESOURCE);
+        }
     }
 
     private function xml(string $path): \SimpleXMLElement

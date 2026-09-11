@@ -4,7 +4,7 @@
         <resources>
             <resource id="Magento_Backend::admin">
                 <resource id="Magento_Catalog::catalog">
-                    <resource id="GraphCommerce_CatalogStorefrontAdminhtml::views" title="Catalog Storefront Views" translate="title" sortOrder="30"/>
+                    <resource id="GraphCommerce_CatalogStorefrontAdminhtml::views" title="Catalog Storefront" translate="title" sortOrder="30"><resource id="GraphCommerce_CatalogStorefrontAdminhtml::manage" title="Create and Edit Resources" translate="title"/><resource id="GraphCommerce_CatalogStorefrontAdminhtml::delete" title="Delete Resources" translate="title"/></resource>
                 </resource>
             </resource>
         </resources>

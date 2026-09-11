@@ -86,6 +86,7 @@ class OverviewDataProviderTest extends TestCase
         return [
             'views' => ['catalog_storefront_views_listing_data_source', 1, 'id', 'default'],
             'sources' => ['catalog_storefront_sources_listing_data_source', 1, 'code', 'default'],
+            'stocks without adapter' => ['catalog_storefront_stocks_listing_data_source', 0, null, null],
             'books' => ['catalog_storefront_books_listing_data_source', 2, 'id', 'all'],
             'layers' => ['catalog_storefront_layers_listing_data_source', 0, null, null],
             'policies' => ['catalog_storefront_policies_listing_data_source', 0, null, null],

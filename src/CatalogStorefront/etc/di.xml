@@ -171,4 +171,7 @@
             </argument>
         </arguments>
     </type>
+    <preference for="GraphCommerce\CatalogStorefrontApi\Registry\ResourceRepositoryInterface" type="GraphCommerce\CatalogStorefront\Model\Registry\ReadOnlyConfiguration"/>
+    <preference for="GraphCommerce\CatalogStorefrontApi\Service\ConfigurationInterface" type="GraphCommerce\CatalogStorefront\Model\Registry\ReadOnlyConfiguration"/>
+    <preference for="GraphCommerce\CatalogStorefrontApi\Service\SourceMetadataInterface" type="GraphCommerce\CatalogStorefront\Model\Registry\UnavailableSourceMetadata"/>
 </config>

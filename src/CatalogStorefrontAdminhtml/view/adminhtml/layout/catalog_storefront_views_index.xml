@@ -7,6 +7,7 @@
                 <uiComponent name="catalog_storefront_views_listing"/>
                 <uiComponent name="catalog_storefront_sources_listing"/>
                 <uiComponent name="catalog_storefront_books_listing"/>
+                <uiComponent name="catalog_storefront_stocks_listing"/>
                 <uiComponent name="catalog_storefront_layers_listing"/>
                 <uiComponent name="catalog_storefront_policies_listing"/>
             </container>

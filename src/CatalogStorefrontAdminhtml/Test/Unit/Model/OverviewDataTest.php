@@ -47,6 +47,7 @@ class OverviewDataTest extends TestCase
         self::assertSame([
             'catalogViews',
             'sources',
+            'stocks',
             'books',
             'layers',
             'policies',

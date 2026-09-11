@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
     <menu>
-        <add id="GraphCommerce_CatalogStorefrontAdminhtml::views" title="Catalog Storefront Views" translate="title"
+        <add id="GraphCommerce_CatalogStorefrontAdminhtml::views" title="Catalog Storefront" translate="title"
              module="GraphCommerce_CatalogStorefrontAdminhtml" sortOrder="30" parent="Magento_Catalog::catalog"
              action="catalog_storefront/views/index" resource="GraphCommerce_CatalogStorefrontAdminhtml::views"/>
     </menu>

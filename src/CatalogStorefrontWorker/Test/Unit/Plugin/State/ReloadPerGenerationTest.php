@@ -85,6 +85,32 @@ class ReloadPerGenerationTest extends TestCase
         self::assertSame(2, $proceeds, 'changed config reloads before the request is registered');
     }
 
+    public function testInactiveBootstrapDoesNotReuseItsPreviousRequestToken(): void
+    {
+        $token = 'old';
+        $cache = $this->createStub(\Magento\Framework\App\CacheInterface::class);
+        $cache->method('load')->willReturnCallback(static function () use (&$token) { return $token; });
+        $generations = new Generation($cache);
+        $composite = $this->createStub(ReloadProcessorComposite::class);
+        $reload = $this->createMock(ReloadProcessorInterface::class);
+        $calls = 0;
+        $reload->expects($this->exactly(2))->method('reloadState')->willReturnCallback(
+            function () use (&$plugin, $composite, &$calls): void {
+                $plugin->aroundReloadState($composite, static function () use (&$calls) { $calls++; });
+            },
+        );
+        $plugin = $this->createPlugin($generations, $this->createStub(RequestReload::class),
+            $this->createStub(SearchRequestConfig::class), $reload);
+        $registry = $this->createStub(RequestRegistry::class);
+        $plugin->beforeInitFromSuperGlobals($registry);
+        $token = 'published';
+        // An inactive area gets no post-response reset from BootstrapPool.
+        self::assertSame('old', $generations->current(Generation::CONFIG));
+        $plugin->beforeInitFromSuperGlobals($registry);
+        self::assertSame(2, $calls);
+        self::assertSame('published', $generations->current(Generation::CONFIG));
+    }
+
     #[DataProvider('failedReloadProvider')]
     public function testFailedReloadIsRetriedOnTheNextRequest(string $failure): void
     {

@@ -10,13 +10,14 @@ use Magento\Framework\Api\Filter;
 use Magento\Ui\DataProvider\AbstractDataProvider;
 
 /**
- * Read-only array provider for the five Catalog Storefront Admin listings.
+ * Read-only array provider for the Catalog Storefront Admin listings.
  */
 class OverviewDataProvider extends AbstractDataProvider
 {
     private const DATASETS = [
         'catalogViews',
         'sources',
+        'stocks',
         'books',
         'layers',
         'policies',
@@ -46,6 +47,7 @@ class OverviewDataProvider extends AbstractDataProvider
         $dataset = $data['config']['dataset'] ?? match ($name) {
             'catalog_storefront_views_listing_data_source' => 'catalogViews',
             'catalog_storefront_sources_listing_data_source' => 'sources',
+            'catalog_storefront_stocks_listing_data_source' => 'stocks',
             'catalog_storefront_books_listing_data_source' => 'books',
             'catalog_storefront_layers_listing_data_source' => 'layers',
             'catalog_storefront_policies_listing_data_source' => 'policies',
@@ -75,6 +77,12 @@ class OverviewDataProvider extends AbstractDataProvider
             unset($item);
         }
         return ['items' => $items, 'totalRecords' => count($items)];
+    }
+
+    /** Optional inventory adapter uses this without depending on an Admin service constructor. */
+    public function getStockFeedCounts(): array
+    {
+        return $this->sourceFeedCounts?->stocks() ?? [];
     }
 
     #[\ReturnTypeWillChange]

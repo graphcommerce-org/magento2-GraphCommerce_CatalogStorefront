@@ -33,6 +33,9 @@ class ReloadPerGeneration
 
     public function beforeInitFromSuperGlobals(RequestRegistry $subject): void
     {
+        // BootstrapPool also initializes inactive area bootstraps, which may not
+        // have received the previous response reset. Observe the shared token now.
+        $this->generations->_resetState();
         if ($this->generations->current(Generation::CONFIG) !== $this->reloaded) {
             $this->reloadProcessor->reloadState();
         }

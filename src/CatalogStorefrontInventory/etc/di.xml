@@ -23,4 +23,6 @@
             </argument>
         </arguments>
     </type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Registry\NativeResources"><plugin name="catalog_registry_native_stocks" type="GraphCommerce\CatalogStorefrontInventory\Plugin\Registry\NativeStocks"/></type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Registry\Options"><plugin name="catalog_registry_stock_options" type="GraphCommerce\CatalogStorefrontInventory\Plugin\Registry\NativeStocks"/></type>
 </config>

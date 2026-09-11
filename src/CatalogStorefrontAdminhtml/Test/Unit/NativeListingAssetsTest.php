@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontAdminhtml\Test\Unit;
@@ -32,7 +33,7 @@ final class NativeListingAssetsTest extends TestCase
         $directory = $module . '/view/adminhtml/web/template/grid/cells';
         $templates = glob($directory . '/*.html');
         self::assertIsArray($templates);
-        self::assertCount(9, $templates);
+        self::assertCount(10, $templates);
 
         foreach ($templates as $template) {
             $contents = (string)file_get_contents($template);
@@ -80,7 +81,7 @@ final class NativeListingAssetsTest extends TestCase
         $directory = $module . '/view/adminhtml/ui_component';
         $files = glob($directory . '/*.xml');
         self::assertIsArray($files);
-        self::assertCount(5, $files);
+        self::assertCount(7, $files);
 
         $all = '';
         foreach ($files as $file) {
@@ -88,7 +89,7 @@ final class NativeListingAssetsTest extends TestCase
             self::assertInstanceOf(\SimpleXMLElement::class, $xml);
             $all .= (string)file_get_contents($file);
         }
-        self::assertSame(5, substr_count($all, '<item name="dataset" xsi:type="string">'));
+        self::assertSame(6, substr_count($all, '<item name="dataset" xsi:type="string">'));
         self::assertSame(
             substr_count($all, '<class name="catalog-overview-number">true</class>'),
             substr_count($all, '<headerTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/columns/number</headerTmpl>'),
@@ -104,7 +105,7 @@ final class NativeListingAssetsTest extends TestCase
             $policies,
         );
         self::assertStringContainsString(
-            'Policy triggers are not available until managed catalog policies are supported.',
+            'Stored policies and their resource relationships.',
             $policies,
         );
     }

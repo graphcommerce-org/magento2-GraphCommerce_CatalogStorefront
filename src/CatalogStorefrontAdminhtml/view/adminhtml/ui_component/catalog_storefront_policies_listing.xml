@@ -20,19 +20,19 @@
             </storageConfig>
         </settings>
         <aclResource>GraphCommerce_CatalogStorefrontAdminhtml::views</aclResource>
-        <dataProvider class="GraphCommerce\CatalogStorefrontAdminhtml\Ui\DataProvider\OverviewDataProvider" name="catalog_storefront_policies_listing_data_source">
+        <dataProvider class="GraphCommerce\CatalogStorefrontAdminhtml\Ui\DataProvider\RegistryListing" name="catalog_storefront_policies_listing_data_source">
             <settings>
                 <requestFieldName>name</requestFieldName>
                 <primaryFieldName>name</primaryFieldName>
             </settings>
         </dataProvider>
     </dataSource>
-    <columns name="catalog_storefront_policies_listing_columns" component="GraphCommerce_CatalogStorefrontAdminhtml/js/grid/listing">
+    <columns class="GraphCommerce\CatalogStorefrontAdminhtml\Ui\Component\RegistryColumns" name="catalog_storefront_policies_listing_columns" component="GraphCommerce_CatalogStorefrontAdminhtml/js/grid/listing">
         <argument name="data" xsi:type="array">
             <item name="config" xsi:type="array">
                 <item name="heading" xsi:type="string" translate="true">Catalog Policies</item>
                 <item name="actionLabel" xsi:type="string" translate="true">Add Policy</item>
-                <item name="infoText" xsi:type="string" translate="true">The in-stock-only policy represents Magento Show Out of Stock Products = No and lists the linked derived views. Editable policies and triggers are not available.</item>
+                <item name="infoText" xsi:type="string" translate="true">Stored policies and their resource relationships.</item>
                 <item name="dataset" xsi:type="string">policies</item>
                 <item name="dndConfig" xsi:type="array">
                     <item name="enabled" xsi:type="boolean">false</item>
@@ -62,7 +62,7 @@
                 <label translate="true">Filter</label>
             </settings>
         </column>
-        <column name="type" sortOrder="30">
+        <column name="valueSource" sortOrder="30">
             <settings>
                 <bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/badge</bodyTmpl>
                 <sortable>false</sortable>
@@ -74,7 +74,7 @@
         <column name="trigger" component="GraphCommerce_CatalogStorefrontAdminhtml/js/grid/columns/info" sortOrder="40">
             <argument name="data" xsi:type="array">
                 <item name="config" xsi:type="array">
-                    <item name="infoText" xsi:type="string" translate="true">Policy triggers are not available until managed catalog policies are supported.</item>
+                    <item name="infoText" xsi:type="string" translate="true">Stored policies and their resource relationships.</item>
                 </item>
             </argument>
             <settings>
@@ -84,7 +84,7 @@
                 <label translate="true">Trigger</label>
             </settings>
         </column>
-        <column name="views" sortOrder="50">
+        <column name="linkedViews" sortOrder="50">
             <settings>
                 <sortable>false</sortable>
                 <draggable>false</draggable>
@@ -96,15 +96,9 @@
                 </fieldClass>
             </settings>
         </column>
-        <column name="actions" component="GraphCommerce_CatalogStorefrontAdminhtml/js/grid/columns/more" sortOrder="60">
-            <settings>
-                <bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/more</bodyTmpl>
-                <sortable>false</sortable>
-                <draggable>false</draggable>
-                <controlVisibility>false</controlVisibility>
-                <label translate="true">Actions</label>
-                <visible>true</visible>
-            </settings>
-        </column>
+        <actionsColumn name="actions" class="GraphCommerce\CatalogStorefrontAdminhtml\Ui\Component\ResourceActions" sortOrder="100">
+            <argument name="data" xsi:type="array"><item name="config" xsi:type="array"><item name="resourceKind" xsi:type="string">policies</item></item></argument>
+            <settings><indexField>id</indexField><label translate="true">Actions</label></settings>
+        </actionsColumn>
     </columns>
 </listing>

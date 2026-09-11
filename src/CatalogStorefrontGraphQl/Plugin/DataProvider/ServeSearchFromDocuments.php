@@ -29,7 +29,7 @@ class ServeSearchFromDocuments
         array $attributes = [],
         ?ContextInterface $context = null
     ): SearchResultsInterface {
-        if (!$this->hydration->enabled() || !$searchResult->getItems()) {
+        if (!$this->hydration->enabled()) {
             return $proceed($searchCriteria, $searchResult, $attributes, $context);
         }
 

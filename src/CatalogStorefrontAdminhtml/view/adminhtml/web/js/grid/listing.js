@@ -16,6 +16,7 @@ define([
             actionLabel: '',
             infoText: '',
             dataset: '',
+            actionUrl: '',
             unavailableText: 'This management workflow is not available yet.'
         },
 
@@ -38,14 +39,8 @@ define([
             });
         },
 
-        /**
-         * Explain that the screenshot action is not implemented in Magento.
-         */
-        showUnavailable: function () {
-            uiAlert({
-                title: $t(this.actionLabel),
-                content: $t(this.unavailableText)
-            });
+        openCreate: function () {
+            if (this.actionUrl) { window.location.assign(this.actionUrl); }
         }
     });
 });

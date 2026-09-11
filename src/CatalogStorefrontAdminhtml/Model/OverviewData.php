@@ -37,6 +37,7 @@ final class OverviewData
         return [
             'catalogViews' => self::catalogViews($views, $groups['available'], $groupNames, []),
             'sources' => self::sources($views),
+            'stocks' => [],
             'books' => self::books($groups, $currency),
             'layers' => [],
             'policies' => self::policies($views),
@@ -83,6 +84,7 @@ final class OverviewData
                 'id' => $code,
                 'protection' => self::DASH,
                 'source' => $code,
+                'stock' => self::DASH,
                 'bookMode' => 'Customer group pricing',
                 'bookList' => $groupsAvailable && $groupNames !== []
                     ? implode(', ', $groupNames)

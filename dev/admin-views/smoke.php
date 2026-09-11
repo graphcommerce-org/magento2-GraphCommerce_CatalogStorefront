@@ -23,6 +23,7 @@ const COMPONENTS = [
     'catalog_storefront_views_listing',
     'catalog_storefront_sources_listing',
     'catalog_storefront_books_listing',
+    'catalog_storefront_stocks_listing',
     'catalog_storefront_layers_listing',
     'catalog_storefront_policies_listing',
 ];
@@ -197,7 +198,7 @@ try {
         static fn(string $name): bool => str_starts_with($name, 'catalog_storefront_'),
     ));
     if ($declaredNames !== COMPONENTS) {
-        $failure('layout', 'merged layout does not contain the exact five overview listings in order');
+        $failure('layout', 'merged layout does not contain the exact six overview listings in order');
     } else {
         $pass('layout', [
             'handle' => HANDLE,
