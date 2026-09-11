@@ -61,7 +61,7 @@ class OverviewDataTest extends TestCase
         self::assertSame('Customer group pricing', $overview['catalogViews'][0]['bookMode']);
         self::assertSame('NOT LOGGED IN, General', $overview['catalogViews'][0]['bookList']);
         self::assertSame('—', $overview['catalogViews'][0]['policies']);
-        self::assertSame('Store-view content', $overview['catalogViews'][0]['layers']);
+        self::assertSame('—', $overview['catalogViews'][0]['layers']);
         self::assertSame('nl_NL', $overview['sources'][0]['locale']);
         self::assertSame('Store view nl_store (ID 3)', $overview['sources'][0]['origin']);
         self::assertSame('—', $overview['sources'][0]['feedProducts']['value']);
@@ -76,8 +76,7 @@ class OverviewDataTest extends TestCase
         self::assertSame('', $overview['books'][2]['currencyNote']);
         self::assertSame('—', $overview['books'][2]['feedPrices']['value']);
 
-        self::assertSame(['MODULE ENABLED', 'MODULE UNAVAILABLE'], array_column($overview['layers'], 'status'));
-        self::assertSame('Product and category values', $overview['layers'][0]['groups'][0]['label']);
+        self::assertSame([], $overview['layers']);
         self::assertSame([], $overview['policies']);
         foreach (['viewTip', 'bookTip', 'layerTip', 'policyTip', 'triggerTip'] as $tip) {
             self::assertSame(['lines'], array_keys($overview[$tip]));
@@ -86,6 +85,21 @@ class OverviewDataTest extends TestCase
                 self::assertArrayHasKey('text', $line);
             }
         }
+    }
+
+    public function testStockPolicyLinksOnlyViewsThatHideOutOfStockProducts(): void
+    {
+        $views = [];
+        foreach (['default' => false, 'retail' => false, 'wholesale' => true] as $code => $show) {
+            $views[] = ['id' => count($views) + 1, 'code' => $code, 'name' => $code,
+                'showOutOfStock' => $show, 'currency' => ['base' => 'USD']];
+        }
+        $result = OverviewData::build($views, ['available' => false, 'fallback' => 'all', 'items' => []], []);
+        self::assertSame(['in-stock-only', 'in-stock-only', '—'], array_column($result['catalogViews'], 'policies'));
+        self::assertCount(1, $result['policies']);
+        self::assertSame(2, $result['policies'][0]['views']);
+        self::assertSame('MAGENTO CONFIG', $result['policies'][0]['type']);
+        self::assertSame('is_in_stock EQUALS 1', $result['policies'][0]['filter']);
     }
 
     public function testUnavailableOptionalDataNeverInventsCountsOrAssignments(): void

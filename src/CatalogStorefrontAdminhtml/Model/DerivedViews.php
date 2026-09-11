@@ -74,6 +74,7 @@ class DerivedViews
                     'name' => (string)$group->getName(),
                     'rootCategoryId' => (int)$group->getRootCategoryId(),
                 ],
+                'showOutOfStock' => $this->scopeConfig->isSetFlag('cataloginventory/options/show_out_of_stock', ScopeInterface::SCOPE_STORE, $storeCode),
                 'locale' => (string)$this->scopeConfig->getValue(self::LOCALE, ScopeInterface::SCOPE_STORE, $storeCode),
                 'currency' => [
                     'base' => (string)$this->scopeConfig->getValue(self::BASE_CURRENCY, ScopeInterface::SCOPE_STORE, $storeCode),

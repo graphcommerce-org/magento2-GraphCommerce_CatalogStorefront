@@ -159,7 +159,7 @@ try {
             'ready' => $dataReady,
             'activeStoreViews' => count($views),
             'customerGroups' => count($groups['items']),
-            'catalogLayerContributions' => count($contributions),
+            'installedDocumentContributors' => count($contributions),
         ]);
     } else {
         $checks['data'] = [
@@ -167,7 +167,7 @@ try {
             'reason' => 'one or more factual Admin data sources are unavailable',
             'activeStoreViews' => count($views),
             'customerGroupsAvailable' => $groups['available'],
-            'catalogLayerContributions' => count($contributions),
+            'installedDocumentContributors' => count($contributions),
         ];
     }
 

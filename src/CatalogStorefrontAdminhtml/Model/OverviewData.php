@@ -25,10 +25,6 @@ final class OverviewData
             static fn(array $group): string => $group['code'],
             $groups['items'],
         ));
-        $enabledContributionNames = array_values(array_map(
-            static fn(array $contribution): string => $contribution['name'],
-            array_filter($contributions, static fn(array $contribution): bool => $contribution['available']),
-        ));
         $currencies = [];
         foreach ($views as $view) {
             $currency = trim((string)($view['currency']['base'] ?? ''));
@@ -39,11 +35,11 @@ final class OverviewData
         $currency = $currencies === [] ? self::DASH : implode(', ', array_keys($currencies));
 
         return [
-            'catalogViews' => self::catalogViews($views, $groups['available'], $groupNames, $enabledContributionNames),
+            'catalogViews' => self::catalogViews($views, $groups['available'], $groupNames, []),
             'sources' => self::sources($views),
             'books' => self::books($groups, $currency),
-            'layers' => self::layers($contributions),
-            'policies' => [],
+            'layers' => [],
+            'policies' => self::policies($views),
             'viewTip' => ['lines' => [
                 ['head' => 'Magento store views', 'text' => 'Each row is derived from an active Magento store view.'],
                 ['head' => 'Protection', 'text' => 'Managed catalog-view protection is not available in Magento.'],
@@ -53,11 +49,10 @@ final class OverviewData
                 ['head' => 'Customer groups', 'text' => 'Each Magento customer group has a derived price key that can override the fallback.'],
             ]],
             'layerTip' => ['lines' => [
-                ['head' => 'Magento contributions', 'text' => 'Rows show installed document contributions and the fields they provide.'],
-                ['head' => 'Module state', 'text' => 'Enabled means the Magento module is enabled; it is not a document-health check.'],
+                ['head' => 'Catalog layers', 'text' => 'No independent layer records have been configured. Source content, stock and installed review modules are not layers.'],
             ]],
             'policyTip' => ['lines' => [
-                ['head' => 'Planned', 'text' => 'Managed catalog policies are not available in Magento.'],
+                ['head' => 'Magento configuration', 'text' => 'The in-stock-only policy is derived from Show Out of Stock Products. Managed policy records are not yet available.'],
             ]],
             'triggerTip' => ['lines' => [
                 ['text' => 'Policy triggers are not available until managed catalog policies are supported.'],
@@ -92,7 +87,7 @@ final class OverviewData
                 'bookList' => $groupsAvailable && $groupNames !== []
                     ? implode(', ', $groupNames)
                     : self::DASH,
-                'policies' => self::DASH,
+                'policies' => ($view['showOutOfStock'] ?? null) === false ? 'in-stock-only' : self::DASH,
                 'layers' => $contributionNames === []
                     ? self::DASH
                     : implode(', ', $contributionNames),
@@ -171,32 +166,27 @@ final class OverviewData
         return $books;
     }
 
-    /**
-     * @param array<string, array{name: string, source: string, fields: string, available: bool}> $contributions
-     * @return array<int, array<string, mixed>>
-     */
-    private static function layers(array $contributions): array
+    /** Existing source configuration rendered as a policy; no independent policy record is implied. */
+    private static function policies(array $views): array
     {
-        $layers = [];
-        foreach ($contributions as $contribution) {
-            $layers[] = [
-                'name' => $contribution['name'],
-                'order' => self::DASH,
-                'locale' => 'All locales',
-                'managedBy' => $contribution['source'],
-                'records' => self::DASH,
-                'groups' => [[
-                    'kind' => 'FIELDS',
-                    'fields' => $contribution['fields'],
-                    'label' => $contribution['fields'],
-                ]],
-                'feedRecords' => self::unavailableFeed(),
-                'status' => $contribution['available'] ? 'MODULE ENABLED' : 'MODULE UNAVAILABLE',
-                'statusBg' => $contribution['available'] ? self::NEUTRAL_BACKGROUND : '#FFFFFF',
-                'statusBorder' => self::NEUTRAL_BORDER,
-            ];
+        $linked = array_values(array_filter($views, static fn(array $view): bool => ($view['showOutOfStock'] ?? null) === false));
+        if ($linked === []) {
+            return [];
         }
-        return $layers;
+        return [[
+            'name' => 'in-stock-only',
+            'filter' => 'is_in_stock EQUALS 1',
+            'type' => 'MAGENTO CONFIG',
+            'trigger' => 'Not used',
+            'views' => count($linked),
+            'tagBg' => self::NEUTRAL_BACKGROUND,
+            'tagBorder' => self::NEUTRAL_BORDER,
+            'tagColor' => self::NEUTRAL_COLOR,
+            'tip' => ['lines' => [[
+                'head' => 'Show Out of Stock Products',
+                'text' => 'No: restrict discovery using Magento stock eligibility. Yes: omit this restriction. Source setting: cataloginventory/options/show_out_of_stock. Current publications retain their captured setting until refreshed.',
+            ]]],
+        ]];
     }
 
     /** @return array{value: string, hasBadge: false, badgeLabel: string, badgeBg: string, badgeBorder: string, badgeFg: string} */

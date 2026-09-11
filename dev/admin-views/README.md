@@ -64,8 +64,8 @@ the page with the smoke report:
 3. Price Books contains the real `all` fallback followed by customer-group
    contexts. Product-price counts remain unavailable because the page does not
    scan catalog documents.
-4. Catalog Layers reports installed content, inventory and review document
-   contributions as module state. It does not present that state as data health.
+4. Catalog Layers is empty until independent layers exist. Installed content,
+   inventory and review modules must not appear as layer records.
 5. Catalog Policies is an explicit planned empty state because Magento has no
    persisted managed-policy model for this surface.
 6. Unavailable management actions are disabled and do not save data.
@@ -76,3 +76,11 @@ Do not create a user or reset a password for this check. If the existing session
 opens the sign-in screen, record that authenticated browser evidence is
 unavailable. A screenshot should contain only the page content, excluding the
 address bar, cookies and other session-bearing browser UI.
+
+Source counts use scoped base-feed import receipts and independent pending/failed badges. Validate the SQL behavior on a local fixture (all writes are rolled back):
+
+```sh
+MAGENTO_ROOT=/path/to/magento php dev/admin-views/verify-source-feed-counts.php default
+```
+
+The in-stock-only policy is derived from the source store configuration. It does not imply a managed policy registry or an immediate change to an already published search generation.

@@ -1,5 +1,10 @@
 <div class="catalog-overview-feed catalog-overview-number"
      data-bind="with: $col.getLabel($row())">
+    <!-- ko foreach: $data.badges || [] -->
+    <span class="catalog-overview-badge"
+          ko-style="{'background-color': background, 'border-color': 'transparent', color: '#303030'}"
+          text="label"></span>
+    <!-- /ko -->
     <span if="$data.hasBadge"
           class="catalog-overview-badge"
           ko-style="{
@@ -8,5 +13,5 @@
               color: $data.badgeFg
           }"
           text="$data.badgeLabel"></span>
-    <span text="$data.value"></span>
+    <span attr="{title: $data.description || ''}" text="$data.value"></span>
 </div>

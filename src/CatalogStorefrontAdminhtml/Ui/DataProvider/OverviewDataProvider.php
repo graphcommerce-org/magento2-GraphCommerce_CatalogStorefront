@@ -5,6 +5,7 @@ namespace GraphCommerce\CatalogStorefrontAdminhtml\Ui\DataProvider;
 
 use GraphCommerce\CatalogStorefrontAdminhtml\Model\DerivedViews;
 use GraphCommerce\CatalogStorefrontAdminhtml\Model\OverviewData;
+use GraphCommerce\CatalogStorefrontAdminhtml\Model\SourceFeedCounts;
 use Magento\Framework\Api\Filter;
 use Magento\Ui\DataProvider\AbstractDataProvider;
 
@@ -37,6 +38,7 @@ class OverviewDataProvider extends AbstractDataProvider
         private readonly DerivedViews $derivedViews,
         array $meta = [],
         array $data = [],
+        private readonly ?SourceFeedCounts $sourceFeedCounts = null,
     ) {
         parent::__construct($name, $primaryFieldName, $requestFieldName, $meta, $data);
         // Magento's UI definition converter supplies provider data from the
@@ -65,6 +67,13 @@ class OverviewDataProvider extends AbstractDataProvider
         );
         /** @var array<int, array<string, mixed>> $items */
         $items = $overview[$this->dataset];
+        if ($this->dataset === 'sources' && $this->sourceFeedCounts !== null) {
+            $counts = $this->sourceFeedCounts->get();
+            foreach ($items as &$item) {
+                $item = array_replace($item, $counts['*'] ?? [], $counts[$item['code']] ?? []);
+            }
+            unset($item);
+        }
         return ['items' => $items, 'totalRecords' => count($items)];
     }
 

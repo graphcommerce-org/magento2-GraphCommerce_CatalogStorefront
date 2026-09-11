@@ -32,7 +32,7 @@
             <item name="config" xsi:type="array">
                 <item name="heading" xsi:type="string" translate="true">Catalog Policies</item>
                 <item name="actionLabel" xsi:type="string" translate="true">Add Policy</item>
-                <item name="infoText" xsi:type="string" translate="true">Magento assortment rules are derived per active store view. Editable policies and triggers are not available.</item>
+                <item name="infoText" xsi:type="string" translate="true">The in-stock-only policy represents Magento Show Out of Stock Products = No and lists the linked derived views. Editable policies and triggers are not available.</item>
                 <item name="dataset" xsi:type="string">policies</item>
                 <item name="dndConfig" xsi:type="array">
                     <item name="enabled" xsi:type="boolean">false</item>

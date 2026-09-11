@@ -32,7 +32,7 @@
             <item name="config" xsi:type="array">
                 <item name="heading" xsi:type="string" translate="true">Catalog Layers</item>
                 <item name="actionLabel" xsi:type="string" translate="true">Add Catalog Layer</item>
-                <item name="infoText" xsi:type="string" translate="true">These rows show installed Magento document contributions. Ordered priorities and editable layer records are not available.</item>
+                <item name="infoText" xsi:type="string" translate="true">No independent catalog layers are configured. Source content, stock and installed review modules are not layer records.</item>
                 <item name="dataset" xsi:type="string">layers</item>
                 <item name="dndConfig" xsi:type="array">
                     <item name="enabled" xsi:type="boolean">false</item>
