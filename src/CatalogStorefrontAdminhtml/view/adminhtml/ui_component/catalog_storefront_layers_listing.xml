@@ -84,7 +84,7 @@
                 <label translate="true">Fields</label>
             </settings>
         </column>
-        <column name="locale" sortOrder="50">
+        <column name="locale" class="GraphCommerce\CatalogStorefrontAdminhtml\Ui\Component\LocaleName" sortOrder="50">
             <settings>
                 <sortable>false</sortable>
                 <draggable>false</draggable>
@@ -113,6 +113,12 @@
                     <class name="catalog-overview-feed-column">true</class>
                 </fieldClass>
             </settings>
+        </column>
+        <column name="availability" sortOrder="80">
+            <settings><sortable>false</sortable><label translate="true">Availability</label></settings>
+        </column>
+        <column name="linkedViews" sortOrder="90">
+            <settings><sortable>false</sortable><label translate="true">Connected Views</label></settings>
         </column>
         <actionsColumn name="actions" class="GraphCommerce\CatalogStorefrontAdminhtml\Ui\Component\ResourceActions" sortOrder="100">
             <argument name="data" xsi:type="array"><item name="config" xsi:type="array"><item name="resourceKind" xsi:type="string">layers</item></item></argument>

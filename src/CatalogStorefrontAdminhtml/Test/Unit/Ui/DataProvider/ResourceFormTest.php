@@ -58,6 +58,11 @@ final class ResourceFormTest extends TestCase
         $meta = $this->form('views')->getMeta()['general']['children'];
         $picker = $meta['layer_ids']['children']['record']['children']['resource_id']['arguments']['data']['config'];
         self::assertSame('layers', $picker['resourceFilter']);
+        foreach (['book_id', 'book_ids'] as $name) {
+            $book = $meta[$name]['arguments']['data']['config'];
+            self::assertSame('books', $book['resourceFilter']);
+            self::assertSame('catalog_storefront_resource_form.resource_form_data_source:data.source_id', $book['imports']['sourceSelection']);
+        }
         self::assertSame('3', $picker['layerRoster'][0]['sourceId']);
         self::assertSame('catalog_storefront_resource_form.resource_form_data_source:data.source_id', $picker['imports']['sourceSelection']);
     }

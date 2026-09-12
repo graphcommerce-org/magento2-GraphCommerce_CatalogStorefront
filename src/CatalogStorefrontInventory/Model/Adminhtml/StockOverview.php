@@ -85,7 +85,7 @@ class StockOverview
         ksort($items, SORT_NUMERIC);
         foreach ($items as &$item) {
             sort($item['linkedViews'], SORT_STRING);
-            $item['linkedViews'] = implode(', ', $item['linkedViews']) ?: '—';
+            $item['linkedViews'] = implode(', ', $item['linkedViews']) ?: '';
         }
         unset($item);
         return $this->snapshot = ['stocks' => array_values($items), 'viewStocks' => $viewStocks];

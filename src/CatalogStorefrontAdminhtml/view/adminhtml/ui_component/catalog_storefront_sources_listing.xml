@@ -69,7 +69,7 @@
                 <label translate="true">Type</label>
             </settings>
         </column>
-        <column name="locale" sortOrder="40">
+        <column name="locale" class="GraphCommerce\CatalogStorefrontAdminhtml\Ui\Component\LocaleName" sortOrder="40">
             <settings>
                 <sortable>false</sortable>
                 <draggable>false</draggable>

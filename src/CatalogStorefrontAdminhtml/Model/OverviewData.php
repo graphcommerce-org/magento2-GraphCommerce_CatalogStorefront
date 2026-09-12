@@ -8,7 +8,7 @@ namespace GraphCommerce\CatalogStorefrontAdminhtml\Model;
  */
 final class OverviewData
 {
-    private const DASH = '—';
+    private const EMPTY = '';
     private const NEUTRAL_BORDER = '#C7C7C7';
     private const NEUTRAL_COLOR = '#303030';
     private const NEUTRAL_BACKGROUND = '#F1F1F1';
@@ -32,7 +32,7 @@ final class OverviewData
                 $currencies[$currency] = true;
             }
         }
-        $currency = $currencies === [] ? self::DASH : implode(', ', array_keys($currencies));
+        $currency = $currencies === [] ? self::EMPTY : implode(', ', array_keys($currencies));
 
         return [
             'catalogViews' => self::catalogViews($views, $groups['available'], $groupNames, []),
@@ -82,16 +82,16 @@ final class OverviewData
             return [
                 'name' => (string)$view['name'],
                 'id' => $code,
-                'protection' => self::DASH,
+                'protection' => self::EMPTY,
                 'source' => $code,
-                'stock' => self::DASH,
+                'stock' => self::EMPTY,
                 'bookMode' => 'Customer group pricing',
                 'bookList' => $groupsAvailable && $groupNames !== []
                     ? implode(', ', $groupNames)
-                    : self::DASH,
-                'policies' => ($view['showOutOfStock'] ?? null) === false ? 'in-stock-only' : self::DASH,
+                    : self::EMPTY,
+                'policies' => ($view['showOutOfStock'] ?? null) === false ? 'in-stock-only' : self::EMPTY,
                 'layers' => $contributionNames === []
-                    ? self::DASH
+                    ? self::EMPTY
                     : implode(', ', $contributionNames),
                 'tagBorder' => self::NEUTRAL_BORDER,
                 'tagColor' => self::NEUTRAL_COLOR,
@@ -102,7 +102,7 @@ final class OverviewData
                         'head' => 'Assortment',
                         'text' => sprintf(
                             'Website %s; root category %d. Product status and visibility determine eligibility.',
-                            (string)($view['website']['code'] ?? self::DASH),
+                            (string)($view['website']['code'] ?? self::EMPTY),
                             (int)($view['store']['rootCategoryId'] ?? 0),
                         ),
                     ],
@@ -121,7 +121,7 @@ final class OverviewData
             'code' => (string)$view['code'],
             'type' => 'Magento Store View Catalog',
             'origin' => sprintf('Store view %s (ID %d)', (string)$view['code'], (int)$view['id']),
-            'locale' => trim((string)($view['locale'] ?? '')) ?: self::DASH,
+            'locale' => trim((string)($view['locale'] ?? '')) ?: self::EMPTY,
             'feedProducts' => self::unavailableFeed(),
             'feedCategories' => self::unavailableFeed(),
             'feedAttributes' => self::unavailableFeed(),
@@ -139,7 +139,7 @@ final class OverviewData
             'name' => 'Magento Base Prices',
             'type' => 'Magento Fallback',
             'currency' => $currency,
-            'rows' => self::DASH,
+            'rows' => self::EMPTY,
             'depth' => 0,
             'role' => 'Fallback',
             'currencyNote' => '',
@@ -156,7 +156,7 @@ final class OverviewData
                 'name' => $group['code'],
                 'type' => 'Magento Customer Group',
                 'currency' => $currency,
-                'rows' => self::DASH,
+                'rows' => self::EMPTY,
                 'depth' => 1,
                 'role' => 'Child',
                 'currencyNote' => '',
@@ -195,7 +195,7 @@ final class OverviewData
     private static function unavailableFeed(): array
     {
         return [
-            'value' => self::DASH,
+            'value' => 'Unknown',
             'hasBadge' => false,
             'badgeLabel' => '',
             'badgeBg' => self::NEUTRAL_BACKGROUND,

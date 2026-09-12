@@ -35,8 +35,27 @@ final class RegistryListingTest extends TestCase
         $result = $listing->getData();
         self::assertSame(6, $result['totalRecords']);
         self::assertSame([
-            'own-all-locales, own-en, selected', 'other-source', '—',
-            'legacy-all-locales, legacy-en, selected', 'legacy-all-locales, legacy-de', '—',
+            'own-all-locales, own-en, selected', 'other-source', '',
+            'legacy-all-locales, legacy-en, selected', 'legacy-all-locales, legacy-de', '',
         ], array_column($result['items'], 'layers'));
+    }
+    public function testLayerReverseConnectionsRespectSourceLocaleAndViewSideSelection(): void
+    {
+        $records = [
+            'sources'=>[['id'=>1,'type'=>'generic','locale'=>'en_US'],['id'=>2,'type'=>'generic','locale'=>'nl_NL']],
+            'layers'=>[
+                ['id'=>10,'name'=>'Manual','code'=>'manual','type'=>'generic','enabled'=>1,'scope'=>'view','source_id'=>1,'locale'=>'','fields'=>[]],
+                ['id'=>11,'name'=>'Automatic','code'=>'automatic','type'=>'generic','enabled'=>1,'scope'=>'global','source_id'=>1,'locale'=>'en_US','fields'=>[]],
+                ['id'=>12,'name'=>'Unconnected','code'=>'unconnected','type'=>'generic','enabled'=>1,'scope'=>'view','source_id'=>1,'locale'=>'','fields'=>[]],
+            ],
+            'views'=>[['id'=>1,'code'=>'english','source_id'=>1,'layer_ids'=>[['resource_id'=>10]]],['id'=>2,'code'=>'dutch','source_id'=>2,'layer_ids'=>[]]],
+        ];
+        $repository=$this->createStub(ConfigurationInterface::class);$repository->method('all')->willReturnCallback(static fn($kind)=>$records[$kind]??[]);
+        $platform=$this->createStub(Platform::class);$platform->method('name')->willReturn('Magento');
+        $listing=new RegistryListing('catalog_storefront_layers_listing_data_source','id','id',$repository,new Definition($platform),$this->createStub(SourceFeedCounts::class),$this->createStub(NativeResources::class),$this->createStub(StoreManagerInterface::class),$this->createStub(ScopeConfigInterface::class));
+        $rows=$listing->getData()['items'];
+        self::assertSame(['english','english',''],array_column($rows,'linkedViews'));
+        self::assertSame(['Connected from individual Views','Automatic for matching Views','Connected from individual Views'],array_column($rows,'availability'));
+        self::assertSame(['Unknown','Unknown','Unknown'],array_map(static fn($row)=>$row['feedRecords']['value'],$rows));
     }
 }

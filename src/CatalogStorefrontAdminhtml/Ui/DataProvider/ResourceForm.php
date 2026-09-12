@@ -97,21 +97,30 @@ class ResourceForm extends AbstractDataProvider
         $typeRules = [];
         // PHP-generated metadata disables JS template expansion; use the XML form's explicit provider.
         $formProvider = 'catalog_storefront_resource_form.resource_form_data_source';
-        $sourceRoster = $layerRoster = [];
+        $sourceRoster = $layerRoster = $bookRoster = [];
+        $nativeWebsites = $this->kind === 'views' ? $this->options->get('native_store_websites') : [];
         if (in_array($this->kind, ['views', 'layers'], true)) {
             foreach ($this->repository->all('sources') as $source) $sourceRoster[] = ['value' => (string)$source['id'], 'label' => (string)$source['name'],
-                'type' => $source['type'], 'enabled' => !empty($source['enabled']), 'identityNamespace' => $source['identity_namespace'] ?? '', 'locale' => $source['locale'] ?? ''];
+                'type' => $source['type'], 'enabled' => !empty($source['enabled']), 'identityNamespace' => $source['identity_namespace'] ?? '', 'locale' => $source['locale'] ?? '', 'nativeStoreId' => (string)($source['native_store_id'] ?? ''),
+                'nativeWebsiteId' => (string)($nativeWebsites[$source['native_store_id'] ?? ''] ?? '')];
         }
         if ($this->kind === 'views') {
+            foreach ($this->repository->all('books') as $book) $bookRoster[] = ['value' => (string)$book['id'], 'label' => \GraphCommerce\CatalogStorefrontAdminhtml\Model\ResourceLabels::name($book),
+                'type' => $book['type'], 'enabled' => !empty($book['enabled']), 'identityNamespace' => $book['identity_namespace'] ?? '', 'nativeWebsiteId' => (string)($book['native_website_id'] ?? '')];
             foreach ($this->repository->all('layers') as $layer) $layerRoster[] = ['value' => (string)$layer['id'], 'label' => (string)$layer['name'],
                 'type' => $layer['type'], 'enabled' => !empty($layer['enabled']), 'sourceId' => (string)($layer['source_id'] ?? ''),
-                'identityNamespace' => $layer['identity_namespace'] ?? '', 'locale' => $layer['locale'] ?? '', 'scope' => $layer['scope'] ?? 'view'];
+                'identityNamespace' => $layer['identity_namespace'] ?? '', 'locale' => $layer['locale'] ?? '', 'scope' => $layer['scope'] ?? 'view', 'productMatch' => $layer['product_match'] ?? 'native_id', 'nativeStoreId' => (string)($layer['native_store_id'] ?? '')];
         }
         $editable = $this->repository->capabilities()['can_manage'] && $this->authorization->isAllowed('GraphCommerce_CatalogStorefrontAdminhtml::manage');
         foreach ($definitions as $field => $spec) {
             $config = ['componentType' => 'field','formElement' => $spec['element'],'dataType' => 'text','dataScope' => $field,'source' => 'resource','label' => (string)__($spec['label'] ?? ''),'sortOrder' => $order += 10,'visible' => $spec['visible'] ?? true,'disabled' => !$editable,'validation' => ['required-entry' => (bool)($spec['required'] ?? false)]];
             if ((in_array($field, ['book_ids','book_id','policy_ids','option_values','attribute'], true) || ($this->kind === 'layers' && $field === 'source_id')) && isset($spec['options'])) {
                 $config += ['component' => 'GraphCommerce_CatalogStorefrontAdminhtml/js/form/resource-picker', 'elementTmpl' => 'ui/grid/filters/elements/ui-select', 'filterOptions' => true, 'chipsEnabled' => true, 'multiple' => in_array($field, ['book_ids','policy_ids','option_values'], true), 'showCheckbox' => true];
+            }
+            if ($this->kind === 'views' && in_array($field, ['book_id', 'book_ids'], true)) {
+                $config += ['resourceFilter' => 'books', 'sourceRoster' => $sourceRoster, 'bookRoster' => $bookRoster,
+                    'imports' => ['sourceSelection' => $formProvider . ':data.source_id']];
+                $config['notice'] = (string)__('Native Sources offer the website’s customer-group Books. Website Books remain inheritance parents.');
             }
             if (isset($spec['notice'])) {
                 $config['notice'] = (string)__($spec['notice']);
@@ -122,7 +131,7 @@ class ResourceForm extends AbstractDataProvider
             }
             if (isset($spec['options'])) {
                 $source = $spec['options'];
-                $values = is_array($source) ? $source : (in_array($source, Definition::KINDS, true) ? array_column($this->repository->all($source), 'name', 'id') : $this->options->get($source));
+                $values = is_array($source) ? $source : (in_array($source, Definition::KINDS, true) ? array_column(array_map(static fn(array $row): array => array_replace($row, ['name' => \GraphCommerce\CatalogStorefrontAdminhtml\Model\ResourceLabels::name($row)]), $this->repository->all($source)), 'name', 'id') : $this->options->get($source));
                 if ($field === 'parent_id') {
                     unset($values[(int)$this->request->getParam('id')]);
                 }

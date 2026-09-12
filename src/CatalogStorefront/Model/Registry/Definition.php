@@ -52,7 +52,7 @@ class Definition
             ],
             'sources'=>[
                 'document_scope' => ['element' => 'input','visible' => false],
-                'locale' => ['label' => 'Locale','element' => 'input'],
+                'locale' => ['label' => 'Locale','element' => 'select','options' => 'locales'],
                 'identity_namespace' => ['label' => 'Product Identity Namespace','element' => 'input','types' => ['generic'],'binding' => true,'notice' => 'A stable identifier shared by this Source and its price, stock and layer feeds. Set it before identity ingestion; it cannot change afterward.'],
                 'native_store_id' => $nativeStore + ['types' => ['platform_store_view'],'required' => true],
             ],
@@ -71,9 +71,9 @@ class Definition
                 'native_stock_id' => ['label' => $this->platform->name() . ' MSI Stock','element' => 'select','options' => 'native_stocks','types' => ['platform_msi'],'required' => true],
             ],
             'layers'=>[
-                'scope' => ['label' => 'Availability','element' => 'select','options' => ['view' => 'Selected Views','global' => 'All Views'],'default' => 'view'],
+                'scope' => ['label' => 'Availability','element' => 'select','options' => ['view' => 'Connected from individual Views','global' => 'Automatic for matching Views'],'default' => 'view','notice' => 'Individual connections are managed on each Catalog View, under Layers in Resolution Order. Automatic layers apply only to Views with the matching Source and locale; they are resolved by priority before individually connected layers.'],
                 'priority' => ['label' => 'Default Priority','element' => 'input','default' => '10'],
-                'locale' => ['label' => 'Locale','element' => 'input','notice' => 'Leave empty for all locales.'],
+                'locale' => ['label' => 'Locale','element' => 'select','options' => 'locales','notice' => 'Leave empty for all locales.'],
                 'source_id' => ['label' => 'Catalog Source','element' => 'select','options' => 'sources','types' => ['generic'],'binding' => true,'notice' => 'For a canonical feed, select its generic Source and set producer and namespace together. Only Sources with a matching product namespace are offered.'],
                 'layer_producer' => ['label' => 'Layer Producer','element' => 'input','types' => ['generic'],'binding' => true,'notice' => 'The producer identifier supplied by this Layer’s content feed. Owned fields use imported Source attribute codes and scalar Override values; ratings and array merges are not supported by this feed.'],
                 'identity_namespace' => ['label' => 'Product Identity Namespace','element' => 'input','types' => ['generic'],'binding' => true,'notice' => 'Must match the selected Source. Source, producer, namespace and owned fields cannot change after ingestion begins.'],

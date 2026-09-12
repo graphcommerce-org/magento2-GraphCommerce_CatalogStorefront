@@ -58,14 +58,14 @@ class OverviewDataTest extends TestCase
             'triggerTip',
         ], array_keys($overview));
         self::assertSame('nl_store', $overview['catalogViews'][0]['source']);
-        self::assertSame('—', $overview['catalogViews'][0]['protection']);
+        self::assertSame('', $overview['catalogViews'][0]['protection']);
         self::assertSame('Customer group pricing', $overview['catalogViews'][0]['bookMode']);
         self::assertSame('NOT LOGGED IN, General', $overview['catalogViews'][0]['bookList']);
-        self::assertSame('—', $overview['catalogViews'][0]['policies']);
-        self::assertSame('—', $overview['catalogViews'][0]['layers']);
+        self::assertSame('', $overview['catalogViews'][0]['policies']);
+        self::assertSame('', $overview['catalogViews'][0]['layers']);
         self::assertSame('nl_NL', $overview['sources'][0]['locale']);
         self::assertSame('Store view nl_store (ID 3)', $overview['sources'][0]['origin']);
-        self::assertSame('—', $overview['sources'][0]['feedProducts']['value']);
+        self::assertSame('Unknown', $overview['sources'][0]['feedProducts']['value']);
         self::assertFalse($overview['sources'][0]['feedProducts']['hasBadge']);
 
         self::assertSame(['all', 'customer_group_0', 'customer_group_1'], array_column($overview['books'], 'id'));
@@ -75,7 +75,7 @@ class OverviewDataTest extends TestCase
         self::assertSame('EUR', $overview['books'][2]['currency']);
         self::assertSame('', $overview['books'][0]['currencyNote']);
         self::assertSame('', $overview['books'][2]['currencyNote']);
-        self::assertSame('—', $overview['books'][2]['feedPrices']['value']);
+        self::assertSame('Unknown', $overview['books'][2]['feedPrices']['value']);
 
         self::assertSame([], $overview['layers']);
         self::assertSame([], $overview['policies']);
@@ -96,7 +96,7 @@ class OverviewDataTest extends TestCase
                 'showOutOfStock' => $show, 'currency' => ['base' => 'USD']];
         }
         $result = OverviewData::build($views, ['available' => false, 'fallback' => 'all', 'items' => []], []);
-        self::assertSame(['in-stock-only', 'in-stock-only', '—'], array_column($result['catalogViews'], 'policies'));
+        self::assertSame(['in-stock-only', 'in-stock-only', ''], array_column($result['catalogViews'], 'policies'));
         self::assertCount(1, $result['policies']);
         self::assertSame(2, $result['policies'][0]['views']);
         self::assertSame('MAGENTO CONFIG', $result['policies'][0]['type']);
@@ -119,10 +119,10 @@ class OverviewDataTest extends TestCase
             [],
         );
 
-        self::assertSame('—', $overview['catalogViews'][0]['bookList']);
-        self::assertSame('—', $overview['catalogViews'][0]['layers']);
-        self::assertSame('—', $overview['sources'][0]['locale']);
-        self::assertSame('—', $overview['books'][0]['currency']);
+        self::assertSame('', $overview['catalogViews'][0]['bookList']);
+        self::assertSame('', $overview['catalogViews'][0]['layers']);
+        self::assertSame('', $overview['sources'][0]['locale']);
+        self::assertSame('', $overview['books'][0]['currency']);
         self::assertCount(1, $overview['books']);
         self::assertSame([], $overview['layers']);
         self::assertSame([], $overview['policies']);

@@ -4,6 +4,6 @@
     <div each="data: $row().inventorySources, as: 'inventorySource'">
         <span text="inventorySource.name"></span>
         <span class="catalog-overview-subline" text="' (' + inventorySource.code + ')' "></span>
-        <span ifnot="inventorySource.enabled" class="catalog-overview-subline" translate="' — Disabled'"></span>
+        <span ifnot="inventorySource.enabled" class="catalog-overview-subline" translate="' (Disabled)'"></span>
     </div>
 </div>

@@ -23,7 +23,7 @@ class OverviewStockData
         if ($name === 'catalog_storefront_views_listing_data_source') {
             foreach ($result['items'] as &$view) {
                 $stock = $snapshot['viewStocks'][$view['id']] ?? null;
-                $view['stock'] = $stock['name'] ?? '—';
+                $view['stock'] = $stock['name'] ?? '';
                 $view['stockId'] = $stock['id'] ?? null;
             }
             unset($view);
@@ -33,7 +33,7 @@ class OverviewStockData
         $items = $snapshot['stocks'];
         foreach ($items as &$stock) {
             $stock['feedStock'] = $counts[$stock['id']] ?? $counts['*'] ?? [
-                'value' => '—', 'badges' => [], 'hasBadge' => false,
+                'value' => 'Unknown', 'badges' => [], 'hasBadge' => false,
                 'description' => 'Stock feed receipts are unavailable.',
             ];
         }

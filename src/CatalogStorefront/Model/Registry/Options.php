@@ -23,6 +23,8 @@ class Options
             foreach ($this->stores->getStores() as $store) {
                 $result[(int)$store->getId()] = $store->getName() . ' (' . $store->getCode() . ')';
             }
+        } elseif ($name === 'native_store_websites') {
+            foreach ($this->stores->getStores() as $store) $result[(int)$store->getId()] = (int)$store->getWebsiteId();
         } elseif ($name === 'native_websites') {
             foreach ($this->stores->getWebsites() as $website) {
                 $result[(int)$website->getId()] = $website->getName() . ' (' . $website->getCode() . ')';
@@ -33,6 +35,9 @@ class Options
             foreach (array_merge([$this->groups->getNotLoggedInGroup()], $this->groups->getLoggedInGroups()) as $group) {
                 $result[(int)$group->getId()] = $group->getCode();
             }
+        } elseif ($name === 'locales') {
+            foreach ($this->currencies->getAllowedLocales() as $code) $result[$code] = \Locale::getDisplayName($code);
+            asort($result, SORT_NATURAL | SORT_FLAG_CASE);
         } elseif ($name === 'currencies') {
             foreach ($this->currencies->getAllowedCurrencies() as $code) {
                 $result[$code] = $code;

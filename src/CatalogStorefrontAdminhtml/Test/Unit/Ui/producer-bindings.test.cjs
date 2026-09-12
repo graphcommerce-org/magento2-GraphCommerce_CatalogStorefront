@@ -47,3 +47,31 @@ test('Canonical Layer offers Override only and never silently rewrites an existi
     field.sourceBinding = ''; field.updateOperations();
     assert.equal(JSON.stringify(field.options().map(row => row.value)), '["override","merge"]'); assert.equal(field.error(), false);
 });
+
+test('View Book picker excludes native website parents and other websites without hiding generic Books', () => {
+    const sourceRoster = [...sources, {value: '10', type: 'platform_store_view', nativeWebsiteId: '1'}];
+    const bookRoster = [
+        {value: '1', label: 'Website', enabled: true, type: 'platform_website', nativeWebsiteId: '1'},
+        {value: '2', label: 'Guest', enabled: true, type: 'platform_customer_group', nativeWebsiteId: '1'},
+        {value: '3', label: 'Other guest', enabled: true, type: 'platform_customer_group', nativeWebsiteId: '2'},
+        {value: '4', label: 'Generic', enabled: true, type: 'generic', identityNamespace: 'products'},
+        {value: '5', label: 'Empty child', enabled: true, type: 'generic', identityNamespace: ''},
+        {value: '6', label: 'Foreign', enabled: true, type: 'generic', identityNamespace: 'other'}
+    ];
+    const field = picker({resourceFilter: 'books', sourceRoster, sourceSelection: '10', bookRoster, value: observable(['1', '2'])});
+    field.filterRoster(); assert.equal(JSON.stringify(field.options().map(row => row.value)), '["2"]');
+    assert.match(field.error(), /does not match/); assert.equal(JSON.stringify(field.value()), '["1","2"]');
+    field.sourceSelection = '3'; field.value(['4', '5']); field.filterRoster();
+    assert.equal(JSON.stringify(field.options().map(row => row.value)), '["4","5"]'); assert.equal(field.error(), false);
+});
+test('Review Layer selection distinguishes exact SKU from native identity matching', () => {
+    const sourceRoster = [...sources, {value: '10', type: 'platform_store_view', nativeStoreId: '1'}];
+    const layerRoster = [
+        {value: '1', type: 'platform_reviews', enabled: true, scope: 'view', productMatch: 'native_id', nativeStoreId: '1'},
+        {value: '2', type: 'platform_reviews', enabled: true, scope: 'view', productMatch: 'exact_sku', nativeStoreId: '2'},
+        {value: '3', type: 'platform_reviews', enabled: true, scope: 'global', productMatch: 'exact_sku'}
+    ];
+    const field = picker({resourceFilter: 'layers', sourceRoster, sourceSelection: '3', layerRoster});
+    field.filterRoster(); assert.equal(JSON.stringify(field.options().map(row => row.value)), '["2"]');
+    field.sourceSelection = '10'; field.filterRoster(); assert.equal(JSON.stringify(field.options().map(row => row.value)), '["1","2"]');
+});

@@ -3,7 +3,7 @@ define(['Magento_Ui/js/form/element/ui-select', 'mage/translate'], function (Sel
     return Select.extend({
         defaults: {
             disableLabel: true,
-            resourceFilter: '', sourceRoster: [], layerRoster: [],
+            resourceFilter: '', sourceRoster: [], layerRoster: [], bookRoster: [],
             listens: {namespaceSelection: 'filterRoster', sourceSelection: 'filterRoster'}
         },
         initialize: function () {
@@ -18,17 +18,29 @@ define(['Magento_Ui/js/form/element/ui-select', 'mage/translate'], function (Sel
             if (this.resourceFilter === 'sources') {
                 rows = this.sourceRoster.filter(function (row) {
                     return row.type === 'generic' && row.enabled && row.identityNamespace && (!namespace || row.identityNamespace === namespace);
-                }).map(function (row) { return {value: row.value, label: row.label + ' — ' + row.identityNamespace}; });
+                }).map(function (row) { return {value: row.value, label: row.label + ' (' + row.identityNamespace + ')'}; });
             } else {
                 source = this.sourceRoster.find(function (row) { return row.value === String(this.sourceSelection || ''); }, this);
-                rows = this.layerRoster.filter(function (row) {
-                    if (!source || !row.enabled || row.type !== 'generic' || row.scope === 'global' || (row.locale && row.locale !== source.locale)) return false;
-                    return source.type === 'generic' ? Boolean(source.identityNamespace) && row.sourceId === source.value && row.identityNamespace === source.identityNamespace : !row.sourceId;
-                });
+                if (this.resourceFilter === 'books') {
+                    rows = this.bookRoster.filter(function (row) {
+                        if (!source || !row.enabled) return false;
+                        if (source.type === 'platform_store_view') return row.type === 'platform_customer_group' && row.nativeWebsiteId === source.nativeWebsiteId;
+                        return source.type === 'generic' && row.type === 'generic' && (!row.identityNamespace || row.identityNamespace === source.identityNamespace);
+                    });
+                } else {
+                    rows = this.layerRoster.filter(function (row) {
+                        if (!source || !row.enabled || row.scope === 'global' || (row.locale && row.locale !== source.locale)) return false;
+                        if (row.type === 'platform_reviews') return row.productMatch === 'exact_sku'
+                            || (source.type === 'platform_store_view' && row.nativeStoreId === source.nativeStoreId);
+                        if (row.type !== 'generic') return false;
+                        return source.type === 'generic' ? Boolean(source.identityNamespace) && row.sourceId === source.value && row.identityNamespace === source.identityNamespace : !row.sourceId;
+                    });
+                }
             }
             this.setOptions(rows);
             this.value(selected);
-            this.error(selected && !rows.some(function (row) { return row.value === String(selected); }) ? $t('This selection does not match the current Source or product namespace.') : false);
+            var selectedValues = (Array.isArray(selected) ? selected : [selected]).filter(function (value) { return value !== '' && value !== null && value !== undefined; });
+            this.error(selectedValues.some(function (value) { return !rows.some(function (row) { return row.value === String(value); }); }) ? $t('This selection does not match the current Source or product namespace.') : false);
         },
         /** Replace the entire source roster, including cached search options from the previous Source. */
         setOptions: function (options) {

@@ -41,20 +41,21 @@ class RegistryListing extends AbstractDataProvider
         foreach (Definition::KINDS as $kind) {
             $lookup[$kind] = array_column($this->repository->all($kind), null, 'id');
         }
-        $unknown = ['value' => '—','badges' => [],'description' => 'No imported feed counts are available.'];
+        $unknown = ['value' => 'Unknown','badges' => [],'description' => 'No imported feed counts are available.'];
         $sourceCounts = $this->kind === 'sources' ? $this->counts->get() : [];
         $stockCounts = $this->kind === 'stocks' ? $this->counts->stocks() : [];
         $stocks = $this->kind === 'stocks' ? array_column($this->native->stockSnapshot()['stocks'], null, 'id') : [];
         foreach ($rows as &$row) {
             $type = $row['type'];
+            $row['name'] = \GraphCommerce\CatalogStorefrontAdminhtml\Model\ResourceLabels::name($row);
             $row['type'] = $types[$type];
             $row['displayCode'] = $row['code'];
             $row += ['tagBorder' => '#C7C7C7','tagColor' => '#303030','tagBg' => '#F1F1F1','currencyNote' => '','indent' => '0px','glyph' => '','groups' => []];
             $row['status'] = $row['enabled'] ? 'ACTIVE' : 'INACTIVE';
             if ($this->kind === 'views') {
                 $source = $lookup['sources'][$row['source_id']] ?? null;
-                $row['source'] = $source['code'] ?? '—';
-                $row['stock'] = $lookup['stocks'][$row['stock_id']]['name'] ?? '—';
+                $row['source'] = $source['code'] ?? '';
+                $row['stock'] = $lookup['stocks'][$row['stock_id']]['name'] ?? '';
                 $row['protection'] = strtoupper($row['protection']);
                 $row['bookMode'] = match ($row['book_mode']) {
                     'all'=>'Use all available price books','single'=>'Single price book only',default=>'Allow selected price books only'
@@ -62,7 +63,10 @@ class RegistryListing extends AbstractDataProvider
                 $row['bookList'] = implode(', ', array_map(static fn(int $id): string=>$lookup['books'][$id]['code'] ?? '', $row['book_ids']));
                 $global = array_filter($lookup['layers'], static function (array $layer) use ($source): bool {
                     if (!$source || empty($source['enabled']) || ($layer['scope'] ?? 'view') !== 'global' || empty($layer['enabled'])
-                        || $layer['type'] !== 'generic' || (!empty($layer['locale']) && $layer['locale'] !== ($source['locale'] ?? null))) return false;
+                        || (!empty($layer['locale']) && $layer['locale'] !== ($source['locale'] ?? null))) return false;
+                    if ($layer['type'] === 'platform_reviews') return ($layer['product_match'] ?? 'native_id') === 'exact_sku'
+                        || ($source['type'] === 'platform_store_view' && (int)($layer['native_store_id'] ?? 0) > 0 && (int)$layer['native_store_id'] === (int)($source['native_store_id'] ?? 0));
+                    if ($layer['type'] !== 'generic') return false;
                     if (!empty($layer['source_id'])) return (int)$layer['source_id'] === (int)$source['id'];
                     // Unbound legacy feeds apply only to the native Source adapter.
                     return $source['type'] === 'platform_store_view';
@@ -73,8 +77,8 @@ class RegistryListing extends AbstractDataProvider
                     $layer = $lookup['layers'][$link['resource_id']] ?? null;
                     if ($layer && ($layer['scope'] ?? 'view') !== 'global') $codes[] = $layer['code'];
                 }
-                $row['layers'] = implode(', ', array_unique(array_filter($codes))) ?: '—';
-                $row['policies'] = implode(', ', array_map(static fn(int $id): string=>$lookup['policies'][$id]['code'] ?? '', $row['policy_ids'])) ?: '—';
+                $row['layers'] = implode(', ', array_unique(array_filter($codes))) ?: '';
+                $row['policies'] = implode(', ', array_map(static fn(int $id): string=>$lookup['policies'][$id]['code'] ?? '', $row['policy_ids'])) ?: '';
             } elseif ($this->kind === 'sources') {
                 $row['origin'] = 'External';
                 $feed = [];
@@ -112,14 +116,27 @@ class RegistryListing extends AbstractDataProvider
                 $stock = $stocks[$row['native_stock_id'] ?? ''] ?? [];
                 $row['inventorySources'] = $type === 'generic' ? ($row['locations'] ?? []) : ($stock['inventorySources'] ?? []);
                 $row['sourcesAvailable'] = $type === 'generic' || ($stock['sourcesAvailable'] ?? false);
-                $row['linkedViews'] = implode(', ', array_column(array_filter($lookup['views'], static fn(array $v): bool=>(int)$v['stock_id'] === $row['id']), 'code')) ?: '—';
+                $row['linkedViews'] = implode(', ', array_column(array_filter($lookup['views'], static fn(array $v): bool=>(int)$v['stock_id'] === $row['id']), 'code')) ?: '';
                 $row['feedStock'] = $type === 'platform_msi' ? ($stockCounts[$row['native_stock_id']] ?? $stockCounts['*'] ?? $unknown) : $unknown;
             } elseif ($this->kind === 'layers') {
                 $row['groups'] = array_map(static fn(array $f): array=>['label' => strtoupper($f['operation']) . ' ' . $f['field']], $row['fields'] ?? []);
                 $row['managedBy'] = $type === 'generic' ? 'External' : $types[$type];
-                $row['records'] = '—';
+                $row['records'] = '';
                 $row['feedRecords'] = $unknown;
                 $row['locale'] = $row['locale'] ?: 'All locales';
+                $linked = [];
+                foreach ($lookup['views'] as $view) {
+                    $source = $lookup['sources'][$view['source_id']] ?? null;
+                    if (!$source || (!empty($row['locale']) && $row['locale'] !== 'All locales' && $row['locale'] !== ($source['locale'] ?? null))) continue;
+                    if (!empty($row['source_id']) && (int)$row['source_id'] !== (int)$source['id']) continue;
+                    if ($type === 'platform_reviews') {
+                        if (($row['product_match'] ?? 'native_id') !== 'exact_sku' && ($source['type'] !== 'platform_store_view' || (int)($row['native_store_id'] ?? 0) !== (int)($source['native_store_id'] ?? 0))) continue;
+                    } elseif (empty($row['source_id']) && $source['type'] !== 'platform_store_view') continue;
+                    $explicit = in_array($row['id'], array_column($view['layer_ids'] ?? [], 'resource_id'), true);
+                    if ($explicit || ($row['scope'] ?? 'view') === 'global') $linked[] = $view['code'];
+                }
+                $row['linkedViews'] = implode(', ', $linked);
+                $row['availability'] = ($row['scope'] ?? 'view') === 'global' ? 'Automatic for matching Views' : 'Connected from individual Views';
             } elseif ($this->kind === 'policies') {
                 if ($type === 'platform_stock_visibility') {
                     $show = $this->scope->isSetFlag('cataloginventory/options/show_out_of_stock', 'store', $row['native_store_id']);
