@@ -52,18 +52,27 @@ class RegistryListing extends AbstractDataProvider
             $row += ['tagBorder' => '#C7C7C7','tagColor' => '#303030','tagBg' => '#F1F1F1','currencyNote' => '','indent' => '0px','glyph' => '','groups' => []];
             $row['status'] = $row['enabled'] ? 'ACTIVE' : 'INACTIVE';
             if ($this->kind === 'views') {
-                $row['source'] = $lookup['sources'][$row['source_id']]['code'] ?? '—';
+                $source = $lookup['sources'][$row['source_id']] ?? null;
+                $row['source'] = $source['code'] ?? '—';
                 $row['stock'] = $lookup['stocks'][$row['stock_id']]['name'] ?? '—';
                 $row['protection'] = strtoupper($row['protection']);
                 $row['bookMode'] = match ($row['book_mode']) {
                     'all'=>'Use all available price books','single'=>'Single price book only',default=>'Allow selected price books only'
                 };
                 $row['bookList'] = implode(', ', array_map(static fn(int $id): string=>$lookup['books'][$id]['code'] ?? '', $row['book_ids']));
-                $row['layers'] = implode(', ', array_map(static fn(array $link): string=>$lookup['layers'][$link['resource_id']]['code'] ?? '', $row['layer_ids'])) ?: '—';
-                $global = array_filter($lookup['layers'], static fn(array $layer): bool => ($layer['scope'] ?? 'view') === 'global' && (bool)$layer['enabled']);
+                $global = array_filter($lookup['layers'], static function (array $layer) use ($source): bool {
+                    if (!$source || empty($source['enabled']) || ($layer['scope'] ?? 'view') !== 'global' || empty($layer['enabled'])
+                        || $layer['type'] !== 'generic' || (!empty($layer['locale']) && $layer['locale'] !== ($source['locale'] ?? null))) return false;
+                    if (!empty($layer['source_id'])) return (int)$layer['source_id'] === (int)$source['id'];
+                    // Unbound legacy feeds apply only to the native Source adapter.
+                    return $source['type'] === 'platform_store_view';
+                });
                 uasort($global, static fn(array $a, array $b): int => [(int)$a['priority'], $a['id']] <=> [(int)$b['priority'], $b['id']]);
                 $codes = array_column($global, 'code');
-                foreach ($row['layer_ids'] as $link) $codes[] = $lookup['layers'][$link['resource_id']]['code'] ?? '';
+                foreach ($row['layer_ids'] as $link) {
+                    $layer = $lookup['layers'][$link['resource_id']] ?? null;
+                    if ($layer && ($layer['scope'] ?? 'view') !== 'global') $codes[] = $layer['code'];
+                }
                 $row['layers'] = implode(', ', array_unique(array_filter($codes))) ?: '—';
                 $row['policies'] = implode(', ', array_map(static fn(int $id): string=>$lookup['policies'][$id]['code'] ?? '', $row['policy_ids'])) ?: '—';
             } elseif ($this->kind === 'sources') {

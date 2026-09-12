@@ -54,11 +54,13 @@ class ResourceForm extends AbstractDataProvider
         }
         foreach ($this->definition->fields($this->kind) as $field => $spec) {
             if ($spec['element'] === 'multiselect' && is_array($row[$field] ?? null)) $row[$field] = array_map('strval', $row[$field]);
+            if ($spec['element'] === 'select' && is_scalar($row[$field] ?? null)) $row[$field] = (string)$row[$field];
         }
         if ($this->kind === 'views' && !array_key_exists('book_id', (array)$pending)) $row['book_id'] = count($row['book_ids'] ?? []) === 1 ? (string)$row['book_ids'][0] : '';
         if ($this->kind === 'policies' && !array_key_exists('option_values', (array)$pending)) $row['option_values'] = $row['values'] === '' ? [] : preg_split('/\R/', $row['values']);
         $row['kind'] = $this->kind;
-        return [$id => $row];
+        // Magento Form uses the empty key when a new-resource route has no id.
+        return [$this->request->getParam('id') ?? '' => $row];
     }
     public function getMeta(): array
     {
@@ -93,14 +95,30 @@ class ResourceForm extends AbstractDataProvider
         $children = [];
         $order = 0;
         $typeRules = [];
+        // PHP-generated metadata disables JS template expansion; use the XML form's explicit provider.
+        $formProvider = 'catalog_storefront_resource_form.resource_form_data_source';
+        $sourceRoster = $layerRoster = [];
+        if (in_array($this->kind, ['views', 'layers'], true)) {
+            foreach ($this->repository->all('sources') as $source) $sourceRoster[] = ['value' => (string)$source['id'], 'label' => (string)$source['name'],
+                'type' => $source['type'], 'enabled' => !empty($source['enabled']), 'identityNamespace' => $source['identity_namespace'] ?? '', 'locale' => $source['locale'] ?? ''];
+        }
+        if ($this->kind === 'views') {
+            foreach ($this->repository->all('layers') as $layer) $layerRoster[] = ['value' => (string)$layer['id'], 'label' => (string)$layer['name'],
+                'type' => $layer['type'], 'enabled' => !empty($layer['enabled']), 'sourceId' => (string)($layer['source_id'] ?? ''),
+                'identityNamespace' => $layer['identity_namespace'] ?? '', 'locale' => $layer['locale'] ?? '', 'scope' => $layer['scope'] ?? 'view'];
+        }
         $editable = $this->repository->capabilities()['can_manage'] && $this->authorization->isAllowed('GraphCommerce_CatalogStorefrontAdminhtml::manage');
         foreach ($definitions as $field => $spec) {
             $config = ['componentType' => 'field','formElement' => $spec['element'],'dataType' => 'text','dataScope' => $field,'source' => 'resource','label' => (string)__($spec['label'] ?? ''),'sortOrder' => $order += 10,'visible' => $spec['visible'] ?? true,'disabled' => !$editable,'validation' => ['required-entry' => (bool)($spec['required'] ?? false)]];
-            if (in_array($field, ['book_ids','book_id','policy_ids','option_values','attribute'], true) && isset($spec['options'])) {
+            if ((in_array($field, ['book_ids','book_id','policy_ids','option_values','attribute'], true) || ($this->kind === 'layers' && $field === 'source_id')) && isset($spec['options'])) {
                 $config += ['component' => 'GraphCommerce_CatalogStorefrontAdminhtml/js/form/resource-picker', 'elementTmpl' => 'ui/grid/filters/elements/ui-select', 'filterOptions' => true, 'chipsEnabled' => true, 'multiple' => in_array($field, ['book_ids','policy_ids','option_values'], true), 'showCheckbox' => true];
             }
             if (isset($spec['notice'])) {
                 $config['notice'] = (string)__($spec['notice']);
+            }
+            if ($this->kind === 'layers' && $field === 'source_id') {
+                $config += ['resourceFilter' => 'sources', 'sourceRoster' => $sourceRoster,
+                    'imports' => ['namespaceSelection' => $formProvider . ':data.identity_namespace']];
             }
             if (isset($spec['options'])) {
                 $source = $spec['options'];
@@ -127,12 +145,23 @@ class ResourceForm extends AbstractDataProvider
                     'fields'=>['field' => ['label' => 'Attribute Code','formElement' => 'input'],'operation' => ['label' => 'Operation','formElement' => 'select','options' => [['value' => 'override','label' => 'Override'],['value' => 'merge','label' => 'Merge']]]],
                     'locations'=>['code' => ['label' => 'Source Code','formElement' => 'input'],'name' => ['label' => 'Source Name','formElement' => 'input']],
                 };
+                if ($spec['element'] === 'ordered' && $this->kind === 'views') {
+                    $columns['resource_id'] += ['component' => 'GraphCommerce_CatalogStorefrontAdminhtml/js/form/resource-picker',
+                        'elementTmpl' => 'ui/grid/filters/elements/ui-select', 'multiple' => false, 'filterOptions' => true, 'chipsEnabled' => true,
+                        'resourceFilter' => 'layers', 'sourceRoster' => $sourceRoster, 'layerRoster' => $layerRoster,
+                        'imports' => ['sourceSelection' => $formProvider . ':data.source_id']];
+                }
+                if ($spec['element'] === 'fields') {
+                    $columns['operation'] += ['component' => 'GraphCommerce_CatalogStorefrontAdminhtml/js/form/layer-operation',
+                        'imports' => ['sourceBinding' => $formProvider . ':data.source_id', 'producerBinding' => $formProvider . ':data.layer_producer', 'namespaceBinding' => $formProvider . ':data.identity_namespace']];
+                }
                 $rowChildren = [];
                 foreach ($columns as $key => $column) {
                     $rowChildren[$key] = ['arguments' => ['data' => ['config' => array_replace(['componentType' => 'field','dataType' => 'text','dataScope' => $key,'validation' => ['required-entry' => true],'disabled' => !$editable], $column)]]];
                 }
                 $rowChildren['action_delete'] = ['arguments' => ['data' => ['config' => ['componentType' => 'actionDelete','dataType' => 'text','label' => '','disabled' => !$editable]]]];
-                $config = array_replace($config, ['componentType' => 'dynamicRows','component' => 'Magento_Ui/js/dynamic-rows/dynamic-rows','template' => 'ui/dynamic-rows/templates/default','recordTemplate' => 'record','addButtonLabel' => (string)__('Add row'),'columnsHeader' => true,'deleteProperty' => 'delete','deleteValue' => true,'positionProvider' => 'position','dndConfig' => ['enabled' => $editable && $spec['element'] === 'ordered'],'defaultRecord' => false]);
+                // Native dynamicRows appends its index to the parent data scope itself.
+                $config = array_replace($config, ['dataScope' => '', 'componentType' => 'dynamicRows','component' => 'Magento_Ui/js/dynamic-rows/dynamic-rows','template' => 'ui/dynamic-rows/templates/default','recordTemplate' => 'record','addButtonLabel' => (string)__('Add row'),'columnsHeader' => true,'deleteProperty' => 'delete','deleteValue' => true,'positionProvider' => 'position','dndConfig' => ['enabled' => $editable && $spec['element'] === 'ordered'],'defaultRecord' => false]);
                 unset($config['formElement'], $config['options'], $config['validation']);
                 $children[$field] = ['arguments' => ['data' => ['config' => $config]],'children' => ['record' => ['arguments' => ['data' => ['config' => ['componentType' => 'container','component' => 'Magento_Ui/js/dynamic-rows/record','isTemplate' => true,'is_collection' => true,'dataScope' => '']]],'children' => $rowChildren]]];
             } else {
