@@ -18,6 +18,7 @@
             <span class="catalog-overview-count">
                 <span text="getRecordCount() + ' ' + $t('records')"></span>
             </span>
+            <span if="dataset === 'sources'" class="catalog-overview-live" text="liveMessage" role="status"></span>
         </div>
         <button if="actionLabel"
                 type="button"

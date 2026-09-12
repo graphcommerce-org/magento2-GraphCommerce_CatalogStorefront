@@ -5,19 +5,42 @@
 define([
     'Magento_Ui/js/grid/listing',
     'Magento_Ui/js/modal/alert',
-    'mage/translate'
-], function (Listing, uiAlert, $t) {
+    'mage/translate',
+    'GraphCommerce_CatalogStorefrontAdminhtml/js/grid/live-refresh',
+    'GraphCommerce_CatalogStorefrontAdminhtml/js/reindex'
+], function (Listing, uiAlert, $t, liveRefresh, reindex) {
     'use strict';
 
     return Listing.extend({
         defaults: {
             template: 'GraphCommerce_CatalogStorefrontAdminhtml/grid/listing',
             heading: '',
+            liveMessage: $t('Live updates every 5 seconds'),
             actionLabel: '',
             infoText: '',
             dataset: '',
             actionUrl: '',
             unavailableText: 'This management workflow is not available yet.'
+        },
+
+        initialize: function () {
+            this._super();
+            this.stopLiveRefresh = liveRefresh.register(this);
+            return this;
+        },
+
+        initObservable: function () {
+            this._super().track('liveMessage');
+            return this;
+        },
+
+        destroy: function () {
+            if (this.stopLiveRefresh) { this.stopLiveRefresh(); }
+            return this._super();
+        },
+
+        requestReindex: function (actionIndex, recordId, action) {
+            reindex(action);
         },
 
         /**

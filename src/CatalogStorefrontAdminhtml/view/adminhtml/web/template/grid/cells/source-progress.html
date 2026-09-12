@@ -1,0 +1,8 @@
+<span class="catalog-overview-name" text="$col.getLabel($row())"></span>
+<!-- ko if: $col.getReindex($row()) -->
+<div class="catalog-overview-reindex"
+     attr="{'data-status': $row().reindex.status, title: $row().reindex.updatedAt || ''}">
+    <span class="catalog-overview-reindex-status" text="$col.getReindexLabel($row())"></span>
+    <span class="catalog-overview-subline" if="$row().reindex.message" text="$row().reindex.message"></span>
+</div>
+<!-- /ko -->

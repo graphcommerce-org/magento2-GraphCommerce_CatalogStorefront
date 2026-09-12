@@ -44,9 +44,9 @@
                 </item>
             </item>
         </argument>
-        <column name="code" sortOrder="10">
+        <column name="code" sortOrder="10" component="GraphCommerce_CatalogStorefrontAdminhtml/js/grid/columns/source">
             <settings>
-                <bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/source</bodyTmpl>
+                <bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/source-progress</bodyTmpl>
                 <sortable>false</sortable>
                 <draggable>false</draggable>
                 <controlVisibility>false</controlVisibility>
@@ -121,7 +121,7 @@
         </column>
         <actionsColumn name="actions" class="GraphCommerce\CatalogStorefrontAdminhtml\Ui\Component\ResourceActions" sortOrder="100">
             <argument name="data" xsi:type="array"><item name="config" xsi:type="array"><item name="resourceKind" xsi:type="string">sources</item></item></argument>
-            <settings><indexField>id</indexField><label translate="true">Actions</label></settings>
+            <settings><indexField>id</indexField><bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/actions</bodyTmpl><label translate="true">Actions</label></settings>
         </actionsColumn>
     </columns>
 </listing>
