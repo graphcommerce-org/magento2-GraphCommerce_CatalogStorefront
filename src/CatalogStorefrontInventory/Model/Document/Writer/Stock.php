@@ -47,9 +47,28 @@ class Stock implements FeedWriterInterface
             }
         }
 
-        $assigned = $this->assignments->storesOf(array_map(static fn(array $row) => (int)$row['productId'], $rows));
-        $upserts = [];
+        // A deleted row (the product left the stock's websites) names the product by sku only;
+        // an empty slice reads as no slice, so the products feed's inStock answers again.
+        $dropsByStore = [];
+        $live = [];
         foreach ($rows as $row) {
+            if (empty($row['deleted'])) {
+                $live[] = $row;
+                continue;
+            }
+            $stores = isset($row['stockId']) ? $storesByStock[(int)$row['stockId']] ?? [] : array_merge([], ...array_values($storesByStock));
+            foreach ($stores as $store) {
+                $dropsByStore[$store][] = (string)$row['sku'];
+            }
+        }
+        $upserts = [];
+        foreach ($dropsByStore as $store => $skus) {
+            foreach ($this->storage->storedBySku($store, array_values(array_unique($skus))) as $id => $document) {
+                $upserts[$store][$id]['stock'] = [];
+            }
+        }
+        $assigned = $this->assignments->storesOf(array_map(static fn(array $row) => (int)$row['productId'], $live));
+        foreach ($live as $row) {
             $id = (int)$row['productId'];
             foreach (array_intersect($storesByStock[(int)($row['stockId'] ?? 0)] ?? [], $assigned[$id] ?? []) as $store) {
                 $upserts[$store][$id]['stock'] = $row;
