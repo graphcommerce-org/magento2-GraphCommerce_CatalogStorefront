@@ -3,18 +3,17 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontReview\Model\Document\Writer;
 
+use GraphCommerce\CatalogStorefront\Model\Document\Scopes;
 use GraphCommerce\CatalogStorefrontApi\Document\FeedWriterInterface;
 use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
 use GraphCommerce\CatalogStorefrontReview\Model\Document\RatingId;
-use Magento\Framework\App\ResourceConnection;
-use Magento\Store\Model\StoreManagerInterface;
 
 /**
  * Keeps one review document per review and store view where the review is
- * visible, with its votes and their percents over the rating's scale, and
- * removes it where it is not or once it is deleted. The product document
- * carries nothing about reviews: the summary and the review page are
- * queries over the review documents.
+ * visible, with its votes and their percents over the scale the row carries
+ * per rating, and removes it where it is not or once it is deleted. The
+ * product document carries nothing about reviews: the summary and the review
+ * page are queries over the review documents.
  */
 class Reviews implements FeedWriterInterface
 {
@@ -22,28 +21,21 @@ class Reviews implements FeedWriterInterface
 
     public function __construct(
         private readonly MetadataDocumentStorageInterface $reviews,
-        private readonly StoreManagerInterface $storeManager,
-        private readonly ResourceConnection $resourceConnection,
+        private readonly Scopes $scopes,
         private readonly RatingId $ratingId,
     ) {
     }
 
     public function write(array $rows): void
     {
-        $stores = array_map(static fn($store) => $store->getCode(), $this->storeManager->getStores());
-        $connection = $this->resourceConnection->getConnection();
-        $scales = $connection->fetchPairs(
-            $connection->select()
-                ->from($this->resourceConnection->getTableName('rating_option'), ['rating_id', 'COUNT(*)'])
-                ->group('rating_id')
-        );
-
+        $stores = $this->scopes->storeViews();
         $upserts = [];
         $deletes = [];
         foreach ($rows as $row) {
             if (empty($row['reviewId']) || empty($row['productId'])) {
                 continue;
             }
+            $scales = array_column((array)($row['ratingScales'] ?? []), 'scale', 'ratingId');
             $votes = [];
             $percents = [];
             foreach ((array)($row['ratings'] ?? []) as $rating) {

@@ -75,10 +75,11 @@ passes.
   that hashes on the URL alone would hand its answer to every visitor),
   `Model/Strict` (the fallback
   report of a keyed request), `Model/Feeds` (the feeds per entity, for the
-  rebuild and status commands), `Model/Document/StoreAssignments` (the store
-  views a product is assigned to, for the slice writers whose rows name no
-  website: stock and variants write those store views only, so no document
-  exists for a product outside its websites), `Plugin/Customer/PricesFeedOnNewGroup` (a new or
+  rebuild and status commands), `Model/Document/Scopes` (the store views of
+  every website and the customer groups, from the documents the two scopes
+  feeds write under the index name `global`; every writer fans its rows out
+  over them, and a slice writer whose rows name no website writes where a
+  product document is), `Plugin/Customer/PricesFeedOnNewGroup` (a new or
   deleted group truncates the prices feed table and invalidates its indexer) and the
   plugins on non-GraphQL core: product links, the layer price step, the single
   price range mode, salable.

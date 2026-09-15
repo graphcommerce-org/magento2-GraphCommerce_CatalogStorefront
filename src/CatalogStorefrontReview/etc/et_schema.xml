@@ -4,6 +4,13 @@
         <field name="createdAt" type="String" provider="GraphCommerce\CatalogStorefrontReview\Model\DataExporter\Provider\ReviewDate">
             <using field="reviewId"/>
         </field>
+        <field name="ratingScales" type="ReviewRatingScale" repeated="true" provider="GraphCommerce\CatalogStorefrontReview\Model\DataExporter\Provider\RatingScales">
+            <using field="reviewId"/>
+        </field>
+    </record>
+    <record name="ReviewRatingScale">
+        <field name="ratingId" type="Int"/>
+        <field name="scale" type="Int"/>
     </record>
     <record name="Export">
         <field name="reviews" type="Review" repeated="true"

@@ -69,6 +69,9 @@ copy the pattern, not the code.
   or writes an entity of its own through `MetadataDocumentStorageInterface`.
   Examples: `CatalogStorefrontInventory/Model/Document/Writer/Stock` (a key per
   product), `CatalogStorefrontReview/Model/Document/Writer/Reviews` (an entity).
+  A writer reads the feed rows and the document store, and nothing else: the
+  store views and the customer groups come from `Model\Document\Scopes`, and
+  every other fact comes from a provider on the record of its own feed.
 - **Declare the fields of an entity you query on.** Register them under
   `mappings` on `GraphCommerce\CatalogStorefrontApi\Storage\EntityMappings`,
   entity name to field name to `keyword`, `integer`, `float`, `boolean` or
