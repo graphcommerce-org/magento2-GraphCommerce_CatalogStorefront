@@ -3,32 +3,17 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Test\Unit\Model\Document\Writer;
 
+use GraphCommerce\CatalogStorefront\Model\Document\Scopes;
 use GraphCommerce\CatalogStorefront\Model\Document\Writer\Prices;
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
 use GraphCommerce\CatalogStorefrontApi\Storage\ProductDocumentStorageInterface;
-use Magento\Customer\Api\Data\GroupInterface;
-use Magento\Customer\Api\GroupManagementInterface;
-use Magento\Store\Api\Data\StoreInterface;
-use Magento\Store\Api\Data\WebsiteInterface;
-use Magento\Store\Model\Store;
-use Magento\Store\Model\StoreManagerInterface;
 use PHPUnit\Framework\TestCase;
 
 class PricesTest extends TestCase
 {
     public function testMergesTheBatchWithStoredRowsAndIndexesEveryGroup(): void
     {
-        $website = $this->createMock(WebsiteInterface::class);
-        $website->method('getCode')->willReturn('base');
-        $store = $this->createMock(Store::class);
-        $store->method('getCode')->willReturn('default');
-        $store->method('getWebsite')->willReturn($website);
-        $storeManager = $this->createMock(StoreManagerInterface::class);
-        $storeManager->method('getStores')->willReturn([$store]);
-        $group = $this->createMock(GroupInterface::class);
-        $group->method('getId')->willReturn(1);
-        $groupManagement = $this->createMock(GroupManagementInterface::class);
-        $groupManagement->method('getLoggedInGroups')->willReturn([$group]);
+        $scopes = $this->scopes();
 
         $storage = $this->createMock(ProductDocumentStorageInterface::class);
         $storage->method('stored')->with('default', [7], ['prices'])->willReturn([
@@ -47,7 +32,7 @@ class PricesTest extends TestCase
             ],
         ]);
 
-        $writer = new Prices($storage, $storeManager, $groupManagement, new ProductPrice());
+        $writer = new Prices($storage, $scopes, new ProductPrice());
         $writer->write([
             ['productId' => 7, 'websiteCode' => 'base', 'customerGroupCode' => sha1('1'), 'regular' => 10.0, 'discounts' => [['price' => 8.0]]],
             ['productId' => 7, 'websiteCode' => 'base', 'customerGroupCode' => sha1('99'), 'regular' => 1.0],
@@ -57,17 +42,7 @@ class PricesTest extends TestCase
 
     public function testADeletedRowNamesTheProductBySkuAndDropsThatGroupsStoredRow(): void
     {
-        $website = $this->createMock(WebsiteInterface::class);
-        $website->method('getCode')->willReturn('base');
-        $store = $this->createMock(Store::class);
-        $store->method('getCode')->willReturn('default');
-        $store->method('getWebsite')->willReturn($website);
-        $storeManager = $this->createMock(StoreManagerInterface::class);
-        $storeManager->method('getStores')->willReturn([$store]);
-        $group = $this->createMock(GroupInterface::class);
-        $group->method('getId')->willReturn(1);
-        $groupManagement = $this->createMock(GroupManagementInterface::class);
-        $groupManagement->method('getLoggedInGroups')->willReturn([$group]);
+        $scopes = $this->scopes();
 
         $storage = $this->createMock(ProductDocumentStorageInterface::class);
         $storage->method('storedBySku')->with('default', ['A-1'])->willReturn([7 => ['sku' => 'A-1']]);
@@ -87,8 +62,19 @@ class PricesTest extends TestCase
             ],
         ]);
 
-        (new Prices($storage, $storeManager, $groupManagement, new ProductPrice()))->write([
+        (new Prices($storage, $scopes, new ProductPrice()))->write([
             ['sku' => 'A-1', 'websiteCode' => 'base', 'customerGroupCode' => sha1('1'), 'deleted' => true, 'updatedAt' => '2026-09-07T06:19:57+00:00'],
         ]);
+    }
+
+    private function scopes(): Scopes
+    {
+        $scopes = $this->createMock(Scopes::class);
+        $scopes->method('storeViewsOfWebsite')->willReturnCallback(
+            static fn(string $websiteCode) => $websiteCode === 'base' ? ['default'] : []
+        );
+        $scopes->method('customerGroups')->willReturn([sha1('0') => 0, sha1('1') => 1]);
+
+        return $scopes;
     }
 }

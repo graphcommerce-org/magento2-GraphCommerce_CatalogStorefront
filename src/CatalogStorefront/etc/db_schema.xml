@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+    <!--
+        The scopes exporter ships its feed tables in the legacy layout. Immediate export needs the
+        columns of the modern layout (as in cde_products_feed), so they are added here. The legacy id
+        column becomes auto-increment because immediate export does not fill it, and feed_id stays
+        nullable so the upgrade succeeds on a table that still holds legacy rows.
+    -->
+    <table name="scopes_website_data_exporter" resource="default" engine="innodb" comment="Scopes' Website Feed Storage">
+        <column xsi:type="int" name="id" padding="10" unsigned="true" nullable="false" identity="true" comment="Autoincrement ID"/>
+        <column xsi:type="int" name="source_entity_id" padding="10" unsigned="true" nullable="false" default="0" comment="Website Id"/>
+        <column xsi:type="varchar" name="feed_id" nullable="true" length="64" comment="Feed Item Identifier"/>
+        <column xsi:type="smallint" name="status" nullable="false" default="0" comment="Feed item status"/>
+        <column xsi:type="varchar" name="feed_hash" nullable="false" length="64" default="" comment="Hash of feed_data"/>
+        <column xsi:type="text" name="errors" nullable="true" comment="Errors"/>
+        <column xsi:type="text" name="metadata" nullable="true" comment="Metadata"/>
+        <constraint referenceId="SCOPES_WEBSITE_DATA_EXPORTER_FEED_ID" xsi:type="unique">
+            <column name="feed_id"/>
+        </constraint>
+        <index referenceId="SCOPES_WEBSITE_DATA_EXPORTER_SOURCE_ENTITY_ID_MODIFIED_AT" indexType="btree">
+            <column name="source_entity_id"/>
+            <column name="modified_at"/>
+        </index>
+        <index referenceId="SCOPES_WEBSITE_DATA_EXPORTER_STATUS" indexType="btree">
+            <column name="status"/>
+        </index>
+    </table>
+    <table name="scopes_customergroup_data_exporter" resource="default" engine="innodb" comment="Scopes' Customer Group Feed Storage">
+        <column xsi:type="int" name="id" padding="10" unsigned="true" nullable="false" identity="true" comment="Autoincrement ID"/>
+        <column xsi:type="int" name="source_entity_id" padding="10" unsigned="true" nullable="false" default="0" comment="Customer Group Id"/>
+        <column xsi:type="varchar" name="feed_id" nullable="true" length="64" comment="Feed Item Identifier"/>
+        <column xsi:type="smallint" name="status" nullable="false" default="0" comment="Feed item status"/>
+        <column xsi:type="varchar" name="feed_hash" nullable="false" length="64" default="" comment="Hash of feed_data"/>
+        <column xsi:type="text" name="errors" nullable="true" comment="Errors"/>
+        <column xsi:type="text" name="metadata" nullable="true" comment="Metadata"/>
+        <constraint referenceId="SCOPES_CUSTOMERGROUP_DATA_EXPORTER_FEED_ID" xsi:type="unique">
+            <column name="feed_id"/>
+        </constraint>
+        <index referenceId="SCOPES_CUSTOMERGROUP_DATA_EXPORTER_SOURCE_ENTITY_ID_MODIFIED_AT" indexType="btree">
+            <column name="source_entity_id"/>
+            <column name="modified_at"/>
+        </index>
+        <index referenceId="SCOPES_CUSTOMERGROUP_DATA_EXPORTER_STATUS" indexType="btree">
+            <column name="status"/>
+        </index>
+    </table>
+</schema>

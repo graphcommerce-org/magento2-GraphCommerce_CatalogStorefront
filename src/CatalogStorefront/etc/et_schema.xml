@@ -57,6 +57,19 @@
             <using field="storeViewCode"/>
         </field>
     </record>
+    <record name="Export">
+        <field name="scopesWebsite" type="Website" repeated="true" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Processor\Scopes">
+            <using field="websiteId"/>
+        </field>
+        <field name="scopesCustomerGroup" type="CustomerGroup" repeated="true" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Processor\Scopes">
+            <using field="customerGroupId"/>
+        </field>
+    </record>
+    <record name="CustomerGroup">
+        <field name="name" type="String" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\CustomerGroupName">
+            <using field="customerGroupId"/>
+        </field>
+    </record>
     <record name="ProductAttributeOption">
         <field name="id" type="ID"/>
         <field name="label" type="String"/>

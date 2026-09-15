@@ -6,6 +6,7 @@
             <module name="Magento_DataExporter"/>
             <module name="Magento_CatalogDataExporter"/>
             <module name="Magento_ProductPriceDataExporter"/>
+            <module name="Magento_ScopesDataExporter"/>
         </sequence>
     </module>
 </config>

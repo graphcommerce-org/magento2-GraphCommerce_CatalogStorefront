@@ -1,0 +1,38 @@
+{
+    "scopes_website_data_exporter": {
+        "column": {
+            "id": true,
+            "source_entity_id": true,
+            "feed_id": true,
+            "status": true,
+            "feed_hash": true,
+            "errors": true,
+            "metadata": true
+        },
+        "index": {
+            "SCOPES_WEBSITE_DATA_EXPORTER_SOURCE_ENTITY_ID_MODIFIED_AT": true,
+            "SCOPES_WEBSITE_DATA_EXPORTER_STATUS": true
+        },
+        "constraint": {
+            "SCOPES_WEBSITE_DATA_EXPORTER_FEED_ID": true
+        }
+    },
+    "scopes_customergroup_data_exporter": {
+        "column": {
+            "id": true,
+            "source_entity_id": true,
+            "feed_id": true,
+            "status": true,
+            "feed_hash": true,
+            "errors": true,
+            "metadata": true
+        },
+        "index": {
+            "SCOPES_CUSTOMERGROUP_DATA_EXPORTER_SOURCE_ENTITY_ID_MODIFIED_AT": true,
+            "SCOPES_CUSTOMERGROUP_DATA_EXPORTER_STATUS": true
+        },
+        "constraint": {
+            "SCOPES_CUSTOMERGROUP_DATA_EXPORTER_FEED_ID": true
+        }
+    }
+}

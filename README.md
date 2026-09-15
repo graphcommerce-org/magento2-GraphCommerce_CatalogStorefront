@@ -110,7 +110,8 @@ Inside a module the folders name the stage of the pipeline:
   hands it to the `Writer/` of that feed; `Field/` classes reshape a product document
   field from the row. A writer reads the feed rows and the document store, and nothing
   else, so it can run on the other side of the wire: what a document needs comes from a
-  provider on the record of its feed.
+  provider on the record of its feed, and the store views and customer groups come from
+  the scope documents of the two scopes feeds (`Model/Document/Scopes`).
 - `Model/Read/`: the request side any frontend shares: product documents to models,
   the price ranges, the display prices, the metadata readers.
 - In a GraphQl module: `Model/DocumentHydration` and `Model/Prefill/`, `Plugin/Resolver/`,
@@ -391,6 +392,14 @@ rebuild replaces the staged index. Needed after a mapping change and whenever th
 documents drifted from the database. Each entity and store view has one index behind two
 aliases, `<prefix>_<entity>_<store view>` for the reads and its `_write` twin for the
 writes. A module that writes a feed registers it under `feeds` on `Model\Feeds`.
+
+The scope documents stand outside the rebuild: the two scopes feeds of
+`magento/module-scopes-data-exporter` write one website document and one customer group
+document under the index name `global`, and the writers of the other feeds read the store
+views and the groups from them. Export them before the catalog feeds
+(`bin/magento indexer:reindex scopes_website_data_exporter scopes_customergroup_data_exporter`);
+a catalog feed whose scope documents are missing is refused and the feed machinery retries
+it by cron.
 
 ## Tests
 

@@ -36,6 +36,8 @@
                 <item name="prices" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Writer\Prices</item>
                 <item name="categories" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Writer\Categories</item>
                 <item name="productAttributes" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Writer\Attributes</item>
+                <item name="scopesWebsite" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Writer\Websites</item>
+                <item name="scopesCustomerGroup" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Writer\CustomerGroups</item>
             </argument>
             <!-- The cache tags a feed batch purges after its write: cat_p is the product tag, cat_c the category tag. -->
             <argument name="identities" xsi:type="array">
@@ -64,6 +66,44 @@
             <argument name="idAttributes" xsi:type="array">
                 <item name="/config/record/field/using" xsi:type="string">field</item>
             </argument>
+        </arguments>
+    </virtualType>
+    <!-- The scopes feeds are delivered like the catalog feeds: during indexing, keyed like the modern feed tables. -->
+    <virtualType name="Magento\ScopesDataExporter\Model\Indexer\ScopesWebsiteFeedIndexMetadata">
+        <arguments>
+            <argument name="feedTableField" xsi:type="string">source_entity_id</argument>
+            <argument name="exportImmediately" xsi:type="boolean">true</argument>
+            <argument name="persistExportedFeed" xsi:type="init_parameter">Magento\DataExporter\Model\ExportFeedInterface::PERSIST_EXPORTED_FEED</argument>
+            <argument name="minimalPayload" xsi:type="array">
+                <item name="websiteId" xsi:type="string">websiteId</item>
+            </argument>
+            <argument name="feedItemIdentifiers" xsi:type="array">
+                <item name="websiteId" xsi:type="string">websiteId</item>
+            </argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="Magento\ScopesDataExporter\Model\Indexer\ScopesCustomerGroupFeedIndexMetadata">
+        <arguments>
+            <argument name="feedTableField" xsi:type="string">source_entity_id</argument>
+            <argument name="exportImmediately" xsi:type="boolean">true</argument>
+            <argument name="persistExportedFeed" xsi:type="init_parameter">Magento\DataExporter\Model\ExportFeedInterface::PERSIST_EXPORTED_FEED</argument>
+            <argument name="minimalPayload" xsi:type="array">
+                <item name="customerGroupId" xsi:type="string">customerGroupId</item>
+            </argument>
+            <argument name="feedItemIdentifiers" xsi:type="array">
+                <item name="customerGroupId" xsi:type="string">customerGroupId</item>
+            </argument>
+        </arguments>
+    </virtualType>
+    <!-- The legacy scopes serializers map the plain row; immediate export hands over the generic shape. -->
+    <virtualType name="Magento\ScopesDataExporter\Model\Indexer\ScopesWebsiteFeedIndexer">
+        <arguments>
+            <argument name="serializer" xsi:type="object">Magento\DataExporter\Model\Indexer\DataSerializer</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="Magento\ScopesDataExporter\Model\Indexer\ScopesCustomerGroupFeedIndexer">
+        <arguments>
+            <argument name="serializer" xsi:type="object">Magento\DataExporter\Model\Indexer\DataSerializer</argument>
         </arguments>
     </virtualType>
     <!-- A new customer group re-exports the prices feed, so every price index gets the group's entry. -->

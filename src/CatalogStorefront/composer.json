@@ -17,6 +17,7 @@
         "magento/module-data-exporter": "*",
         "magento/module-catalog-data-exporter": "*",
         "magento/module-product-price-data-exporter": "*",
+        "magento/module-scopes-data-exporter": "*",
         "graphcommerce/module-catalog-storefront-api": "self.version"
     },
     "autoload": {
