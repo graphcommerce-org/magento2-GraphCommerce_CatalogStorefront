@@ -1,0 +1,222 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-15",
+  "endpoint": "https://worker.localhost.reachdigital.io/graphql",
+  "command": "bin/magento catalog-storefront:parity https://worker.localhost.reachdigital.io/graphql --insecure --soak=3000 --memory-sample=100 --token-file=<file> --probe-header=\"X-Catalog-View: default\" --probe-header=\"X-Catalog-Price-Book: base-group-1\" --probe-share=25",
+  "installation": {
+    "catalog": "47 products, one website, one store view, one currency, four customer groups",
+    "worker": "project-backend-frankenphp-1, 25 PHP threads, restarted before the run",
+    "note": "the database holds few of the query set's fixtures, so the gate leaves out the queries it marks EMPTY or ERROR"
+  },
+  "settings": {
+    "requests": 3000,
+    "contexts": [
+      "guest",
+      "token 1",
+      "token 2",
+      "token 3"
+    ],
+    "customers": [
+      "guest",
+      "customer 1 group 1 Michigan",
+      "customer 4 group 2 California",
+      "customer 5 group 3 New York"
+    ],
+    "queriesPerContext": {
+      "guest": 18,
+      "token 1": 19,
+      "token 2": 19,
+      "token 3": 19
+    },
+    "sampleEvery": 100,
+    "slopeLimitKbPer100": 1500,
+    "probeHeaders": [
+      "X-Catalog-View",
+      "X-Catalog-Price-Book"
+    ],
+    "probeSharePercent": 25
+  },
+  "gate": {
+    "passed": 18,
+    "failed": 12,
+    "skipped": 2,
+    "failing": [
+      "02-configurable",
+      "03-downloadable",
+      "06-category-sorted",
+      "08-urlkey-attributes",
+      "10-price-configurable-sale",
+      "12-configurable-options-wide",
+      "15-bundle-fixed",
+      "17-custom-attributes",
+      "22-graphcommerce-product-page",
+      "24-graphcommerce-configurable-selection",
+      "25-price-currency",
+      "26-category-attributes"
+    ]
+  },
+  "soak": {
+    "diffs": 0,
+    "probes": 750,
+    "probeErrors": 630,
+    "slopeKbPer100": 250.7,
+    "samples": [
+      {
+        "requests": 0,
+        "rss": 1932556,
+        "hwm": 1932556
+      },
+      {
+        "requests": 100,
+        "rss": 1982508,
+        "hwm": 1982508
+      },
+      {
+        "requests": 200,
+        "rss": 2013676,
+        "hwm": 2013676
+      },
+      {
+        "requests": 300,
+        "rss": 2020416,
+        "hwm": 2020416
+      },
+      {
+        "requests": 400,
+        "rss": 1956032,
+        "hwm": 2023708
+      },
+      {
+        "requests": 500,
+        "rss": 1936900,
+        "hwm": 2023708
+      },
+      {
+        "requests": 600,
+        "rss": 1955684,
+        "hwm": 2023708
+      },
+      {
+        "requests": 700,
+        "rss": 1966132,
+        "hwm": 2023708
+      },
+      {
+        "requests": 800,
+        "rss": 1912500,
+        "hwm": 2023708
+      },
+      {
+        "requests": 900,
+        "rss": 1935728,
+        "hwm": 2023708
+      },
+      {
+        "requests": 1000,
+        "rss": 1924856,
+        "hwm": 2023708
+      },
+      {
+        "requests": 1100,
+        "rss": 1917656,
+        "hwm": 2023708
+      },
+      {
+        "requests": 1200,
+        "rss": 1939808,
+        "hwm": 2023708
+      },
+      {
+        "requests": 1300,
+        "rss": 1942880,
+        "hwm": 2023708
+      },
+      {
+        "requests": 1400,
+        "rss": 1944904,
+        "hwm": 2023708
+      },
+      {
+        "requests": 1500,
+        "rss": 1952340,
+        "hwm": 2023708
+      },
+      {
+        "requests": 1600,
+        "rss": 1944948,
+        "hwm": 2023708
+      },
+      {
+        "requests": 1700,
+        "rss": 1932272,
+        "hwm": 2023708
+      },
+      {
+        "requests": 1800,
+        "rss": 1936816,
+        "hwm": 2023708
+      },
+      {
+        "requests": 1900,
+        "rss": 1921668,
+        "hwm": 2023708
+      },
+      {
+        "requests": 2000,
+        "rss": 1927476,
+        "hwm": 2023708
+      },
+      {
+        "requests": 2100,
+        "rss": 1923600,
+        "hwm": 2023708
+      },
+      {
+        "requests": 2200,
+        "rss": 1927576,
+        "hwm": 2023708
+      },
+      {
+        "requests": 2300,
+        "rss": 1923044,
+        "hwm": 2023708
+      },
+      {
+        "requests": 2400,
+        "rss": 1933832,
+        "hwm": 2023708
+      },
+      {
+        "requests": 2500,
+        "rss": 1937872,
+        "hwm": 2023708
+      },
+      {
+        "requests": 2600,
+        "rss": 1939352,
+        "hwm": 2023708
+      },
+      {
+        "requests": 2700,
+        "rss": 1937952,
+        "hwm": 2023708
+      },
+      {
+        "requests": 2800,
+        "rss": 1948376,
+        "hwm": 2023708
+      },
+      {
+        "requests": 2900,
+        "rss": 1939416,
+        "hwm": 2023708
+      },
+      {
+        "requests": 3000,
+        "rss": 1942548,
+        "hwm": 2023708
+      }
+    ],
+    "passed": true
+  }
+}
