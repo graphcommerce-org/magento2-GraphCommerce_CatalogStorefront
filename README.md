@@ -107,8 +107,10 @@ Inside a module the folders name the stage of the pipeline:
   `Processor/` classes make a legacy feed export like the modern ones, the plugins fix
   what an exporter provider leaves out. They run at index time and may use SQL.
 - `Model/Document/`: the document store side. `Delivery` receives each feed batch and
-  hands it to the `Writer/` of that feed; `Field/` classes compute product document
-  fields the feed lacks.
+  hands it to the `Writer/` of that feed; `Field/` classes reshape a product document
+  field from the row. A writer reads the feed rows and the document store, and nothing
+  else, so it can run on the other side of the wire: what a document needs comes from a
+  provider on the record of its feed.
 - `Model/Read/`: the request side any frontend shares: product documents to models,
   the price ranges, the display prices, the metadata readers.
 - In a GraphQl module: `Model/DocumentHydration` and `Model/Prefill/`, `Plugin/Resolver/`,
@@ -153,7 +155,8 @@ A module registers its parts through di.xml:
   entities a batch touches, purged after the write.
 - `feeds` on `Model\Feeds`: the feed metadata per entity and indexer id, for the
   rebuild and the status command.
-- `fields` on the products writer: a `ProductDocumentFieldInterface` per computed field.
+- `fields` on the products writer: a `ProductDocumentFieldInterface` per field that is
+  reshaped from the row.
 - `prefillers` on the GraphQl module's `Model\DocumentHydration`: a `PrefillerInterface` fills fields on
   the product value from the model and the document, so the executor returns them
   without a resolver call. List the fields under `prefilledFields` on

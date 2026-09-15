@@ -58,8 +58,8 @@ passes.
   over the declared fields in one query, `batch()` runs several reads in one
   multi-search.
 - `CatalogStorefront`: the base. Feed delivery and the writers for the
-  products, prices, categories and attributes feeds, the composite links, the
-  image URL field, the exporter patch-ups the core feeds need, the model
+  products, prices, categories and attributes feeds, the composite links,
+  the exporter patch-ups the core feeds need, the model
   builder, `ProductDocuments`, `AttributeDocuments`, the
   configuration (`Model/Config`: storefront indexing, serve GraphQL, the
   storefront key; `etc/di.xml` maps the out of stock display setting to an
@@ -383,7 +383,7 @@ registers all modules through composer autoload.
 document's `customAttributes` (option ids, tax class id, dates, prices as the
 entity tables hold them) and decodes the feed's status and visibility labels
 through static maps, so no metadata lookup is left on the request path; the
-writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
+image URLs come from the feed row (`Model/DataExporter/Provider/ImageUrls`).
 
 ## Shape
 
@@ -558,9 +558,9 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   every attribute), `CatalogStorefrontSearch/Plugin/FieldNameMemo` (search index field name
   per attribute code and context, the core mapper asks several times per
   attribute), `Model/Mode` and `Model/Strict` are request-scoped. Derivations
-  that used to be memos are made by the writer instead:
-  `Model/Document/Field/ImageUrls` puts the image media paths on the product
-  document; the category price step travels on the category document. The
+  that used to be memos are made at index time instead:
+  `Model/DataExporter/Provider/ImageUrls` puts the image media paths on the
+  products feed row; the category price step travels on the category document. The
   state that does live for a process lifetime sits in the Worker module and
   derives from the query text, the deployment, the tax setup or the currency
   rates, not from catalog data; each memo lives under a generation, and a

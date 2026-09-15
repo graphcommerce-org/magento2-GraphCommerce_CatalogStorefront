@@ -28,7 +28,7 @@
             </argument>
         </arguments>
     </type>
-    <!-- Write side: one writer per feed, the products feed run through the document fields. -->
+    <!-- Write side: one writer per feed. -->
     <type name="GraphCommerce\CatalogStorefront\Model\Document\Delivery">
         <arguments>
             <argument name="writers" xsi:type="array">
@@ -57,6 +57,15 @@
             </argument>
         </arguments>
     </type>
+    <!-- A `using` node merges by its field name, so a field this package gives a provider keeps every key of
+         its lookup; without it two `using` nodes of one field share a path and the last one stands alone. -->
+    <virtualType name="Magento\DataExporter\Config\Reader">
+        <arguments>
+            <argument name="idAttributes" xsi:type="array">
+                <item name="/config/record/field/using" xsi:type="string">field</item>
+            </argument>
+        </arguments>
+    </virtualType>
     <!-- A new customer group re-exports the prices feed, so every price index gets the group's entry. -->
     <type name="Magento\Customer\Api\GroupRepositoryInterface">
         <plugin name="graphcommerce_catalog_storefront_prices_feed_on_new_group" type="GraphCommerce\CatalogStorefront\Plugin\Customer\PricesFeedOnNewGroup"/>
@@ -65,15 +74,6 @@
         <arguments>
             <argument name="feed" xsi:type="object">Magento\ProductPriceDataExporter\Model\Indexer\ProductPriceFeedIndexMetadata</argument>
             <argument name="indexerId" xsi:type="string">catalog_data_exporter_product_prices</argument>
-        </arguments>
-    </type>
-    <type name="GraphCommerce\CatalogStorefront\Model\Document\Writer\Products">
-        <arguments>
-            <argument name="fields" xsi:type="array">
-                <item name="imageUrls" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Field\ImageUrls</item>
-                <item name="taxClassId" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Field\TaxClassId</item>
-                <item name="websiteIds" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Field\WebsiteIds</item>
-            </argument>
         </arguments>
     </type>
     <type name="Magento\CatalogDataExporter\Model\Provider\Product\Links">

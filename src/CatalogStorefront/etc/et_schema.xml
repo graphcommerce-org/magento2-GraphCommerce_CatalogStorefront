@@ -17,6 +17,27 @@
             <using field="storeViewCode"/>
             <using field="type"/>
         </field>
+        <field name="websiteIds" type="Int" repeated="true" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\Websites">
+            <using field="productId"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="taxClassId" type="Int" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\TaxClass">
+            <using field="productId"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="imageUrls" type="ProductImageUrls" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\ImageUrls">
+            <using field="productId"/>
+            <using field="storeViewCode"/>
+        </field>
+    </record>
+    <record name="ProductImageUrl" skipNull="true">
+        <field name="mediaPath" type="String"/>
+        <field name="placeholder" type="Boolean"/>
+    </record>
+    <record name="ProductImageUrls" skipNull="true">
+        <field name="image" type="ProductImageUrl"/>
+        <field name="small_image" type="ProductImageUrl"/>
+        <field name="thumbnail" type="ProductImageUrl"/>
     </record>
     <record name="CategoryCustomAttribute">
         <field name="attributeCode" type="String"/>
