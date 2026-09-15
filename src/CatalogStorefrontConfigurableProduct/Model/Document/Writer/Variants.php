@@ -3,10 +3,9 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Document\Writer;
 
-use GraphCommerce\CatalogStorefront\Model\Document\StoreAssignments;
+use GraphCommerce\CatalogStorefront\Model\Document\Scopes;
 use GraphCommerce\CatalogStorefrontApi\Storage\ProductDocumentStorageInterface;
 use GraphCommerce\CatalogStorefrontApi\Document\FeedWriterInterface;
-use Magento\Store\Model\StoreManagerInterface;
 
 /**
  * Records the configurable relation on both sides: the parent document
@@ -16,14 +15,14 @@ use Magento\Store\Model\StoreManagerInterface;
  * straight from the variants feed, so the read side needs no product load.
  * The list is merged with the one stored, so a batch that carries one
  * parent of a variant keeps its other parents. A side is written in the
- * store views its product is assigned to only.
+ * store views that hold its product document, which the products feed writes
+ * for the store views of the product's websites.
  */
 class Variants implements FeedWriterInterface
 {
     public function __construct(
         private readonly ProductDocumentStorageInterface $storage,
-        private readonly StoreManagerInterface $storeManager,
-        private readonly StoreAssignments $assignments,
+        private readonly Scopes $scopes,
     ) {
     }
 
@@ -49,18 +48,13 @@ class Variants implements FeedWriterInterface
         foreach ($links as $parents) {
             $parentIdsAll = array_merge($parentIdsAll, array_map('intval', array_keys($parents)));
         }
-        $assigned = $this->assignments->storesOf(array_merge(array_keys($links), $parentIdsAll));
-        foreach ($this->storeManager->getStores() as $storeModel) {
-            $store = $storeModel->getCode();
-            $inStore = static fn(int $id) => in_array($store, $assigned[$id] ?? [], true);
-            $variantIds = array_filter(array_keys($links), $inStore);
-            $stored = [];
-            foreach ($this->storage->stored($store, $variantIds, ['parentIds']) as $id => $document) {
-                $stored[$id] = (array)($document['parentIds'] ?? []);
-            }
+        $ids = array_values(array_unique(array_merge(array_keys($links), $parentIdsAll)));
+        foreach ($this->scopes->storeViews() as $store) {
+            $stored = $this->storage->stored($store, $ids, ['parentIds']);
+            $inStore = static fn(int $id) => isset($stored[$id]);
             $upserts = [];
             foreach ($links as $variantId => $parents) {
-                $parentIds = array_fill_keys($stored[$variantId] ?? [], true);
+                $parentIds = array_fill_keys((array)($stored[$variantId]['parentIds'] ?? []), true);
                 foreach ($parents as $parentId => $linked) {
                     if ($inStore((int)$parentId)) {
                         $upserts[(int)$parentId]['variantIds']['v' . $variantId] = $linked ? $variantId : null;
