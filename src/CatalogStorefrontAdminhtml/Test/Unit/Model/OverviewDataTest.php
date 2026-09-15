@@ -66,7 +66,7 @@ class OverviewDataTest extends TestCase
         self::assertSame('nl_NL', $overview['sources'][0]['locale']);
         self::assertSame('Store view nl_store (ID 3)', $overview['sources'][0]['origin']);
         self::assertSame('Unknown', $overview['sources'][0]['feedProducts']['value']);
-        self::assertFalse($overview['sources'][0]['feedProducts']['hasBadge']);
+        self::assertSame([], $overview['sources'][0]['feedProducts']['badges']);
 
         self::assertSame(['all', 'customer_group_0', 'customer_group_1'], array_column($overview['books'], 'id'));
         self::assertSame([0, 1, 1], array_column($overview['books'], 'depth'));

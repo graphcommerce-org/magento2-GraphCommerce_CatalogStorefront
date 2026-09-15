@@ -23,6 +23,7 @@ final class SourceFeedCountsTest extends TestCase
         $result = $subject->get();
         self::assertSame('47', $result['default']['feedProducts']['value']);
         self::assertSame(['3 PENDING', '2 FAILED'], array_column($result['default']['feedProducts']['badges'], 'label'));
+        self::assertSame(['pending', 'failed'], array_column($result['default']['feedProducts']['badges'], 'tone'));
         self::assertSame('39', $result['default']['feedCategories']['value']);
         self::assertSame('88', $result['default']['feedAttributes']['value']);
         self::assertSame([], $result['default']['feedAttributes']['badges']);

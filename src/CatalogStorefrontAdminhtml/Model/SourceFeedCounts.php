@@ -76,12 +76,12 @@ class SourceFeedCounts
     {
         $badges = [];
         if ($pending > 0) {
-            $badges[] = ['label' => number_format($pending) . ' PENDING', 'background' => '#FFDCC4'];
+            $badges[] = ['label' => number_format($pending) . ' PENDING', 'tone' => 'pending'];
         }
         if ($failed > 0) {
-            $badges[] = ['label' => number_format($failed) . ' FAILED', 'background' => '#FFD8D5'];
+            $badges[] = ['label' => number_format($failed) . ' FAILED', 'tone' => 'failed'];
         }
-        return ['value' => number_format($imported), 'badges' => $badges, 'hasBadge' => false,
+        return ['value' => number_format($imported), 'badges' => $badges,
             'description' => 'Latest accepted, non-deleted source feed records. Pending and failed deliveries are separate; pending does not mean actively processing.'];
     }
 }

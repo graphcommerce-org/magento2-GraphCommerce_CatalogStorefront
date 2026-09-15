@@ -33,7 +33,7 @@ class OverviewStockData
         $items = $snapshot['stocks'];
         foreach ($items as &$stock) {
             $stock['feedStock'] = $counts[$stock['id']] ?? $counts['*'] ?? [
-                'value' => 'Unknown', 'badges' => [], 'hasBadge' => false,
+                'value' => 'Unknown', 'badges' => [],
                 'description' => 'Stock feed receipts are unavailable.',
             ];
         }

@@ -191,16 +191,9 @@ final class OverviewData
         ]];
     }
 
-    /** @return array{value: string, hasBadge: false, badgeLabel: string, badgeBg: string, badgeBorder: string, badgeFg: string} */
+    /** @return array{value: string, badges: array{}} */
     private static function unavailableFeed(): array
     {
-        return [
-            'value' => 'Unknown',
-            'hasBadge' => false,
-            'badgeLabel' => '',
-            'badgeBg' => self::NEUTRAL_BACKGROUND,
-            'badgeBorder' => 'transparent',
-            'badgeFg' => self::NEUTRAL_COLOR,
-        ];
+        return ['value' => 'Unknown', 'badges' => []];
     }
 }

@@ -117,13 +117,6 @@ class OverviewDataProviderTest extends TestCase
     /** @return array<string, mixed> */
     private function emptyFeed(): array
     {
-        return [
-            'value' => 'Unknown',
-            'hasBadge' => false,
-            'badgeLabel' => '',
-            'badgeBg' => '#F1F1F1',
-            'badgeBorder' => 'transparent',
-            'badgeFg' => '#303030',
-        ];
+        return ['value' => 'Unknown', 'badges' => []];
     }
 }
