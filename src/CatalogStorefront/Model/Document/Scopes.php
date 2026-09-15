@@ -25,7 +25,7 @@ class Scopes implements ResetAfterRequestInterface
     /** The feed exports the groups from id 1, so the not logged in group is added. */
     private const NOT_LOGGED_IN_ID = 0;
 
-    /** @var array<string, array<string, array>>|null store views by website code, then by store view code */
+    /** @var array<string, array{id: int, storeViews: array<string, array>}>|null by website code */
     private ?array $websites = null;
 
     /** @var array<string, int>|null group id by the code the feeds name the group with */
@@ -41,7 +41,10 @@ class Scopes implements ResetAfterRequestInterface
      */
     public function storeViews(): array
     {
-        return array_values(array_unique(array_merge([], ...array_map('array_keys', array_values($this->websites())))));
+        return array_values(array_unique(array_merge([], ...array_map(
+            static fn(array $website): array => array_keys($website['storeViews']),
+            array_values($this->websites())
+        ))));
     }
 
     /**
@@ -49,7 +52,18 @@ class Scopes implements ResetAfterRequestInterface
      */
     public function storeViewsOfWebsite(string $websiteCode): array
     {
-        return array_keys($this->websites()[$websiteCode] ?? []);
+        return array_keys($this->websites()[$websiteCode]['storeViews'] ?? []);
+    }
+
+    /** The id of the website a feed row names by its code. */
+    public function websiteId(string $websiteCode): int
+    {
+        return $this->websites()[$websiteCode]['id']
+            ?? throw new \RuntimeException(sprintf(
+                'No website document holds the code "%s": export the scopesWebsite feed '
+                . '(bin/magento indexer:reindex scopes_website_data_exporter).',
+                $websiteCode
+            ));
     }
 
     /**
@@ -60,9 +74,9 @@ class Scopes implements ResetAfterRequestInterface
      */
     public function media(string $storeViewCode): array
     {
-        foreach ($this->websites() as $storeViews) {
-            if (isset($storeViews[$storeViewCode])) {
-                return $storeViews[$storeViewCode];
+        foreach ($this->websites() as $website) {
+            if (isset($website['storeViews'][$storeViewCode])) {
+                return $website['storeViews'][$storeViewCode];
             }
         }
 
@@ -128,7 +142,7 @@ class Scopes implements ResetAfterRequestInterface
                         'imagePlaceholders' => array_map('strval', (array)($storeView['imagePlaceholders'] ?? [])),
                     ];
                 }
-                $this->websites[(string)$document['code']] = $storeViews;
+                $this->websites[(string)$document['code']] = ['id' => (int)$document['id'], 'storeViews' => $storeViews];
             }
         }
 
