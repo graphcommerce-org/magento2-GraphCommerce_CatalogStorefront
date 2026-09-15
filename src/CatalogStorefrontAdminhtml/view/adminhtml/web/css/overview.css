@@ -51,6 +51,12 @@
 .catalog-overview .catalog-overview-feed,
 .catalog-overview .catalog-overview-book,
 .catalog-overview .catalog-overview-badge { vertical-align: middle; }
+.catalog-overview .catalog-overview-badge._enabled { background: #e5f6e8; border-color: #3f9d5a; color: #1f6b38; }
+.catalog-overview .catalog-overview-badge._disabled { color: #777; }
+.catalog-overview .catalog-overview-badge._pending { background: #fff3e0; border-color: #eb8c2b; color: #8a4b00; }
+.catalog-overview .catalog-overview-badge._failed { background: #fbe9e7; border-color: #e22626; color: #a31a1a; }
+.catalog-overview button.catalog-overview-retry { all: unset; margin-left: 8px; color: #1677ff; font: inherit; font-size: 12px; cursor: pointer; }
+.catalog-overview button.catalog-overview-retry:hover { text-decoration: underline; }
 .catalog-overview .data-grid td.catalog-overview-feed-column,
 .catalog-overview .data-grid th.catalog-overview-feed-column { border-left: 1px solid #f1f1f1; }
 .catalog-overview .data-grid tr.data-row td:last-child,

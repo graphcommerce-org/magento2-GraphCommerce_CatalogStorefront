@@ -54,6 +54,15 @@
                 <label translate="true">View</label>
             </settings>
         </column>
+        <column name="status" sortOrder="15">
+            <settings>
+                <bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/status</bodyTmpl>
+                <sortable>false</sortable>
+                <draggable>false</draggable>
+                <controlVisibility>false</controlVisibility>
+                <label translate="true">Status</label>
+            </settings>
+        </column>
         <column name="protection" sortOrder="20">
             <settings>
                 <bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/badge</bodyTmpl>

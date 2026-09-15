@@ -56,7 +56,7 @@
         </column>
         <column name="status" sortOrder="20">
             <settings>
-                <bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/badge</bodyTmpl>
+                <bodyTmpl>GraphCommerce_CatalogStorefrontAdminhtml/grid/cells/status</bodyTmpl>
                 <sortable>false</sortable>
                 <draggable>false</draggable>
                 <controlVisibility>false</controlVisibility>
