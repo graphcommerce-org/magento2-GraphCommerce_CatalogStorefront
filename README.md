@@ -321,6 +321,31 @@ product fields the documents serve next to the item's own prices and quantity. T
 subject is a database entity, so the gate lists the statements core runs for the quote, the
 wish list and the order instead of failing on them.
 
+`--soak=<requests>` runs, after the gate, the queries the judges accept for as many
+requests, with the context varied per request: the customer takes turns between the guest
+and every `--token` (or every line of `--token-file`), which varies the customer group, the
+response cache id and the tax destination; the page size of an argument and of a query
+variable steps through the whole, the half, the quarter and one less than the size the
+query names; a sku list rotates; and the two paths of a request alternate their order.
+Every request is judged as the gate judges it, so state a memo keeps from the request
+before shows up as a diff with the request number, the context, the header names and the
+query. A query the judges refuse in a context is left out of that context, so the soak
+measures the worker and not the gaps of the catalog it runs against. `--probe-header
+"Name: value"` sends, on `--probe-share` percent of the requests (25 by default), one more
+document-path request with those headers before the judged pair, so a read path that only
+such a header reaches takes part in the soak; its answer is counted, not judged.
+
+`--memory-sample=<requests>` samples the resident memory of the worker process every so
+many requests, through `docker exec` on `--worker-container` and the process named by
+`--worker-process`. The gate prints the first and the last sample, the peak, the least
+squares slope over the second half of the run in KB per 100 requests, and the table of
+samples. The first half is the warm-up: a thread still fills its memos and builds the
+schema of a query shape it did not serve yet. A slope above `--memory-slope` fails the
+soak; its default of 1500 KB per 100 requests is the noise of a worker of 25 threads,
+whose resident memory swings about 7 MB around its level between samples, while a memo
+that keeps one document per request adds ten times as much. `docs/validation/` holds the
+record of a run.
+
 Use `--candidate-endpoint=https://candidate.example/graphql` to send document-path
 requests to a separate installation while core requests stay on the positional endpoint.
 Both endpoints must accept the configured storefront key and represent the same catalog,
@@ -404,20 +429,15 @@ Documents.
 
 ## Ideas and to do
 
-1. **Worker parity and memory.** The parity gate against the worker endpoint with the
-   headers, stores, currencies, customer groups and filters varied per query, so a memo
-   that keeps what it must not shows up as a diff, and the worker's memory per process
-   sampled over a long run, so a memo that grows per request shows up as a slope.
-2. **Subtree split.** The module directories to their own repositories and packages,
-    so the modules install separately while the repository stays one.
-
-3. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
+1. **Subtree split.** The module directories to their own repositories and packages,
+   so the modules install separately while the repository stays one.
+2. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
    product listing collection, the product page and the layered navigation read from the
    base modules. The price rendering goes through the pricing system, so it needs its
    own document-backed price providers.
-4. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
-5. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
+3. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
+4. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
    listing needs a gate of its own: the rendered listing and product page on both
    paths, so an integrator proves an extension on every surface it touches.
-6. **REST integration.** The product repository and the search API behind the same
+5. **REST integration.** The product repository and the search API behind the same
    document models, for headless setups that read the catalog over REST.

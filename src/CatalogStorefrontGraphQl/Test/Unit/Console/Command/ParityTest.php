@@ -170,6 +170,130 @@ class ParityTest extends TestCase
         yield 'null JSON' => ['null', 200];
     }
 
+    public function testTheSoakTakesTurnsBetweenTheGuestAndEveryTokenAndSendsBothPathOrders(): void
+    {
+        file_put_contents($this->directory . '/02-signed-in.graphql', "# @requires Authorization\n{ products { items { sku } } }");
+        $command = $this->command();
+        $tester = new CommandTester($command);
+        self::assertSame(0, $tester->execute($this->input() + [
+            '--warm' => '0',
+            '--soak' => '12',
+            '--token' => ['first-token', 'second-token'],
+            '--report' => $this->directory . '/report.json',
+        ]));
+
+        $soak = json_decode((string)file_get_contents($this->directory . '/report.json'), true, flags: JSON_THROW_ON_ERROR)['soak'];
+        self::assertSame(['guest', 'token 1', 'token 2'], $soak['contexts']);
+        self::assertSame(['01-product'], $soak['queries']['guest']);
+        self::assertSame(['01-product', '02-signed-in'], $soak['queries']['token 1']);
+        self::assertSame([], $soak['diffs']);
+        self::assertTrue($soak['passed']);
+
+        $soaked = array_slice($command->requests, -24);
+        $customers = [];
+        foreach (array_slice($command->headers, -24) as $position => $headers) {
+            if ($position % 2 === 0) {
+                $customers[] = $headers['Authorization'] ?? 'guest';
+            }
+        }
+        self::assertSame(
+            ['guest', 'Bearer first-token', 'Bearer second-token', 'guest', 'Bearer first-token', 'Bearer second-token'],
+            array_slice($customers, 0, 6)
+        );
+        self::assertSame([Mode::CORE, Mode::DOCUMENTS, Mode::DOCUMENTS, Mode::CORE], array_column(array_slice($soaked, 0, 4), 1));
+    }
+
+    public function testTheSoakReportsADiffWithItsRequestNumberAndContext(): void
+    {
+        $command = $this->command();
+        $command->failFrom = 5;
+        $tester = new CommandTester($command);
+        self::assertSame(1, $tester->execute($this->input() + [
+            '--warm' => '0', '--attempts' => '1', '--soak' => '6', '--report' => $this->directory . '/report.json',
+        ]));
+
+        $soak = json_decode((string)file_get_contents($this->directory . '/report.json'), true, flags: JSON_THROW_ON_ERROR)['soak'];
+        self::assertFalse($soak['passed']);
+        self::assertSame([1, 2, 3, 4, 5, 6], array_column($soak['diffs'], 'request'));
+        self::assertSame('guest', $soak['diffs'][0]['context']);
+        self::assertStringContainsString('{ products { items { sku } } }', $soak['diffs'][0]['query']);
+        self::assertStringContainsString('SOAK  request 1, guest, 01-product', $tester->getDisplay());
+    }
+
+    public function testTheSoakSamplesTheWorkerMemoryAndFailsOnASlopeAboveTheLimit(): void
+    {
+        $command = $this->command();
+        $command->rss = [1000, 1100, 1200, 1900, 2600, 3300];
+        $tester = new CommandTester($command);
+        self::assertSame(1, $tester->execute($this->input() + [
+            '--warm' => '0', '--soak' => '5', '--memory-sample' => '1', '--memory-slope' => '10',
+            '--report' => $this->directory . '/report.json',
+        ]));
+
+        $soak = json_decode((string)file_get_contents($this->directory . '/report.json'), true, flags: JSON_THROW_ON_ERROR)['soak'];
+        self::assertSame([0, 1, 2, 3, 4, 5], array_column($soak['samples'], 'requests'));
+        self::assertSame([1000, 1100, 1200, 1900, 2600, 3300], array_column($soak['samples'], 'rss'));
+        self::assertSame(70000.0, (float)$soak['slope']);
+        self::assertFalse($soak['passed']);
+        self::assertStringContainsString('above 10.0', $tester->getDisplay());
+    }
+
+    public function testAProbeRequestIsSentOnItsShareOfTheSoakRequests(): void
+    {
+        $command = $this->command();
+        $tester = new CommandTester($command);
+        self::assertSame(0, $tester->execute($this->input() + [
+            '--warm' => '0', '--soak' => '8', '--probe-header' => ['X-Probe: on'], '--probe-share' => '50',
+            '--report' => $this->directory . '/report.json',
+        ]));
+
+        $soak = json_decode((string)file_get_contents($this->directory . '/report.json'), true, flags: JSON_THROW_ON_ERROR)['soak'];
+        self::assertSame(['X-Probe'], $soak['probeHeaders']);
+        self::assertSame(4, $soak['probes']);
+        self::assertCount(4, array_filter($command->headers, static fn(array $headers) => isset($headers['X-Probe'])));
+    }
+
+    #[DataProvider('variations')]
+    public function testTheVariationStepsThroughTheValuesTheQueryNames(int $index, string $expected): void
+    {
+        self::assertSame($expected, Parity::vary('query List($pageSize: Int = 8) { products(filter: { sku: { in: ["a", "b", "c"] } }, pageSize: 4) }', $index));
+    }
+
+    public static function variations(): iterable
+    {
+        yield 'whole' => [0, 'query List($pageSize: Int = 8) { products(filter: { sku: { in: ["a", "b", "c"] } }, pageSize: 4) }'];
+        yield 'half' => [1, 'query List($pageSize: Int = 4) { products(filter: { sku: { in: ["b", "c", "a"] } }, pageSize: 2) }'];
+        yield 'quarter' => [2, 'query List($pageSize: Int = 2) { products(filter: { sku: { in: ["c", "a", "b"] } }, pageSize: 1) }'];
+        yield 'one less' => [3, 'query List($pageSize: Int = 7) { products(filter: { sku: { in: ["a", "b", "c"] } }, pageSize: 3) }'];
+    }
+
+    public function testAPageSizeNeverFallsBelowOneAndAListKeepsEveryValue(): void
+    {
+        self::assertSame(
+            '{ products(filter: { sku: { in: ["a"] } }, pageSize: 1) }',
+            Parity::vary('{ products(filter: { sku: { in: ["a"] } }, pageSize: 1) }', 3)
+        );
+    }
+
+    #[DataProvider('slopes')]
+    public function testTheSlopeMeasuresTheSecondHalfOfTheRun(array $samples, ?float $expected): void
+    {
+        self::assertSame($expected, Parity::slope($samples));
+    }
+
+    public static function slopes(): iterable
+    {
+        yield 'one sample' => [[['requests' => 0, 'rss' => 100]], null];
+        yield 'second half of two samples' => [[['requests' => 0, 'rss' => 100], ['requests' => 100, 'rss' => 400]], null];
+        yield 'flat' => [[['requests' => 0, 'rss' => 100], ['requests' => 100, 'rss' => 100], ['requests' => 200, 'rss' => 100]], 0.0];
+        // The warm-up of the first half is left out: only the 100 KB per 100 requests of the second half count.
+        yield 'warm-up then flat' => [[
+            ['requests' => 0, 'rss' => 100], ['requests' => 100, 'rss' => 900],
+            ['requests' => 200, 'rss' => 1000], ['requests' => 300, 'rss' => 1100], ['requests' => 400, 'rss' => 1200],
+        ], 100.0];
+        yield 'one request count' => [[['requests' => 10, 'rss' => 100], ['requests' => 10, 'rss' => 200]], null];
+    }
+
     private function input(): array
     {
         return ['endpoint' => 'https://reference.example/graphql', '--queries' => $this->directory];
@@ -182,17 +306,30 @@ class ParityTest extends TestCase
 
         return new class($config, $this->createStub(EavConfig::class), $this->createStub(Uid::class)) extends Parity {
             public array $requests = [];
+            public array $headers = [];
             public ?array $core = null;
             public ?array $candidate = null;
+            public ?int $failFrom = null;
+            public array $rss = [];
+            private int $samples = 0;
 
             protected function request(string $endpoint, string $query, string $mode, string $key, array $headers): array
             {
                 $this->requests[] = [$endpoint, $mode];
+                $this->headers[] = $headers;
+                $failing = $this->failFrom !== null && count($this->requests) >= $this->failFrom;
 
                 return ($mode === Mode::CORE ? $this->core : $this->candidate) ?? [
-                    'data' => ['products' => ['items' => [['sku' => 'test']]]],
+                    'data' => ['products' => ['items' => [['sku' => $failing && $mode === Mode::DOCUMENTS ? 'changed' : 'test']]]],
                     'extensions' => ['catalogStorefront' => ['mode' => $mode]],
                 ];
+            }
+
+            protected function workerMemory(string $container, string $process): ?array
+            {
+                $rss = $this->rss[$this->samples++] ?? 0;
+
+                return ['rss' => $rss, 'hwm' => $rss];
             }
         };
     }

@@ -33,7 +33,10 @@ use Symfony\Component\Console\Output\OutputInterface;
  * send through `# @requires !Authorization`; a query whose requirement the
  * run does not meet is skipped. `--header`
  * sends one with every query, a customer token for a signed-in gate. Other
- * modules add verdicts through di.xml `judges`.
+ * modules add verdicts through di.xml `judges`. `--soak` runs the accepted
+ * queries again for as many requests, with the customer, the page size, the
+ * sku list and the order of the two paths varied per request, and
+ * `--memory-sample` samples the worker's memory while it does.
  */
 class Parity extends Command
 {
@@ -46,6 +49,15 @@ class Parity extends Command
     private const CANDIDATE_ENDPOINT = 'candidate-endpoint';
     private const REPORT = 'report';
     private const INSECURE = 'insecure';
+    private const SOAK = 'soak';
+    private const TOKEN = 'token';
+    private const TOKEN_FILE = 'token-file';
+    private const PROBE_HEADER = 'probe-header';
+    private const PROBE_SHARE = 'probe-share';
+    private const MEMORY_SAMPLE = 'memory-sample';
+    private const MEMORY_SLOPE = 'memory-slope';
+    private const WORKER_CONTAINER = 'worker-container';
+    private const WORKER_PROCESS = 'worker-process';
 
     private bool $verifyPeer = true;
 
@@ -73,7 +85,16 @@ class Parity extends Command
             ->addOption(self::DUMP, null, InputOption::VALUE_REQUIRED, 'Directory that keeps both responses of every query')
             ->addOption(self::WARM, null, InputOption::VALUE_REQUIRED, 'Unjudged runs of every query per path before the judged one', '2')
             ->addOption(self::HEADER, null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'A request header for every query, "Name: value"; a customer token makes it a signed-in gate')
-            ->addOption(self::ATTEMPTS, null, InputOption::VALUE_REQUIRED, 'Judged requests of a query before a failing verdict counts', '3');
+            ->addOption(self::ATTEMPTS, null, InputOption::VALUE_REQUIRED, 'Judged requests of a query before a failing verdict counts', '3')
+            ->addOption(self::SOAK, null, InputOption::VALUE_REQUIRED, 'Judged requests to run after the gate, with the context varied per request', '0')
+            ->addOption(self::TOKEN, null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'A customer token the soak takes turns with, next to the guest context')
+            ->addOption(self::TOKEN_FILE, null, InputOption::VALUE_REQUIRED, 'A file of customer tokens for the soak, one per line')
+            ->addOption(self::PROBE_HEADER, null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'A header of the soak\'s probe request, "Name: value"')
+            ->addOption(self::PROBE_SHARE, null, InputOption::VALUE_REQUIRED, 'Share of the soak\'s requests that send a probe request first, in percent', '25')
+            ->addOption(self::MEMORY_SAMPLE, null, InputOption::VALUE_REQUIRED, 'Sample the worker\'s memory every this many soak requests', '0')
+            ->addOption(self::MEMORY_SLOPE, null, InputOption::VALUE_REQUIRED, 'Memory the soak may gain per 100 requests over the second half of the run, in KB', '1500')
+            ->addOption(self::WORKER_CONTAINER, null, InputOption::VALUE_REQUIRED, 'Container of the worker whose memory is sampled', 'project-backend-frankenphp-1')
+            ->addOption(self::WORKER_PROCESS, null, InputOption::VALUE_REQUIRED, 'Command name of the worker process inside that container', 'frankenphp');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -112,6 +133,7 @@ class Parity extends Command
         $failed = 0;
         $skipped = 0;
         $results = [];
+        $set = [];
         foreach ($files as $file) {
             $name = basename($file, '.graphql');
             $query = preg_replace_callback(
@@ -128,6 +150,7 @@ class Parity extends Command
             preg_match_all('/^#\s*@header\s+([\w-]+):\s*(.+?)\s*$/m', $query, $matches, PREG_SET_ORDER);
             $headers = array_combine(array_column($matches, 1), array_column($matches, 2)) + $shared;
             preg_match_all('/^#\s*@requires\s+(!?)([\w-]+)\s*$/m', $query, $required, PREG_SET_ORDER);
+            $set[$name] = ['query' => $query, 'headers' => array_combine(array_column($matches, 1), array_column($matches, 2)), 'required' => $required];
             $unmet = array_filter(
                 $required,
                 static fn(array $requirement) => isset($headers[$requirement[2]]) === ($requirement[1] === '!')
@@ -149,36 +172,24 @@ class Parity extends Command
                     $this->request($endpoints[$mode], $query, $mode, $key, $headers);
                 }
             }
-            for ($attempt = 1; $attempt <= $attempts; $attempt++) {
-                $responses = [];
-                foreach ([Mode::CORE, Mode::DOCUMENTS] as $mode) {
-                    $responses[$mode] = $this->request($endpoints[$mode], $query, $mode, $key, $headers);
-                }
-                if ($dump) {
-                    @mkdir($dump, 0777, true);
-                    foreach ($responses as $mode => $response) {
-                        file_put_contents("$dump/$name.$mode.json", json_encode($response, JSON_PRETTY_PRINT));
-                    }
-                }
-                $verdict = new BufferedOutput($output->getVerbosity(), $output->isDecorated());
-                $ok = $this->judge($verdict, $name, $responses[Mode::CORE], $responses[Mode::DOCUMENTS]);
-                if ($ok || $attempt === $attempts) {
-                    $messages = $verdict->fetch();
-                    $output->write($messages);
-                    $results[] = [
-                        'name' => $name,
-                        'queryHash' => hash('sha256', $query),
-                        'passed' => $ok,
-                        'attempts' => $attempt,
-                        'messages' => $messages,
-                    ];
-                    $failed += $ok ? 0 : 1;
-                    break;
-                }
-            }
+            [$ok, $messages, $attempt] = $this->attempt($endpoints, $query, $name, $key, $headers, $attempts, $dump, $output);
+            $output->write($messages);
+            $results[] = [
+                'name' => $name,
+                'queryHash' => hash('sha256', $query),
+                'passed' => $ok,
+                'attempts' => $attempt,
+                'messages' => $messages,
+            ];
+            $failed += $ok ? 0 : 1;
         }
         $judged = count($files) - $skipped;
         $output->writeln(sprintf("\n%d of %d queries identical, %d skipped", $judged - $failed, $judged, $skipped));
+
+        $soak = null;
+        if ((int)$input->getOption(self::SOAK) > 0) {
+            $soak = $this->soak($input, $output, $endpoints, $key, $shared, $set, $attempts);
+        }
 
         if ($input->getOption(self::REPORT) !== null) {
             $path = (string)$input->getOption(self::REPORT);
@@ -189,6 +200,7 @@ class Parity extends Command
                 'failed' => $failed,
                 'skipped' => $skipped,
                 'results' => $results,
+                'soak' => $soak,
             ];
             if (!$this->writeReport($path, $report)) {
                 $output->writeln('<error>Could not write the parity report.</error>');
@@ -197,7 +209,323 @@ class Parity extends Command
             }
         }
 
-        return $failed > 0 ? Command::FAILURE : Command::SUCCESS;
+        return $failed > 0 || ($soak !== null && !$soak['passed']) ? Command::FAILURE : Command::SUCCESS;
+    }
+
+    /**
+     * The soak: the queries the gate's own judges accept in a context are run
+     * again for as many requests as `--soak` names, with the context varied per
+     * request. The customer takes turns between the guest and every `--token`,
+     * which varies the customer group, the cache id and the tax destination;
+     * the page size and the sku list of the query step through the values the
+     * query itself names; the two paths of a request alternate their order;
+     * and a share of the requests sends a probe request with the
+     * `--probe-header` headers first. Every request is judged as the gate
+     * judges it, so state a memo keeps from the request before shows up as a
+     * diff with the request number, the headers and the query.
+     *
+     * `--memory-sample` samples the resident memory of the worker process
+     * every so many requests. The slope over the second half of the run says
+     * whether a memo grows per request; the first half is the warm-up, where
+     * every thread still fills its memos and builds the schema of a query
+     * shape it did not serve yet. The default of `--memory-slope` is the
+     * noise of a worker of 25 threads: its resident memory swings about 7 MB
+     * around its level between samples, so a slope under 1500 KB per 100
+     * requests says nothing over a few thousand requests, while a memo that
+     * keeps one document per request adds ten times as much.
+     *
+     * @param array<string, string> $endpoints
+     * @param array<string, string> $shared
+     * @param array<string, array{query: string, headers: array<string, string>, required: array}> $set
+     * @return array<string, mixed>
+     */
+    private function soak(
+        InputInterface $input,
+        OutputInterface $output,
+        array $endpoints,
+        string $key,
+        array $shared,
+        array $set,
+        int $attempts,
+    ): array {
+        $requests = (int)$input->getOption(self::SOAK);
+        $tokens = (array)$input->getOption(self::TOKEN);
+        $tokenFile = (string)$input->getOption(self::TOKEN_FILE);
+        if ($tokenFile !== '') {
+            $tokens = array_merge($tokens, array_values(array_filter(array_map('trim', (array)file($tokenFile)))));
+        }
+        $contexts = ['guest' => []];
+        foreach ($tokens as $position => $token) {
+            $contexts['token ' . ($position + 1)] = ['Authorization' => 'Bearer ' . $token];
+        }
+        $probe = [];
+        foreach ((array)$input->getOption(self::PROBE_HEADER) as $header) {
+            [$headerName, $value] = array_map('trim', explode(':', $header, 2) + [1 => '']);
+            $probe[$headerName] = $value;
+        }
+        $probeShare = $probe === [] ? 0 : max(0, min(100, (int)$input->getOption(self::PROBE_SHARE)));
+        $sampleEvery = max(0, (int)$input->getOption(self::MEMORY_SAMPLE));
+        $limit = (float)$input->getOption(self::MEMORY_SLOPE);
+        $container = (string)$input->getOption(self::WORKER_CONTAINER);
+        $process = (string)$input->getOption(self::WORKER_PROCESS);
+
+        // A query the judges already refuse in a context cannot show a memo: it is left out with its verdict.
+        $work = [];
+        foreach ($contexts as $label => $context) {
+            foreach ($set as $name => $entry) {
+                $headers = $entry['headers'] + $context + $shared;
+                $unmet = array_filter(
+                    $entry['required'],
+                    static fn(array $requirement) => isset($headers[$requirement[2]]) === ($requirement[1] === '!')
+                );
+                if ($unmet) {
+                    continue;
+                }
+                [$ok] = $this->attempt($endpoints, $entry['query'], $name, $key, $headers, $attempts, null, $output);
+                if ($ok) {
+                    $work[$label][] = ['name' => $name, 'query' => $entry['query'], 'headers' => $headers];
+                }
+            }
+            $output->writeln(sprintf('SOAK  %s: %d of %d queries', $label, count($work[$label] ?? []), count($set)));
+        }
+        $work = array_filter($work);
+        if (!$work) {
+            $output->writeln('<error>The soak has no query the judges accept.</error>');
+
+            return ['requests' => 0, 'passed' => false, 'diffs' => [], 'samples' => [], 'slope' => null];
+        }
+
+        $labels = array_keys($work);
+        $positions = array_fill_keys($labels, 0);
+        $samples = [];
+        $diffs = [];
+        $probes = 0;
+        $probeErrors = 0;
+        if ($sampleEvery > 0) {
+            $samples[] = ['requests' => 0] + ($this->workerMemory($container, $process) ?? ['rss' => 0, 'hwm' => 0]);
+        }
+        for ($request = 1; $request <= $requests; $request++) {
+            $label = $labels[($request - 1) % count($labels)];
+            $item = $work[$label][$positions[$label]++ % count($work[$label])];
+            $query = self::vary($item['query'], $request);
+            if ($probeShare > 0 && ($request * $probeShare) % 100 < $probeShare) {
+                $answer = $this->request($endpoints[Mode::DOCUMENTS], $query, Mode::DOCUMENTS, $key, $probe + $item['headers']);
+                $probes++;
+                $probeErrors += isset($answer['errors']) ? 1 : 0;
+            }
+            [$ok, $messages] = $this->attempt(
+                $endpoints,
+                $query,
+                $item['name'],
+                $key,
+                $item['headers'],
+                $attempts,
+                null,
+                $output,
+                $request % 2 === 0,
+            );
+            if (!$ok) {
+                $diffs[] = [
+                    'request' => $request,
+                    'name' => $item['name'],
+                    'context' => $label,
+                    'headers' => array_keys($item['headers']),
+                    'query' => $query,
+                    'messages' => $messages,
+                ];
+                $output->writeln(sprintf('SOAK  request %d, %s, %s', $request, $label, $item['name']));
+                $output->write($messages);
+            }
+            if ($sampleEvery > 0 && $request % $sampleEvery === 0) {
+                $samples[] = ['requests' => $request] + ($this->workerMemory($container, $process) ?? ['rss' => 0, 'hwm' => 0]);
+            }
+        }
+
+        $slope = self::slope($samples);
+        $output->writeln(sprintf(
+            "\nSoak: %d requests over %d contexts, %d probe requests of which %d answered an error, %d diffs",
+            $requests,
+            count($labels),
+            $probes,
+            $probeErrors,
+            count($diffs)
+        ));
+        if ($samples) {
+            $first = reset($samples);
+            $last = end($samples);
+            $output->writeln(sprintf(
+                'Memory: %d KB at %d requests, %d KB at %d requests, peak %d KB',
+                $first['rss'],
+                $first['requests'],
+                $last['rss'],
+                $last['requests'],
+                $last['hwm']
+            ));
+            $output->writeln($slope === null
+                ? 'Memory: too few samples for a slope'
+                : sprintf('Memory: %.1f KB per 100 requests over the second half, limit %.1f', $slope, $limit));
+            $output->writeln(sprintf('%12s %12s %12s', 'requests', 'RSS KB', 'peak KB'));
+            foreach ($samples as $sample) {
+                $output->writeln(sprintf('%12d %12d %12d', $sample['requests'], $sample['rss'], $sample['hwm']));
+            }
+        }
+        $grows = $slope !== null && $slope > $limit;
+        if ($grows) {
+            $output->writeln(sprintf('<error>The worker gains %.1f KB per 100 requests, above %.1f.</error>', $slope, $limit));
+        }
+
+        return [
+            'requests' => $requests,
+            'contexts' => $labels,
+            'queries' => array_map(static fn(array $items) => array_column($items, 'name'), $work),
+            'probeHeaders' => array_keys($probe),
+            'probeShare' => $probeShare,
+            'probes' => $probes,
+            'probeErrors' => $probeErrors,
+            'sampleEvery' => $sampleEvery,
+            'slopeLimit' => $limit,
+            'slope' => $slope,
+            'samples' => $samples,
+            'diffs' => $diffs,
+            'passed' => $diffs === [] && !$grows,
+        ];
+    }
+
+    /**
+     * The query of soak request `$index`. A page size, named as an argument or
+     * as the default of a query variable, steps through the whole, the half,
+     * the quarter and one less than the size the query itself names, and a sku
+     * list rotates. Both paths get the same text, so a variation makes no
+     * difference of its own: what it changes is the context a memo could keep
+     * from the request before. A variation keeps the set the query asks for,
+     * so a catalog that holds one product of a list still answers.
+     */
+    public static function vary(string $query, int $index): string
+    {
+        $query = preg_replace_callback(
+            '/(\bpageSize:\s*(?:Int!?\s*=\s*)?)(\d+)/',
+            static function (array $match) use ($index): string {
+                $size = (int)$match[2];
+                $sizes = [$size, (int)ceil($size / 2), (int)ceil($size / 4), $size - 1];
+
+                return $match[1] . max(1, $sizes[$index % 4]);
+            },
+            $query
+        );
+
+        return preg_replace_callback(
+            '/(\bsku:\s*\{\s*in:\s*\[)([^\]]+)(\])/',
+            static function (array $match) use ($index): string {
+                $values = array_map('trim', explode(',', $match[2]));
+                $offset = $index % count($values);
+
+                return $match[1]
+                    . implode(', ', array_merge(array_slice($values, $offset), array_slice($values, 0, $offset)))
+                    . $match[3];
+            },
+            $query
+        );
+    }
+
+    /**
+     * The least squares slope of the samples of the second half of the run, in
+     * KB per 100 requests, or null where the half holds fewer than two samples
+     * or all of them name one request count.
+     *
+     * @param list<array{requests: int, rss: int}> $samples
+     */
+    public static function slope(array $samples): ?float
+    {
+        if (count($samples) < 2) {
+            return null;
+        }
+        $end = end($samples)['requests'];
+        $half = array_values(array_filter($samples, static fn(array $sample) => $sample['requests'] * 2 >= $end));
+        if (count($half) < 2) {
+            return null;
+        }
+        $meanRequests = array_sum(array_column($half, 'requests')) / count($half);
+        $meanRss = array_sum(array_column($half, 'rss')) / count($half);
+        $covariance = 0.0;
+        $variance = 0.0;
+        foreach ($half as $sample) {
+            $distance = $sample['requests'] - $meanRequests;
+            $covariance += $distance * ($sample['rss'] - $meanRss);
+            $variance += $distance ** 2;
+        }
+
+        return $variance > 0.0 ? $covariance / $variance * 100 : null;
+    }
+
+    /**
+     * The resident and the peak memory of the worker process of a container,
+     * in KB. The PHP threads are threads of that process, so one process holds
+     * the state of all of them; the shell that reads the table names the
+     * process too, and the largest reader wins.
+     *
+     * @return array{rss: int, hwm: int}|null
+     */
+    protected function workerMemory(string $container, string $process): ?array
+    {
+        if (!preg_match('/^[\w.-]+$/D', $process)) {
+            return null;
+        }
+        $script = 'for d in /proc/[0-9]*; do case "$(tr "\0" " " < $d/cmdline 2>/dev/null)" in '
+            . '*' . $process . '*) grep -E "^Vm(RSS|HWM):" $d/status 2>/dev/null;; esac; done';
+        exec('docker exec ' . escapeshellarg($container) . ' sh -c ' . escapeshellarg($script) . ' 2>/dev/null', $lines);
+
+        $worker = null;
+        $peak = 0;
+        foreach ($lines as $line) {
+            if (preg_match('/^VmHWM:\s*(\d+)/', $line, $match)) {
+                $peak = (int)$match[1];
+            }
+            if (preg_match('/^VmRSS:\s*(\d+)/', $line, $match) && (int)$match[1] > ($worker['rss'] ?? 0)) {
+                $worker = ['rss' => (int)$match[1], 'hwm' => $peak];
+            }
+        }
+
+        return $worker;
+    }
+
+    /**
+     * One judged comparison, requested again up to `$attempts` times before a
+     * failing verdict counts. `$documentsFirst` puts the document path first,
+     * so a soak run sends the two paths of a request in both orders.
+     *
+     * @param array<string, string> $endpoints
+     * @param array<string, string> $headers
+     * @return array{0: bool, 1: string, 2: int} the verdict, its messages and the attempts it took
+     */
+    private function attempt(
+        array $endpoints,
+        string $query,
+        string $name,
+        string $key,
+        array $headers,
+        int $attempts,
+        ?string $dump,
+        OutputInterface $output,
+        bool $documentsFirst = false,
+    ): array {
+        $order = $documentsFirst ? [Mode::DOCUMENTS, Mode::CORE] : [Mode::CORE, Mode::DOCUMENTS];
+        for ($attempt = 1; ; $attempt++) {
+            $responses = [];
+            foreach ($order as $mode) {
+                $responses[$mode] = $this->request($endpoints[$mode], $query, $mode, $key, $headers);
+            }
+            if ($dump) {
+                @mkdir($dump, 0777, true);
+                foreach ($responses as $mode => $response) {
+                    file_put_contents("$dump/$name.$mode.json", json_encode($response, JSON_PRETTY_PRINT));
+                }
+            }
+            $verdict = new BufferedOutput($output->getVerbosity(), $output->isDecorated());
+            $ok = $this->judge($verdict, $name, $responses[Mode::CORE], $responses[Mode::DOCUMENTS]);
+            if ($ok || $attempt >= $attempts) {
+                return [$ok, $verdict->fetch(), $attempt];
+            }
+        }
     }
 
     private function judge(OutputInterface $output, string $name, array $core, array $documents): bool

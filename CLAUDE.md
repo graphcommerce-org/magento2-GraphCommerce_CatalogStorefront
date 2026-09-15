@@ -641,7 +641,9 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   the fixed masked id the cart query names, and
   `php dev/parity/fixtures/customer-wishlist.php <email>` and
   `customer-order.php <email>` fill the wish list and place one order for the
-  gate's customer (the signed-in run's token). The
+  gate's customer (the signed-in run's token). A soak run takes a token per
+  customer group: `php dev/parity/fixtures/soak-customers.php` gives every
+  group a customer, each in another tax region, and prints the emails. The
   harness fails a query that returns no product on either path, because a
   hidden product passed vacuously for hours before that check existed. The
   stock query (`18-*.graphql`) needs `24-WG01` at quantity 1 (source item and
