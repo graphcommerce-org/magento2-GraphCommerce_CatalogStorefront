@@ -1,0 +1,20 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-sales-graph-ql",
+    "description": "Order item products from the catalog read model documents",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-sales-graph-ql": "*",
+        "graphcommerce/module-catalog-storefront-graph-ql": "self.version"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontSalesGraphQl\\": ""
+        }
+    }
+}

@@ -77,6 +77,9 @@ modules next to the `*GraphQl` ones.
 | `GraphCommerce_CatalogStorefrontOpenSearch` | The document stores on OpenSearch, through core's client |
 | `GraphCommerce_CatalogStorefront` | Feed delivery with the cache purge after a write, documents to models, metadata readers, the fallback report, the storefront key, the rebuild and status commands, plugins on non-GraphQL core |
 | `GraphCommerce_CatalogStorefrontGraphQl` | Listings and layered navigation, categories, media, URL rewrites, custom attributes, linked products, the request path, the parity command |
+| `GraphCommerce_CatalogStorefrontQuoteGraphQl` | The display fields of a cart item's product, merged into the item the quote loaded |
+| `GraphCommerce_CatalogStorefrontWishlistGraphQl` | Wish list item products, one document request per list |
+| `GraphCommerce_CatalogStorefrontSalesGraphQl` | Order item products, one document request per order |
 | `GraphCommerce_CatalogStorefrontPrice` / `...PriceGraphQl` | Display prices and price ranges: currency and tax at read time through core's tax service / the prices prefiller, the customer's tax address |
 | `GraphCommerce_CatalogStorefrontWorker` | What a persistent PHP worker keeps between requests: kept schemas, validated documents, the guest tax, customer group and currency rate memos, each lifted by a cache generation. Nothing is keyed by customer. Only for FrankenPHP worker mode. |
 | `GraphCommerce_CatalogStorefrontExplorer` | The path switcher in the MageOS_GraphQLAdminHtml API explorer |
@@ -301,10 +304,22 @@ saved once, and prints every fallback of the document path. `--dump=<dir>` keeps
 responses of every query. A query file sends its own request
 headers through `# @header Content-Currency: EUR` comment lines; `--header "Authorization:
 Bearer <token>"` sends a customer token with every query, which makes it a signed-in gate,
-and `--header "Store: second"` runs it on another store view. A query that fails is requested
+and `--header "Store: second"` runs it on another store view. A query file states the
+headers its run must send through `# @requires Authorization` and the headers its run must
+not send through `# @requires !Authorization`; a query whose requirement the run does not
+meet is skipped. A query that fails is requested
 again, up to `--attempts` times (three by default), before its verdict counts: a worker thread
 that has not served the shape yet answers from a cold state once. See `CLAUDE.md` for the
 operating notes, the fixtures the query set needs and the known deviations.
+
+The set covers the catalog queries plus the three lists whose items carry a product:
+`30-cart-guest` reads the guest cart of `dev/parity/fixtures/guest-cart.php` with a simple
+and a bundle item, `31-wishlist-customer` the wish list of
+`dev/parity/fixtures/customer-wishlist.php` and `32-order-customer` the order of
+`dev/parity/fixtures/customer-order.php`, the last two on a signed-in run. Each selects the
+product fields the documents serve next to the item's own prices and quantity. Their
+subject is a database entity, so the gate lists the statements core runs for the quote, the
+wish list and the order instead of failing on them.
 
 Use `--candidate-endpoint=https://candidate.example/graphql` to send document-path
 requests to a separate installation while core requests stay on the positional endpoint.
@@ -396,19 +411,13 @@ Documents.
 2. **Subtree split.** The module directories to their own repositories and packages,
     so the modules install separately while the repository stays one.
 
-3. **Cart, wishlist and order products.** The quote recomputes an item's row price from
-   its product model at every totals collection, placeOrder included, so a document model
-   on a quote item would charge the document price at feed lag; the wishlist and order
-   item product resolvers are display reads. What fits is a merge of the document's display
-   fields into the cart item's product data, with the database model kept on the item.
-
-4. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
+3. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
    product listing collection, the product page and the layered navigation read from the
    base modules. The price rendering goes through the pricing system, so it needs its
    own document-backed price providers.
-5. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
-6. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
+4. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
+5. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
    listing needs a gate of its own: the rendered listing and product page on both
    paths, so an integrator proves an extension on every surface it touches.
-7. **REST integration.** The product repository and the search API behind the same
+6. **REST integration.** The product repository and the search API behind the same
    document models, for headless setups that read the catalog over REST.

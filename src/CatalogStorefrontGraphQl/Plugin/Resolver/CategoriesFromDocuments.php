@@ -50,7 +50,7 @@ class CategoriesFromDocuments implements ResetAfterRequestInterface
         ?array $args = null
     ) {
         $document = ($value['model'] ?? null)?->getData(HydrationInterface::DOCUMENT_KEY);
-        if (!is_array($document) || in_array('orders', $info->path, true)) {
+        if (!is_array($document)) {
             return $proceed($field, $context, $info, $value, $args);
         }
 

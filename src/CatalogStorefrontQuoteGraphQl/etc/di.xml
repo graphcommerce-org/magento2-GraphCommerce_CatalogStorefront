@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\QuoteGraphQl\Model\Resolver\CartItems">
+        <plugin name="graphcommerce_catalog_storefront_cart_item_products" type="GraphCommerce\CatalogStorefrontQuoteGraphQl\Plugin\Resolver\CartItemProductsFromDocuments"/>
+    </type>
+    <type name="Magento\QuoteGraphQl\Model\Resolver\CartItemsPaginated">
+        <plugin name="graphcommerce_catalog_storefront_cart_item_products" type="GraphCommerce\CatalogStorefrontQuoteGraphQl\Plugin\Resolver\CartItemProductsFromDocuments"/>
+    </type>
+</config>

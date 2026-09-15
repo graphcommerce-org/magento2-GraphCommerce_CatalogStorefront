@@ -132,6 +132,14 @@ passes.
   check from the token where core loads the customer to prove the id. A
   signed-in catalog request reads the revoked table, the address join and
   the rates of the product tax classes, nothing else about the customer.
+- `CatalogStorefrontQuoteGraphQl`: `Plugin/Resolver/CartItemProductsFromDocuments`
+  on the two cart items resolvers: the document and the prefilled fields land
+  on the product model the quote loaded, so the row prices and the quantity
+  stay with the quote.
+- `CatalogStorefrontWishlistGraphQl` / `CatalogStorefrontSalesGraphQl`: the
+  items resolver registers the products of its list in
+  `CatalogStorefrontGraphQl/Model/Read/ItemProducts`, and the item's product
+  resolver takes the value the batch built.
 - `CatalogStorefrontPrice` / `...PriceGraphQl`: `DisplayPrice` (a base currency
   price before tax, as the documents hold it, converted to the display
   currency and taxed through core's tax service for the request's group and
@@ -153,7 +161,10 @@ passes.
   document object, so without the kept documents every request parsed and
   validated again, 7 ms), the kept schemas per query shape, the validated
   documents, the deployment config check, the guest cache id tax factor, the
-  guest tax rates, the customer group and the currency rate lookups. Nothing
+  guest tax rates, the customer group and the currency rate lookups, and the
+  theme a full path names (the image URL builder asks for `graphql/_view` on
+  every request that renders a media gallery URL, and core repeats the query
+  for a path the database holds no theme for). Nothing
   is keyed by customer: a signed-in customer's request carries its own
   address and stays with core's per-request caches.
   The reload processors that run after a response (system config, stores,
@@ -311,7 +322,11 @@ registers all modules through composer autoload.
   OpenSearch, see the change in the response) proves a field is live; the gate
   alone cannot. Product `sku` filters accept only `eq` and `in`; the gate fails
   a query that errors on either path. A query file sends its own request
-  headers through `# @header Name: value` lines.
+  headers through `# @header Name: value` lines, and states what a run must
+  send or must not send for it through `# @requires Authorization` and
+  `# @requires !Authorization`; a query whose requirement the run does not meet
+  is skipped, which is how the signed-in queries and the guest cart query share
+  one directory.
 - Every fallback to core in a document plugin goes through `Model/Strict`:
   `fallback(self::class, reason)` where the document cannot answer,
   `exception(self::class, $e)` where the plugin failed (it logs a warning).
@@ -502,6 +517,26 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   `models`, which fetches the composite price data when the fields ask for a
   price range. `Plugin/SalableFromDocument` answers the configurable and bundle
   salability check from the inventory slice.
+- Cart, wish list and order items: a list whose items carry a product takes the
+  documents of the whole list in one request, and never one per item. The quote
+  computes an item's row price from its product model at every totals
+  collection, so a cart item keeps the model the quote loaded and takes the
+  document and the prefilled fields on top
+  (`CatalogStorefrontQuoteGraphQl/Plugin/Resolver/CartItemProductsFromDocuments`
+  after `CartItems` and `CartItemsPaginated`): the prefilled-field router and
+  the per-field document plugins then serve the display fields, while `prices`
+  and `quantity` stay the quote's. A configurable item carries the ordered
+  child as the `simple_product` item option, which takes the document too, so
+  `configured_variant` is served as well. A wish list item and an order item
+  resolve their product per item, so the items resolver registers the product
+  ids of its list in `CatalogStorefrontGraphQl/Model/Read/ItemProducts`
+  (request-scoped) and the first item that asks fetches them all; the
+  `ProductFromDocument` plugin of each module hands the item its value and
+  leaves a product without a document to core. The fields each list fills come
+  from `Model/Query/SelectedProductFields`, the selection under every `product`
+  and `configured_variant` node of the resolved field. What a cart, wish list
+  or order query still runs against the database is what core runs for the
+  quote, the wish list and the order themselves.
 - Every index mapping is `dynamic: false`; the product index maps only `sku`,
   `type`, the parent id lists, `status`, `stock.isSalable` and the nested
   `priceIndex` (group, regular, final), declared in the base di.xml under
@@ -601,6 +636,12 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   read the store list from the config cache, and a reindex before the flush
   builds one store view; the dev shop has it): the
   demo catalog has only a dynamic bundle with required radio options. The
+  cart, wish list and order queries need their own state, which three
+  idempotent fixtures create: `php dev/parity/fixtures/guest-cart.php` prints
+  the fixed masked id the cart query names, and
+  `php dev/parity/fixtures/customer-wishlist.php <email>` and
+  `customer-order.php <email>` fill the wish list and place one order for the
+  gate's customer (the signed-in run's token). The
   harness fails a query that returns no product on either path, because a
   hidden product passed vacuously for hours before that check existed. The
   stock query (`18-*.graphql`) needs `24-WG01` at quantity 1 (source item and
@@ -741,6 +782,9 @@ writer (`Model/Document/Field/ImageUrls`) resolves only the image URLs.
   bundle selections are not filtered on required customizable options or on
   stock, as core's collections do in some configurations. Variant attributes
   are listed by attribute id, the order core's super attribute index yields.
+- A configurable cart item's `configured_variant` takes the child's document,
+  which no parity query covers: the query set's cart holds a simple and a
+  bundle item.
 - A bundle item's `price_range` is the bundle's own range; core resolves a
   product loaded by the item's sku and answers something else for a dynamic
   bundle. The deprecated
