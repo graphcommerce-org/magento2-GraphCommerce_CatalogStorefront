@@ -2,7 +2,7 @@ define(['Magento_Ui/js/form/element/select', 'mage/translate'], function (Select
     'use strict';
     return Select.extend({
         defaults: {
-            listens: {sourceBinding: 'updateOperations', producerBinding: 'updateOperations', namespaceBinding: 'updateOperations'}
+            listens: {sourceBinding: 'updateOperations', producerBinding: 'updateOperations'}
         },
         initialize: function () {
             this._super();
@@ -11,7 +11,7 @@ define(['Magento_Ui/js/form/element/select', 'mage/translate'], function (Select
         },
         updateOperations: function () {
             if (typeof this.value !== 'function' || typeof this.options !== 'function') return;
-            var selected = this.value(), canonical = Boolean(this.sourceBinding || this.producerBinding || this.namespaceBinding),
+            var selected = this.value(), canonical = Boolean(this.sourceBinding || this.producerBinding),
                 options = [{value: 'override', label: $t('Override')}];
             if (!canonical) options.push({value: 'merge', label: $t('Merge')});
             this.setOptions(options);

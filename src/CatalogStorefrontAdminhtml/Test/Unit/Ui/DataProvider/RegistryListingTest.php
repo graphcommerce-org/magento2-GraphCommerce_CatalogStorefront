@@ -23,7 +23,7 @@ final class RegistryListingTest extends TestCase
             'layers' => [$layer(11, 'own-en', 1, 'en_US', 20), $layer(10, 'own-all-locales', 1), $layer(12, 'other-source', 2), $layer(13, 'wrong-locale', 1, 'de_DE'),
                 $layer(14, 'legacy-en', null, 'en_US'), $layer(15, 'legacy-all-locales', null, '', 5), $layer(16, 'legacy-de', null, 'de_DE'),
                 array_replace($layer(17, 'disabled', 1), ['enabled' => 0]), array_replace($layer(18, 'selected', null), ['scope' => 'view']),
-                array_replace($layer(19, 'unsupported-rating', null), ['type' => 'platform_reviews'])],
+                array_replace($layer(19, 'reviews', null), ['type' => 'platform_reviews'])],
             'views' => [$view(1, 1, [18, 11, 12]), $view(2, 2), $view(3, 3), $view(4, 4, [18]), $view(5, 5), $view(6, 99)],
         ];
         $repository = $this->createStub(ConfigurationInterface::class); $repository->method('all')->willReturnCallback(static fn($kind) => $records[$kind] ?? []);
@@ -35,8 +35,8 @@ final class RegistryListingTest extends TestCase
         $result = $listing->getData();
         self::assertSame(6, $result['totalRecords']);
         self::assertSame([
-            'own-all-locales, own-en, selected', 'other-source', '',
-            'legacy-all-locales, legacy-en, selected', 'legacy-all-locales, legacy-de', '',
+            'own-all-locales, reviews, own-en, selected', 'other-source, reviews', 'reviews',
+            'legacy-all-locales, legacy-en, reviews, selected', 'legacy-all-locales, legacy-de, reviews', '',
         ], array_column($result['items'], 'layers'));
     }
     public function testLayerReverseConnectionsRespectSourceLocaleAndViewSideSelection(): void

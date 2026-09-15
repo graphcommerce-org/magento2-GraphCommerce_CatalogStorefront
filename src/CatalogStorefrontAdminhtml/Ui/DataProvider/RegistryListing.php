@@ -64,8 +64,7 @@ class RegistryListing extends AbstractDataProvider
                 $global = array_filter($lookup['layers'], static function (array $layer) use ($source): bool {
                     if (!$source || empty($source['enabled']) || ($layer['scope'] ?? 'view') !== 'global' || empty($layer['enabled'])
                         || (!empty($layer['locale']) && $layer['locale'] !== ($source['locale'] ?? null))) return false;
-                    if ($layer['type'] === 'platform_reviews') return ($layer['product_match'] ?? 'native_id') === 'exact_sku'
-                        || ($source['type'] === 'platform_store_view' && (int)($layer['native_store_id'] ?? 0) > 0 && (int)$layer['native_store_id'] === (int)($source['native_store_id'] ?? 0));
+                    if ($layer['type'] === 'platform_reviews') return true;
                     if ($layer['type'] !== 'generic') return false;
                     if (!empty($layer['source_id'])) return (int)$layer['source_id'] === (int)$source['id'];
                     // Unbound legacy feeds apply only to the native Source adapter.
@@ -129,9 +128,7 @@ class RegistryListing extends AbstractDataProvider
                     $source = $lookup['sources'][$view['source_id']] ?? null;
                     if (!$source || (!empty($row['locale']) && $row['locale'] !== 'All locales' && $row['locale'] !== ($source['locale'] ?? null))) continue;
                     if (!empty($row['source_id']) && (int)$row['source_id'] !== (int)$source['id']) continue;
-                    if ($type === 'platform_reviews') {
-                        if (($row['product_match'] ?? 'native_id') !== 'exact_sku' && ($source['type'] !== 'platform_store_view' || (int)($row['native_store_id'] ?? 0) !== (int)($source['native_store_id'] ?? 0))) continue;
-                    } elseif (empty($row['source_id']) && $source['type'] !== 'platform_store_view') continue;
+                    if ($type !== 'platform_reviews' && empty($row['source_id']) && $source['type'] !== 'platform_store_view') continue;
                     $explicit = in_array($row['id'], array_column($view['layer_ids'] ?? [], 'resource_id'), true);
                     if ($explicit || ($row['scope'] ?? 'view') === 'global') $linked[] = $view['code'];
                 }

@@ -101,15 +101,15 @@ class ResourceForm extends AbstractDataProvider
         $nativeWebsites = $this->kind === 'views' ? $this->options->get('native_store_websites') : [];
         if (in_array($this->kind, ['views', 'layers'], true)) {
             foreach ($this->repository->all('sources') as $source) $sourceRoster[] = ['value' => (string)$source['id'], 'label' => (string)$source['name'],
-                'type' => $source['type'], 'enabled' => !empty($source['enabled']), 'identityNamespace' => $source['identity_namespace'] ?? '', 'locale' => $source['locale'] ?? '', 'nativeStoreId' => (string)($source['native_store_id'] ?? ''),
+                'type' => $source['type'], 'enabled' => !empty($source['enabled']), 'locale' => $source['locale'] ?? '', 'nativeStoreId' => (string)($source['native_store_id'] ?? ''),
                 'nativeWebsiteId' => (string)($nativeWebsites[$source['native_store_id'] ?? ''] ?? '')];
         }
         if ($this->kind === 'views') {
             foreach ($this->repository->all('books') as $book) $bookRoster[] = ['value' => (string)$book['id'], 'label' => \GraphCommerce\CatalogStorefrontAdminhtml\Model\ResourceLabels::name($book),
-                'type' => $book['type'], 'enabled' => !empty($book['enabled']), 'identityNamespace' => $book['identity_namespace'] ?? '', 'nativeWebsiteId' => (string)($book['native_website_id'] ?? '')];
+                'type' => $book['type'], 'enabled' => !empty($book['enabled']), 'nativeWebsiteId' => (string)($book['native_website_id'] ?? '')];
             foreach ($this->repository->all('layers') as $layer) $layerRoster[] = ['value' => (string)$layer['id'], 'label' => (string)$layer['name'],
                 'type' => $layer['type'], 'enabled' => !empty($layer['enabled']), 'sourceId' => (string)($layer['source_id'] ?? ''),
-                'identityNamespace' => $layer['identity_namespace'] ?? '', 'locale' => $layer['locale'] ?? '', 'scope' => $layer['scope'] ?? 'view', 'productMatch' => $layer['product_match'] ?? 'native_id', 'nativeStoreId' => (string)($layer['native_store_id'] ?? '')];
+                'locale' => $layer['locale'] ?? '', 'scope' => $layer['scope'] ?? 'view', 'nativeStoreId' => (string)($layer['native_store_id'] ?? '')];
         }
         $editable = $this->repository->capabilities()['can_manage'] && $this->authorization->isAllowed('GraphCommerce_CatalogStorefrontAdminhtml::manage');
         foreach ($definitions as $field => $spec) {
@@ -126,8 +126,7 @@ class ResourceForm extends AbstractDataProvider
                 $config['notice'] = (string)__($spec['notice']);
             }
             if ($this->kind === 'layers' && $field === 'source_id') {
-                $config += ['resourceFilter' => 'sources', 'sourceRoster' => $sourceRoster,
-                    'imports' => ['namespaceSelection' => $formProvider . ':data.identity_namespace']];
+                $config += ['resourceFilter' => 'sources', 'sourceRoster' => $sourceRoster];
             }
             if (isset($spec['options'])) {
                 $source = $spec['options'];
@@ -162,7 +161,7 @@ class ResourceForm extends AbstractDataProvider
                 }
                 if ($spec['element'] === 'fields') {
                     $columns['operation'] += ['component' => 'GraphCommerce_CatalogStorefrontAdminhtml/js/form/layer-operation',
-                        'imports' => ['sourceBinding' => $formProvider . ':data.source_id', 'producerBinding' => $formProvider . ':data.layer_producer', 'namespaceBinding' => $formProvider . ':data.identity_namespace']];
+                        'imports' => ['sourceBinding' => $formProvider . ':data.source_id', 'producerBinding' => $formProvider . ':data.layer_producer']];
                 }
                 $rowChildren = [];
                 foreach ($columns as $key => $column) {

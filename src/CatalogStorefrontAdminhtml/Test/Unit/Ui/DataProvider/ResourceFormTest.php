@@ -29,8 +29,7 @@ final class ResourceFormTest extends TestCase
 
     public static function bindingFields(): array
     {
-        return [['sources', ['identity_namespace']], ['books', ['price_producer', 'identity_namespace']],
-            ['stocks', ['stock_producer', 'identity_namespace']], ['layers', ['source_id', 'layer_producer', 'identity_namespace']]];
+        return [['books', ['price_producer']], ['stocks', ['stock_producer']], ['layers', ['source_id', 'layer_producer']]];
     }
 
     public function testLayerSourcePickerUsesRegistryMetadataWithoutNativeAttributeReads(): void
@@ -40,15 +39,13 @@ final class ResourceFormTest extends TestCase
         self::assertSame('GraphCommerce_CatalogStorefrontAdminhtml/js/form/resource-picker', $source['component']);
         self::assertSame('ui/grid/filters/elements/ui-select', $source['elementTmpl']);
         self::assertSame('sources', $source['resourceFilter']);
-        self::assertSame('products', $source['sourceRoster'][0]['identityNamespace']);
-        self::assertSame('catalog_storefront_resource_form.resource_form_data_source:data.identity_namespace', $source['imports']['namespaceSelection']);
+        self::assertSame('3', $source['sourceRoster'][0]['value']);
         self::assertSame('dynamicRows', $meta['fields']['arguments']['data']['config']['componentType']);
         $operation = $meta['fields']['children']['record']['children']['operation']['arguments']['data']['config'];
         self::assertSame('GraphCommerce_CatalogStorefrontAdminhtml/js/form/layer-operation', $operation['component']);
         self::assertSame([
             'sourceBinding' => 'catalog_storefront_resource_form.resource_form_data_source:data.source_id',
             'producerBinding' => 'catalog_storefront_resource_form.resource_form_data_source:data.layer_producer',
-            'namespaceBinding' => 'catalog_storefront_resource_form.resource_form_data_source:data.identity_namespace',
         ], $operation['imports']);
         self::assertSame('input', $meta['fields']['children']['record']['children']['field']['arguments']['data']['config']['formElement']);
     }
@@ -70,7 +67,7 @@ final class ResourceFormTest extends TestCase
     public function testReadOnlyCapabilityKeepsAllNewControlsDisabled(): void
     {
         $meta = $this->form('layers', false)->getMeta()['general']['children'];
-        foreach (['source_id', 'layer_producer', 'identity_namespace'] as $field) self::assertTrue($meta[$field]['arguments']['data']['config']['disabled']);
+        foreach (['source_id', 'layer_producer'] as $field) self::assertTrue($meta[$field]['arguments']['data']['config']['disabled']);
         self::assertTrue($meta['fields']['children']['record']['children']['operation']['arguments']['data']['config']['disabled']);
     }
 
@@ -78,7 +75,7 @@ final class ResourceFormTest extends TestCase
     {
         $data = $this->form('layers')->getData();
         self::assertSame([''], array_keys($data)); self::assertSame('generic', $data['']['type']); self::assertSame(1, $data['']['enabled']);
-        self::assertSame('', $data['']['source_id']); self::assertSame('', $data['']['identity_namespace']);
+        self::assertSame('', $data['']['source_id']); self::assertSame('', $data['']['layer_producer']);
     }
 
     #[DataProvider('dynamicRows')]
@@ -103,8 +100,8 @@ final class ResourceFormTest extends TestCase
         $repository = $this->createStub(ConfigurationInterface::class);
         $repository->method('capabilities')->willReturn(['can_manage' => $editable]);
         $repository->method('all')->willReturnCallback(static fn($kind) => match ($kind) {
-            'sources' => [['id' => 3, 'name' => 'External', 'type' => 'generic', 'enabled' => 1, 'identity_namespace' => 'products', 'locale' => 'en_US']],
-            'layers' => [['id' => 4, 'name' => 'Content', 'type' => 'generic', 'enabled' => 1, 'source_id' => 3, 'identity_namespace' => 'products']], default => [],
+            'sources' => [['id' => 3, 'name' => 'External', 'type' => 'generic', 'enabled' => 1, 'locale' => 'en_US']],
+            'layers' => [['id' => 4, 'name' => 'Content', 'type' => 'generic', 'enabled' => 1, 'source_id' => 3]], default => [],
         });
         $platform = $this->createStub(Platform::class); $platform->method('name')->willReturn('Magento');
         $options = $this->createStub(Options::class); $options->method('get')->willReturn([]);
