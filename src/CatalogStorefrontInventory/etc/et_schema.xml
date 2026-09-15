@@ -13,5 +13,9 @@
             <using field="productId"/>
             <using field="stockId"/>
         </field>
+        <field name="websiteCodes" type="String" repeated="true" provider="GraphCommerce\CatalogStorefrontInventory\Model\DataExporter\Provider\StockWebsites">
+            <using field="productId"/>
+            <using field="stockId"/>
+        </field>
     </record>
 </config>
