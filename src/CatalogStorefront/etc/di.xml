@@ -11,19 +11,20 @@
             </argument>
         </arguments>
     </type>
-    <!-- The feeds that write each entity; a module adds the feeds it writes. -->
+    <!-- The feeds that write each entity, metadata first because a product row names it;
+         a module adds the feeds it writes. -->
     <type name="GraphCommerce\CatalogStorefront\Model\Feeds">
         <arguments>
             <argument name="feeds" xsi:type="array">
-                <item name="product" xsi:type="array">
-                    <item name="catalog_data_exporter_products" xsi:type="object">Magento\CatalogDataExporter\Model\Indexer\ProductFeedIndexMetadata</item>
-                    <item name="catalog_data_exporter_product_prices" xsi:type="object">Magento\ProductPriceDataExporter\Model\Indexer\ProductPriceFeedIndexMetadata</item>
+                <item name="attribute" xsi:type="array">
+                    <item name="catalog_data_exporter_product_attributes" xsi:type="object">Magento\CatalogDataExporter\Model\Indexer\ProductAttributeFeedIndexMetadata</item>
                 </item>
                 <item name="category" xsi:type="array">
                     <item name="catalog_data_exporter_categories" xsi:type="object">Magento\CatalogDataExporter\Model\Indexer\CategoryFeedIndexMetadata</item>
                 </item>
-                <item name="attribute" xsi:type="array">
-                    <item name="catalog_data_exporter_product_attributes" xsi:type="object">Magento\CatalogDataExporter\Model\Indexer\ProductAttributeFeedIndexMetadata</item>
+                <item name="product" xsi:type="array">
+                    <item name="catalog_data_exporter_products" xsi:type="object">Magento\CatalogDataExporter\Model\Indexer\ProductFeedIndexMetadata</item>
+                    <item name="catalog_data_exporter_product_prices" xsi:type="object">Magento\ProductPriceDataExporter\Model\Indexer\ProductPriceFeedIndexMetadata</item>
                 </item>
             </argument>
         </arguments>
