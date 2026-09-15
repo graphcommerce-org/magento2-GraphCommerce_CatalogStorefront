@@ -8,4 +8,29 @@
         <field name="defaultLabel" type="String"/>
         <field name="textSwatchValue" type="String"/>
     </record>
+    <record name="Product">
+        <field name="configurableOptions" type="ConfigurableOption" repeated="true" provider="GraphCommerce\CatalogStorefrontConfigurableProduct\Model\DataExporter\Provider\ConfigurableOptions">
+            <using field="productId"/>
+            <using field="storeViewCode"/>
+        </field>
+    </record>
+    <record name="ConfigurableOption">
+        <field name="id" type="Int"/>
+        <field name="attribute" type="Int"/>
+        <field name="code" type="String"/>
+        <field name="label" type="String"/>
+        <field name="position" type="Int"/>
+        <field name="useDefault" type="Boolean"/>
+        <field name="values" type="ConfigurableOptionValue" repeated="true"/>
+    </record>
+    <record name="ConfigurableOptionValue" skipNull="true">
+        <field name="index" type="Int"/>
+        <field name="label" type="String"/>
+        <field name="defaultLabel" type="String"/>
+        <field name="swatch" type="ConfigurableOptionSwatch"/>
+    </record>
+    <record name="ConfigurableOptionSwatch" skipNull="true">
+        <field name="type" type="Int"/>
+        <field name="value" type="String"/>
+    </record>
 </config>

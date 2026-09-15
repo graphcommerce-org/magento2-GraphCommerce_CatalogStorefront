@@ -55,12 +55,6 @@ copy the pattern, not the code.
   `et_schema.xml` change, truncate the feed table and reindex the feed.
 - **Fix what an exporter provider emits.** A plugin on the provider class, in
   `Plugin/DataExporter/`. Example: `Plugin/DataExporter/TierPricePercent`.
-- **Reshape a product document field from the feed row.** Implement
-  `GraphCommerce\CatalogStorefrontApi\Document\ProductDocumentFieldInterface`
-  and register it under `fields` on `Model\Document\Writer\Products`. Example:
-  `CatalogStorefrontConfigurableProduct/Model/Document/Field/ConfigurableOptions`.
-  It reads the row and nothing else: data the row lacks comes from a provider
-  on the `Product` record.
 - **Write a feed of your own into the documents.** Implement
   `GraphCommerce\CatalogStorefrontApi\Document\FeedWriterInterface` and register
   it under `writers` on `Model\Document\Delivery`, keyed by the feed name. A

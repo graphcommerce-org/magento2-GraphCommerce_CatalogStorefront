@@ -3,6 +3,6 @@
 The base: feeds in, documents out, models for any frontend.
 
 - `Model/DataExporter`: patch-ups of commerce-data-export, the fields the core feeds lack.
-- `Model/Document`: the feed delivery, the writers for the products, prices, categories and attributes feeds, the composite links, the image URLs.
+- `Model/Document`: the feed delivery, the writers for the products, prices, categories, attributes and scopes feeds, the composite links, the scope reader every writer fans its rows out over.
 - `Model/Read`: product documents to product models, the price ranges per product type, the attribute documents.
 - The configuration under Catalog > Catalog > Catalog Storefront Document Store.

@@ -1,63 +1,74 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Document\Field;
+namespace GraphCommerce\CatalogStorefrontConfigurableProduct\Model\DataExporter\Provider;
 
-use GraphCommerce\CatalogStorefrontApi\Document\ProductDocumentFieldInterface;
+use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
+use Magento\ConfigurableProductDataExporter\Model\Provider\Product\Options;
 use Magento\Framework\GraphQl\Query\Uid;
 use Magento\Swatches\Helper\Media as SwatchMedia;
 use Magento\Swatches\Model\Swatch;
 
 /**
- * Stores a configurable's options on its document in the compact form
- * Model\Read\ConfigurableOptions expands: per option the super attribute id, the attribute id and
- * code, the label, the position and the use-default flag; per value the
- * value index, the label, the admin label where it differs and the swatch.
- * Every uid and every repeated id is derived at read time. The feed value id
- * is the core value uid ("configurable/<attribute id>/<value index>"), so
- * the attribute id comes from decoding it. Swatch images travel as the
- * swatch file; the thumbnail variation is generated here and its URL is
- * built at read time, so the document carries no host. Core lists the
- * options in an undefined order (no ORDER BY); the merchant's position order
- * is used instead.
+ * Exports a configurable's options in the compact form
+ * Model\Read\ConfigurableOptions expands: per option the super attribute id,
+ * the attribute id and code, the label, the position and the use-default
+ * flag; per value the value index, the label, the admin label where it
+ * differs and the swatch. Every uid and every repeated id is derived at read
+ * time. The feed value id is the core value uid
+ * ("configurable/<attribute id>/<value index>"), so the attribute id comes
+ * from decoding it. Swatch images travel as the swatch file; the thumbnail
+ * variation is generated here and its URL is built at read time, so the
+ * document carries no host. Core lists the options in an undefined order (no
+ * ORDER BY); the merchant's position order is used instead. The exporter's
+ * own option provider yields the raw options, which
+ * `Plugin\DataExporter\OptionsV2WithoutConfigurable` keeps out of `optionsV2`.
  */
-class ConfigurableOptions implements ProductDocumentFieldInterface
+class ConfigurableOptions
 {
     public function __construct(
+        private readonly Options $options,
         private readonly Uid $uidEncoder,
         private readonly SwatchMedia $swatchMedia,
     ) {
     }
 
-    public function add(string $storeViewCode, array $documents): array
+    public function get(array $values): array
     {
-        foreach ($documents as &$document) {
-            if (($document['type'] ?? null) === 'configurable') {
-                $document['configurableOptions'] = $this->build($document);
-                // The configurable entries live on in the compact form; the raw ones were a third of the document.
-                if ($document['configurableOptions'] !== null) {
-                    $document['optionsV2'] = array_values(array_filter(
-                        (array)($document['optionsV2'] ?? []),
-                        static fn(array $option) => ($option['type'] ?? null) !== 'configurable'
-                    ));
-                }
+        $rawOptions = [];
+        foreach ($this->options->get($values) as $row) {
+            $rawOptions[$row['storeViewCode']][(int)$row['productId']][] = $row['optionsV2'];
+        }
+        $output = [];
+        foreach ($values as $value) {
+            if (($value['type'] ?? null) !== Configurable::TYPE_CODE) {
+                continue;
+            }
+            $options = $this->build($rawOptions[$value['storeViewCode']][(int)$value['productId']] ?? []);
+            if ($options === null) {
+                continue;
+            }
+            foreach ($options as $option) {
+                $output[$value['storeViewCode'] . '_' . $value['productId'] . '_' . $option['attribute']] = [
+                    'productId' => $value['productId'],
+                    'storeViewCode' => $value['storeViewCode'],
+                    'configurableOptions' => $option,
+                ];
             }
         }
 
-        return $documents;
+        return $output;
     }
 
     /**
+     * @param array[] $rawOptions the exporter's own option entries of one product and store view
      * @return array[]|null null when an option carries no value to decode an attribute id from
      */
-    private function build(array $productRow): ?array
+    private function build(array $rawOptions): ?array
     {
         $swatchMediaUrl = $this->swatchMedia->getSwatchMediaUrl();
         $options = [];
-        foreach ((array)($productRow['optionsV2'] ?? []) as $option) {
-            if (($option['type'] ?? null) !== 'configurable') {
-                continue;
-            }
+        foreach ($rawOptions as $option) {
             $attributeId = null;
             $values = [];
             foreach ((array)($option['values'] ?? []) as $optionValue) {

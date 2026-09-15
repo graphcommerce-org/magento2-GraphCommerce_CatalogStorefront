@@ -1,30 +1,31 @@
 <?php
 declare(strict_types=1);
 
-namespace GraphCommerce\CatalogStorefrontConfigurableProduct\Test\Unit\Model\Document;
+namespace GraphCommerce\CatalogStorefrontConfigurableProduct\Test\Unit\Model\DataExporter\Provider;
 
-use GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Document\Field\ConfigurableOptions as Field;
+use GraphCommerce\CatalogStorefrontConfigurableProduct\Model\DataExporter\Provider\ConfigurableOptions as Provider;
 use GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Read\ConfigurableOptions as Read;
+use Magento\ConfigurableProductDataExporter\Model\Provider\Product\Options;
 use Magento\Framework\GraphQl\Query\Uid;
 use Magento\Swatches\Helper\Media as SwatchMedia;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The document contract: a feed row in, the compact field out, and the
- * expansion answers the configurable_options shape.
+ * The document contract: the exporter's own option entries in, the compact
+ * field out one row per option, and the expansion answers the
+ * configurable_options shape.
  */
 class ConfigurableOptionsTest extends TestCase
 {
-    private function row(): array
+    private function rawOptions(): array
     {
         $uid = new Uid();
 
         return [
-            'productId' => 494103,
-            'type' => 'configurable',
-            'optionsV2' => [
-                ['type' => 'custom', 'id' => 'engraving'],
-                [
+            [
+                'productId' => 494103,
+                'storeViewCode' => 'default',
+                'optionsV2' => [
                     'type' => 'configurable',
                     'id' => 'size',
                     'superAttributeId' => 401,
@@ -34,7 +35,11 @@ class ConfigurableOptionsTest extends TestCase
                         ['id' => $uid->encode('configurable/144/5'), 'label' => 'S', 'textSwatchValue' => 'S'],
                     ],
                 ],
-                [
+            ],
+            [
+                'productId' => 494103,
+                'storeViewCode' => 'default',
+                'optionsV2' => [
                     'type' => 'configurable',
                     'id' => 'color',
                     'superAttributeId' => 400,
@@ -51,19 +56,29 @@ class ConfigurableOptionsTest extends TestCase
         ];
     }
 
-    private function document(): array
+    /**
+     * @return array[] the configurableOptions entries of the one product, in the order the row keeps them
+     */
+    private function options(): array
     {
+        $options = $this->createMock(Options::class);
+        $options->method('get')->willReturn($this->rawOptions());
         $swatchMedia = $this->createMock(SwatchMedia::class);
         $swatchMedia->method('getSwatchMediaUrl')->willReturn('https://shop.test/media/attribute/swatch');
+        $swatchMedia->expects(self::once())->method('getSwatchAttributeImage')->with('swatch_thumb', '/b.jpg');
 
-        return (new Field(new Uid(), $swatchMedia))->add('default', [$this->row()])[0];
+        $output = (new Provider($options, new Uid(), $swatchMedia))->get([
+            ['productId' => 494103, 'storeViewCode' => 'default', 'type' => 'configurable'],
+            ['productId' => 7, 'storeViewCode' => 'default', 'type' => 'simple'],
+        ]);
+
+        self::assertSame(['default_494103_93', 'default_494103_144'], array_keys($output));
+
+        return array_column($output, 'configurableOptions');
     }
 
-    public function testStoresTheOptionsCompactInPositionOrderAndDropsTheRawEntries(): void
+    public function testStoresTheOptionsCompactInPositionOrder(): void
     {
-        $document = $this->document();
-
-        $this->assertSame([['type' => 'custom', 'id' => 'engraving']], $document['optionsV2']);
         $this->assertSame([
             [
                 'id' => 400,
@@ -87,12 +102,12 @@ class ConfigurableOptionsTest extends TestCase
                 'useDefault' => false,
                 'values' => [['index' => 5, 'label' => 'S', 'swatch' => ['type' => 0, 'value' => 'S']]],
             ],
-        ], $document['configurableOptions']);
+        ], $this->options());
     }
 
     public function testExpandsToTheSuperAttributeRows(): void
     {
-        $options = (new Read())->attributes($this->document());
+        $options = (new Read())->attributes(['productId' => 494103, 'configurableOptions' => $this->options()]);
 
         $this->assertCount(2, $options);
         $this->assertSame([

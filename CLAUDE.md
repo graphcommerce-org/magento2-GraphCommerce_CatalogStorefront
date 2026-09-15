@@ -19,8 +19,7 @@ passes.
   `Storage\ProductDocumentStorageInterface` and
   `Storage\MetadataDocumentStorageInterface` (the document stores, entity name
   per call for the metadata feeds), `Document\FeedWriterInterface` (writes one
-  feed's rows), `Document\ProductDocumentFieldInterface` (a product document
-  field computed at index time), `Read\ProductDocumentsInterface` (documents
+  feed's rows), `Read\ProductDocumentsInterface` (documents
   and models by id, DOCUMENT_KEY, the lazy composite price data),
   `Read\DocumentContext` (store, group key, composite price data) and
   `Read\PriceRangeInterface` (the range of one product type), and
@@ -263,8 +262,7 @@ Inside a base module the folders name the stage of the pipeline:
   like the modern ones; the plugins fix what an exporter provider leaves out.
 - `Model/Document/`: the document store side. `Delivery` implements the
   exporter's `ExportFeedInterface` and hands each batch to the `Writer/` of its
-  feed; `Field/` classes compute product document fields; `CompositeLinks`
-  keeps the composite relations by id. A writer that merges into stored
+  feed; `CompositeLinks` keeps the composite relations by id. A writer that merges into stored
   documents reads them through `stored()` and `storedBySku()`, the index that
   takes the writes, so a staged rebuild and a first build see what they wrote
   (the read alias points at the old index, or at nothing, until promote);
@@ -280,8 +278,7 @@ Inside a GraphQl module: `Model/DocumentHydration`, `Model/Prefill/`,
 `Plugin/Resolver/`, `Plugin/DataProvider/`, `Plugin/Layer/`, `Plugin/Query/`.
 
 A module registers its parts in its own `etc/di.xml`: `writers` (by feed
-name) on `Delivery`, `fields` on the products writer, `ranges` (by product
-type id) on `PriceRanges`, and on the GraphQL side `prefillers`,
+name) on `Delivery`, `ranges` (by product type id) on `PriceRanges`, and on the GraphQL side `prefillers`,
 `priceFields` on `DocumentHydration`,
 `prefilledFields` on `RoutePrefilledFields`. Prefillers run in di.xml order, so a later
 one may rewrite what an earlier one filled. The composite price searches
@@ -575,17 +572,18 @@ image URLs come from the feed row (`Model/DataExporter/Provider/ImageUrls`).
   its type map is materialized at build time because the type registry resets
   between requests. A schema or config change reaches a worker at the next
   cache flush or config cache clean, which the admin config save does.
-- `configurable_options` is stored compact at index time (`Model/Document/Field/ConfigurableOptions` of the configurable base module,
+- `configurable_options` is stored compact at index time (`Model/DataExporter/Provider/ConfigurableOptions` of the configurable base module,
   document key `configurableOptions`: per option the super attribute id, attribute id, code,
   label, position and use-default flag, per value the index, label, the admin label where it
   differs and the swatch as type plus file or value), expanded into the super attribute rows by
   the base module's `Model/Read/ConfigurableOptions` (the listing module reads those) and into
   the response shape by the GraphQl module's (uids, `_gc_prefilled` value uid and swatch);
   the plugin that serves it builds an image swatch's thumbnail URL at read time from the
-  stored swatch file, so the document carries no host. The field drops the configurable entries
-  of `optionsV2` once it has built them: they were a third of a configurable
-  document (13 KB), and every request-time reader of `optionsV2` looks for the
-  other option types (custom, downloadable, grouped, bundle).
+  stored swatch file, so the document carries no host.
+  `Plugin/DataExporter/OptionsV2WithoutConfigurable` keeps the raw configurable entries out
+  of `optionsV2`: they were a third of a configurable document (13 KB), and every
+  request-time reader of `optionsV2` looks for the other option types (custom,
+  downloadable, grouped, bundle).
 - The GraphCommerce ProductList query (`dev/parity/queries/13-*.graphql`, all
   fragments and injections resolved) runs on the document path with no catalog
   SQL: only per-process metadata and bootstrap queries remain.
