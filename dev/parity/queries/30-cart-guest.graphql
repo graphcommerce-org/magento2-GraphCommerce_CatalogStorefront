@@ -1,0 +1,52 @@
+# @requires !Authorization
+# @requires !Store
+# The guest cart of dev/parity/fixtures/guest-cart.php, a simple and a bundle
+# item. The item prices and the quantity come from the quote on both paths;
+# the product fields come from the document. Core refuses a guest cart to a
+# signed-in customer and a cart of another website's store view, so a run with
+# a token or a store skips it.
+fragment CartItemProduct on ProductInterface {
+  __typename
+  name
+  sku
+  url_key
+  stock_status
+  small_image { url label }
+  thumbnail { url label }
+  price_range {
+    minimum_price { regular_price { value currency } final_price { value currency } discount { amount_off percent_off } }
+    maximum_price { regular_price { value currency } final_price { value currency } discount { amount_off percent_off } }
+  }
+  categories { uid name url_key url_path level position }
+  custom_attributesV2 {
+    items {
+      code
+      ... on AttributeValue { value }
+      ... on AttributeSelectedOptions { selected_options { label value } }
+    }
+  }
+}
+query GuestCart {
+  cart(cart_id: "paritygateguestcart000000000000a") {
+    id
+    total_quantity
+    items {
+      uid
+      quantity
+      prices {
+        price { value currency }
+        row_total { value currency }
+        row_total_including_tax { value currency }
+        total_item_discount { value currency }
+      }
+      product { ...CartItemProduct }
+      ... on ConfigurableCartItem {
+        configurable_options { configurable_product_option_uid option_label value_label }
+        configured_variant { ...CartItemProduct }
+      }
+      ... on BundleCartItem {
+        bundle_options { uid label type values { uid label price quantity } }
+      }
+    }
+  }
+}

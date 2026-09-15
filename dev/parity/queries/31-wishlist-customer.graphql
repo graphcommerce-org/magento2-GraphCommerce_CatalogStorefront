@@ -1,0 +1,42 @@
+# @requires Authorization
+# The wish list of dev/parity/fixtures/customer-wishlist.php. Needs a customer
+# token: `--header "Authorization: Bearer <token>"`.
+query CustomerWishlist {
+  customer {
+    wishlists {
+      id
+      items_count
+      items_v2 {
+        items {
+          id
+          quantity
+          description
+          product {
+            __typename
+            name
+            sku
+            url_key
+            stock_status
+            small_image { url label }
+            thumbnail { url label }
+            price_range {
+              minimum_price { regular_price { value currency } final_price { value currency } discount { amount_off percent_off } }
+              maximum_price { regular_price { value currency } final_price { value currency } discount { amount_off percent_off } }
+            }
+            categories { uid name url_key url_path level position }
+            custom_attributesV2 {
+              items {
+                code
+                ... on AttributeValue { value }
+                ... on AttributeSelectedOptions { selected_options { label value } }
+              }
+            }
+            ... on ConfigurableProduct { configurable_options { attribute_code label values { uid label } } }
+          }
+          ... on ConfigurableWishlistItem { child_sku }
+        }
+        page_info { current_page page_size total_pages }
+      }
+    }
+  }
+}

@@ -26,9 +26,12 @@ use Symfony\Component\Console\Output\OutputInterface;
  * sees the steady state, and a query that fails is requested again up to
  * `--attempts` times before its verdict counts: a worker thread that has not
  * served the shape yet answers from a cold state once. A query file sends extra request headers through
- * comment lines of the form `# @header Content-Currency: EUR`, and names a
+ * comment lines of the form `# @header Content-Currency: EUR`, names a
  * configurable option value as `{{option_uid:<attribute code>:<admin label>}}`,
- * resolved to the installation's ids; `--header`
+ * resolved to the installation's ids, and states the headers a run must send
+ * for it through `# @requires Authorization` and the headers a run must not
+ * send through `# @requires !Authorization`; a query whose requirement the
+ * run does not meet is skipped. `--header`
  * sends one with every query, a customer token for a signed-in gate. Other
  * modules add verdicts through di.xml `judges`.
  */
@@ -107,6 +110,7 @@ class Parity extends Command
         }
 
         $failed = 0;
+        $skipped = 0;
         $results = [];
         foreach ($files as $file) {
             $name = basename($file, '.graphql');
@@ -123,6 +127,23 @@ class Parity extends Command
             );
             preg_match_all('/^#\s*@header\s+([\w-]+):\s*(.+?)\s*$/m', $query, $matches, PREG_SET_ORDER);
             $headers = array_combine(array_column($matches, 1), array_column($matches, 2)) + $shared;
+            preg_match_all('/^#\s*@requires\s+(!?)([\w-]+)\s*$/m', $query, $required, PREG_SET_ORDER);
+            $unmet = array_filter(
+                $required,
+                static fn(array $requirement) => isset($headers[$requirement[2]]) === ($requirement[1] === '!')
+            );
+            if ($unmet) {
+                $skipped++;
+                $output->writeln(sprintf(
+                    'SKIP  %s: the run %s',
+                    $name,
+                    implode(', ', array_map(
+                        static fn(array $requirement) => ($requirement[1] === '!' ? 'sends the ' : 'sends no ') . $requirement[2] . ' header',
+                        $unmet
+                    ))
+                ));
+                continue;
+            }
             foreach ([Mode::CORE, Mode::DOCUMENTS] as $mode) {
                 for ($run = 0; $run < $warm; $run++) {
                     $this->request($endpoints[$mode], $query, $mode, $key, $headers);
@@ -156,15 +177,17 @@ class Parity extends Command
                 }
             }
         }
-        $output->writeln(sprintf("\n%d of %d queries identical", count($files) - $failed, count($files)));
+        $judged = count($files) - $skipped;
+        $output->writeln(sprintf("\n%d of %d queries identical, %d skipped", $judged - $failed, $judged, $skipped));
 
         if ($input->getOption(self::REPORT) !== null) {
             $path = (string)$input->getOption(self::REPORT);
             $report = [
                 'schemaVersion' => 1,
                 'total' => count($files),
-                'passed' => count($files) - $failed,
+                'passed' => $judged - $failed,
                 'failed' => $failed,
+                'skipped' => $skipped,
                 'results' => $results,
             ];
             if (!$this->writeReport($path, $report)) {

@@ -1,0 +1,43 @@
+# @requires Authorization
+# The order of dev/parity/fixtures/customer-order.php. Needs a customer token:
+# `--header "Authorization: Bearer <token>"`.
+query CustomerOrders {
+  customer {
+    orders(pageSize: 10) {
+      total_count
+      items {
+        number
+        status
+        items {
+          id
+          product_sku
+          product_name
+          quantity_ordered
+          product_sale_price { value currency }
+          product {
+            __typename
+            name
+            sku
+            url_key
+            stock_status
+            small_image { url label }
+            thumbnail { url label }
+            price_range {
+              minimum_price { regular_price { value currency } final_price { value currency } discount { amount_off percent_off } }
+              maximum_price { regular_price { value currency } final_price { value currency } discount { amount_off percent_off } }
+            }
+            categories { uid name url_key url_path level position }
+            custom_attributesV2 {
+              items {
+                code
+                ... on AttributeValue { value }
+                ... on AttributeSelectedOptions { selected_options { label value } }
+              }
+            }
+            ... on ConfigurableProduct { configurable_options { attribute_code label values { uid label } } }
+          }
+        }
+      }
+    }
+  }
+}

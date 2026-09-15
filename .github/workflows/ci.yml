@@ -62,7 +62,9 @@ jobs:
 
   # The parity gate: a Mage-OS install with sample data and OpenSearch, the feeds exported into the
   # document store, every query of dev/parity/queries on both paths, in the four price setups,
-  # as a guest, as a signed-in customer and on a second website's store view.
+  # as a guest, as a signed-in customer and on a second website's store view. A query states the
+  # headers its run must send, so the cart query runs on the guest runs and the wish list and
+  # order queries on the signed-in one.
   parity:
     needs: [matrix, unit]
     strategy:
@@ -178,6 +180,10 @@ jobs:
           php ${{ github.workspace }}/dev/parity/fixtures/fixed-product-tax.php
           # A manual price step on the category of the aggregations query, read with manual price navigation.
           php ${{ github.workspace }}/dev/parity/fixtures/category-price-step.php
+          # A guest cart, a wish list and one placed order, the subjects of the cart, wish list and order queries.
+          php ${{ github.workspace }}/dev/parity/fixtures/guest-cart.php
+          php ${{ github.workspace }}/dev/parity/fixtures/customer-wishlist.php customer@example.com
+          php ${{ github.workspace }}/dev/parity/fixtures/customer-order.php customer@example.com
       - name: Configure and export the feeds
         working-directory: ${{ steps.magento.outputs.path }}
         run: |

@@ -131,6 +131,28 @@ class ParityTest extends TestCase
         self::assertSame(0, (new CommandTester($command))->execute($this->input() + ['--warm' => '0', '--attempts' => '1']));
     }
 
+    public function testAQueryIsSkippedWhereTheRunDoesNotMeetItsHeaderRequirements(): void
+    {
+        file_put_contents($this->directory . '/02-signed-in.graphql', "# @requires Authorization\n{ customer { email } }");
+        file_put_contents($this->directory . '/03-guest.graphql', "# @requires !Authorization\n{ cart(cart_id: \"x\") { id } }");
+
+        $command = $this->command();
+        $tester = new CommandTester($command);
+        self::assertSame(0, $tester->execute($this->input() + [
+            '--warm' => '0', '--report' => $this->directory . '/report.json',
+        ]));
+        self::assertStringContainsString('SKIP  02-signed-in: the run sends no Authorization header', $tester->getDisplay());
+        self::assertStringContainsString('2 of 2 queries identical, 1 skipped', $tester->getDisplay());
+        self::assertSame(1, json_decode((string)file_get_contents($this->directory . '/report.json'), true)['skipped']);
+
+        $command = $this->command();
+        $tester = new CommandTester($command);
+        self::assertSame(0, $tester->execute($this->input() + [
+            '--warm' => '0', '--header' => ['Authorization: Bearer test-secret'],
+        ]));
+        self::assertStringContainsString('SKIP  03-guest: the run sends the Authorization header', $tester->getDisplay());
+    }
+
     #[DataProvider('badTransportResponses')]
     public function testTransportAndMalformedJsonAreErrors(string|false $body, int $status): void
     {
