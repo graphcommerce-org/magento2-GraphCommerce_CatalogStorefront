@@ -12,7 +12,9 @@
     <type name="GraphCommerce\CatalogStorefront\Model\Document\Delivery">
         <arguments>
             <argument name="writers" xsi:type="array">
-                <item name="variants" xsi:type="object">GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Document\Writer\Variants</item>
+                <item name="variants" xsi:type="array">
+                    <item name="documents" xsi:type="object">GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Document\Writer\Variants</item>
+                </item>
             </argument>
             <argument name="identities" xsi:type="array">
                 <item name="variants" xsi:type="array">

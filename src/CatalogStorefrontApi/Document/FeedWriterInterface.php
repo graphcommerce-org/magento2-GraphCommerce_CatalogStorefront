@@ -4,10 +4,10 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontApi\Document;
 
 /**
- * Writes the rows of one commerce-data-export feed into the document store.
- * The delivery maps feed names to writers (di.xml `writers`); a feed without
- * one is accepted and only persisted in its feed table. A writer MAY read the
- * database: it runs at index time.
+ * Writes the rows of one commerce-data-export feed into a store.
+ * The delivery maps a feed name to the writers of that feed (di.xml `writers`)
+ * and calls each of them with the batch; a feed without one is accepted and only
+ * persisted in its feed table. A writer MAY read the database: it runs at index time.
  */
 interface FeedWriterInterface
 {

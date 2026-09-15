@@ -16,9 +16,10 @@ use Magento\Framework\Indexer\CacheContextFactory;
 use Psr\Log\LoggerInterface;
 
 /**
- * Local delivery for commerce-data-export feeds: each feed batch goes to the
- * writer registered for its feed name (di.xml `writers`), which writes its
- * slice of the documents. A feed without a writer is accepted and only
+ * Local delivery for commerce-data-export feeds: each feed batch goes to every
+ * writer registered for its feed name (di.xml `writers`, feed name to writer
+ * name), in registration order. Each writer writes its own slice of the
+ * documents. A feed without a writer is accepted and only
  * persisted in its feed table, as is every feed while storefront indexing is
  * off. A storage failure reports status 500 for the exporter's retry bookkeeping.
  * After a registered writer succeeds, an optional feed acceptor can durably record
@@ -38,7 +39,7 @@ class Delivery implements ExportFeedInterface
     private const STATUS_RETRY = 500;
 
     /**
-     * @param FeedWriterInterface[] $writers by feed name
+     * @param array<string, FeedWriterInterface[]> $writers by feed name, then by writer name
      * @param array<string, array<string, string[]>> $identities feed name to cache tag to row keys
      * @param FeedWriteAcceptanceInterface[] $acceptors by feed name
      */
@@ -61,18 +62,21 @@ class Delivery implements ExportFeedInterface
             return $this->feedExportStatusBuilder->build(self::STATUS_ACCEPTED, 'Storefront indexing is off');
         }
         $feed = $metadata->getFeedName();
+        $written = $this->writers[$feed] ?? [];
         $started = microtime(true);
         try {
-            ($this->writers[$feed] ?? null)?->write($data);
+            foreach ($written as $writer) {
+                $writer->write($data);
+            }
         } catch (\Throwable $e) {
             $this->logger->error(sprintf('catalog-storefront: storing feed "%s" failed: %s', $feed, $e->getMessage()));
 
             return $this->feedExportStatusBuilder->build(self::STATUS_RETRY, $e->getMessage());
         }
-        if (isset($this->writers[$feed], $this->acceptors[$feed])) {
+        if ($written && isset($this->acceptors[$feed])) {
             $this->acceptors[$feed]->accept($data, $metadata);
         }
-        if (isset($this->writers[$feed])) {
+        if ($written) {
             $this->logger->debug(sprintf(
                 'catalog-storefront: feed "%s": %d rows written in %d ms',
                 $feed,
@@ -80,7 +84,7 @@ class Delivery implements ExportFeedInterface
                 (int)round((microtime(true) - $started) * 1000)
             ));
         }
-        if (isset($this->writers[$feed], $this->identities[$feed])) {
+        if ($written && isset($this->identities[$feed])) {
             $context = $this->cacheContextFactory->create();
             foreach ($this->identities[$feed] as $tag => $keys) {
                 $ids = [];

@@ -21,8 +21,9 @@ class DeliveryTest extends TestCase
 {
     private ?int $statusCode = null;
 
+    /** @param FeedWriterInterface[] $writers */
     private function delivery(
-        FeedWriterInterface $writer,
+        array $writers,
         ManagerInterface $events,
         CacheInterface $cache,
         ?FeedWriteAcceptanceInterface $acceptor = null,
@@ -46,7 +47,7 @@ class DeliveryTest extends TestCase
             $contextFactory,
             $events,
             $cache,
-            ['products' => $writer],
+            ['products' => $writers],
             ['products' => ['cat_p' => ['productId', 'parentId']]],
             $acceptor === null ? [] : ['products' => $acceptor],
         );
@@ -74,7 +75,7 @@ class DeliveryTest extends TestCase
         $cache = $this->createMock(CacheInterface::class);
         $cache->expects(self::once())->method('clean')->with(['cat_p_7', 'cat_p_9', 'cat_p_8']);
 
-        $this->delivery($writer, $events, $cache)->export($rows, $this->metadata('products'));
+        $this->delivery(['documents' => $writer], $events, $cache)->export($rows, $this->metadata('products'));
         self::assertSame(200, $this->statusCode);
     }
 
@@ -89,7 +90,7 @@ class DeliveryTest extends TestCase
         $cache = $this->createMock(CacheInterface::class);
         $cache->expects(self::never())->method('clean');
 
-        $this->delivery($writer, $events, $cache, $acceptor)
+        $this->delivery(['documents' => $writer], $events, $cache, $acceptor)
             ->export([['productId' => 1]], $this->metadata('orders'));
     }
 
@@ -102,7 +103,7 @@ class DeliveryTest extends TestCase
         $cache = $this->createMock(CacheInterface::class);
         $cache->expects(self::never())->method('clean');
 
-        $this->delivery($writer, $this->createMock(ManagerInterface::class), $cache, $acceptor)
+        $this->delivery(['documents' => $writer], $this->createMock(ManagerInterface::class), $cache, $acceptor)
             ->export([['productId' => 1]], $this->metadata('products'));
         self::assertSame(500, $this->statusCode);
     }
@@ -118,7 +119,7 @@ class DeliveryTest extends TestCase
         $cache = $this->createMock(CacheInterface::class);
         $cache->expects(self::never())->method('clean');
 
-        $this->delivery($writer, $events, $cache, $acceptor, false)
+        $this->delivery(['documents' => $writer], $events, $cache, $acceptor, false)
             ->export([['productId' => 1]], $this->metadata('products'));
 
         self::assertSame(200, $this->statusCode);
@@ -148,7 +149,7 @@ class DeliveryTest extends TestCase
             },
         );
 
-        $this->delivery($writer, $events, $this->createMock(CacheInterface::class), $acceptor)
+        $this->delivery(['documents' => $writer], $events, $this->createMock(CacheInterface::class), $acceptor)
             ->export($rows, $metadata);
 
         self::assertSame(['write', 'accept', 'purge'], $order);
@@ -172,7 +173,54 @@ class DeliveryTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('acceptance unavailable');
 
-        $this->delivery($writer, $events, $cache, $acceptor)
+        $this->delivery(['documents' => $writer], $events, $cache, $acceptor)
             ->export($rows, $this->metadata('products'));
+    }
+
+    public function testEveryWriterOfTheFeedGetsTheBatchInRegistrationOrder(): void
+    {
+        $rows = [['productId' => 7, 'storeViewCode' => 'default']];
+        $order = [];
+        $writers = [];
+        foreach (['documents', 'source'] as $name) {
+            $writer = $this->createMock(FeedWriterInterface::class);
+            $writer->expects(self::once())->method('write')->with($rows)->willReturnCallback(
+                static function () use (&$order, $name): void {
+                    $order[] = $name;
+                },
+            );
+            $writers[$name] = $writer;
+        }
+        $acceptor = $this->createMock(FeedWriteAcceptanceInterface::class);
+        $acceptor->expects(self::once())->method('accept')->willReturnCallback(
+            static function () use (&$order): void {
+                $order[] = 'accept';
+            },
+        );
+
+        $this->delivery($writers, $this->createMock(ManagerInterface::class), $this->createMock(CacheInterface::class), $acceptor)
+            ->export($rows, $this->metadata('products'));
+
+        self::assertSame(['documents', 'source', 'accept'], $order);
+        self::assertSame(200, $this->statusCode);
+    }
+
+    public function testASecondWriterThatFailsAsksForARetryAndPurgesNothing(): void
+    {
+        $first = $this->createMock(FeedWriterInterface::class);
+        $first->expects(self::once())->method('write');
+        $second = $this->createMock(FeedWriterInterface::class);
+        $second->method('write')->willThrowException(new \RuntimeException('down'));
+        $acceptor = $this->createMock(FeedWriteAcceptanceInterface::class);
+        $acceptor->expects(self::never())->method('accept');
+        $events = $this->createMock(ManagerInterface::class);
+        $events->expects(self::never())->method('dispatch');
+        $cache = $this->createMock(CacheInterface::class);
+        $cache->expects(self::never())->method('clean');
+
+        $this->delivery(['documents' => $first, 'source' => $second], $events, $cache, $acceptor)
+            ->export([['productId' => 1]], $this->metadata('products'));
+
+        self::assertSame(500, $this->statusCode);
     }
 }
