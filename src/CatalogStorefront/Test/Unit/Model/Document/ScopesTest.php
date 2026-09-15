@@ -12,8 +12,8 @@ class ScopesTest extends TestCase
     public function testTheStoreViewsComeFromTheWebsiteDocuments(): void
     {
         $scopes = $this->scopes([
-            1 => ['id' => 1, 'code' => 'base', 'storeViews' => ['default', 'second']],
-            2 => ['id' => 2, 'code' => 'other', 'storeViews' => ['third']],
+            1 => ['id' => 1, 'code' => 'base', 'storeViews' => [self::storeView('default'), self::storeView('second')]],
+            2 => ['id' => 2, 'code' => 'other', 'storeViews' => [self::storeView('third')]],
         ], []);
 
         self::assertSame(['default', 'second', 'third'], $scopes->storeViews());
@@ -21,9 +21,33 @@ class ScopesTest extends TestCase
         self::assertSame([], $scopes->storeViewsOfWebsite('missing'));
     }
 
+    public function testTheMediaOfAStoreViewComesFromItsWebsiteDocument(): void
+    {
+        $scopes = $this->scopes([
+            1 => ['id' => 1, 'code' => 'base', 'storeViews' => [self::storeView('default'), self::storeView('second')]],
+        ], []);
+
+        self::assertSame([
+            'mediaBaseUrl' => 'https://shop.test/media/second/',
+            'imagePlaceholders' => ['small_image' => 'https://shop.test/static/second/small_image.jpg'],
+        ], $scopes->media('second'));
+
+        $this->expectExceptionMessageMatches('/store view "third"/');
+        $scopes->media('third');
+    }
+
+    private static function storeView(string $code): array
+    {
+        return [
+            'code' => $code,
+            'mediaBaseUrl' => 'https://shop.test/media/' . $code . '/',
+            'imagePlaceholders' => ['small_image' => 'https://shop.test/static/' . $code . '/small_image.jpg'],
+        ];
+    }
+
     public function testTheNotLoggedInGroupComesFirstAndTheOthersByName(): void
     {
-        $scopes = $this->scopes([1 => ['id' => 1, 'code' => 'base', 'storeViews' => ['default']]], [
+        $scopes = $this->scopes([1 => ['id' => 1, 'code' => 'base', 'storeViews' => [self::storeView('default')]]], [
             2 => ['id' => 2, 'code' => 'hash-2', 'name' => 'Wholesale'],
             3 => ['id' => 3, 'code' => 'hash-3', 'name' => 'Retailer'],
             1 => ['id' => 1, 'code' => 'hash-1', 'name' => 'General'],

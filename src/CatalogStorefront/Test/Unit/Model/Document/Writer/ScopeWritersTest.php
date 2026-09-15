@@ -11,12 +11,12 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * The document contract of the two scopes feeds: the store views of a website
- * flattened into one list, the group with the code its price rows name it
- * with, and a removed scope deleted.
+ * flattened into one list with their media, the group with the code its price
+ * rows name it with, and a removed scope deleted.
  */
 class ScopeWritersTest extends TestCase
 {
-    public function testTheWebsiteDocumentCarriesEveryStoreViewOfItsStoreGroups(): void
+    public function testTheWebsiteDocumentCarriesEveryStoreViewOfItsStoreGroupsWithItsMedia(): void
     {
         [$storage, $upserts, $deletes] = $this->storage();
 
@@ -28,13 +28,22 @@ class ScopeWritersTest extends TestCase
                     ['storeId' => '1', 'storeViews' => [['storeViewCode' => 'default'], ['storeViewCode' => 'nl']]],
                     ['storeId' => '2', 'storeViews' => [['storeViewCode' => 'second']]],
                 ],
+                'storeViewMedia' => [
+                    ['storeViewCode' => 'default', 'mediaBaseUrl' => 'https://shop.test/media/',
+                        'imagePlaceholders' => ['small_image' => 'https://shop.test/static/small_image.jpg']],
+                ],
             ],
             ['websiteId' => '2', 'deleted' => true],
             ['websiteCode' => 'no-id'],
         ]);
 
         self::assertSame([[Scopes::WEBSITE, Scopes::SCOPE, [
-            1 => ['code' => 'base', 'storeViews' => ['default', 'nl', 'second']],
+            1 => ['code' => 'base', 'storeViews' => [
+                ['code' => 'default', 'mediaBaseUrl' => 'https://shop.test/media/',
+                    'imagePlaceholders' => ['small_image' => 'https://shop.test/static/small_image.jpg']],
+                ['code' => 'nl', 'mediaBaseUrl' => '', 'imagePlaceholders' => []],
+                ['code' => 'second', 'mediaBaseUrl' => '', 'imagePlaceholders' => []],
+            ]],
         ]]], $upserts->calls);
         self::assertSame([[Scopes::WEBSITE, Scopes::SCOPE, [2]]], $deletes->calls);
     }

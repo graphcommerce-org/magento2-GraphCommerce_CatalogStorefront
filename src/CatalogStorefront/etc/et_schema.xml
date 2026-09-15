@@ -57,6 +57,21 @@
             <using field="storeViewCode"/>
         </field>
     </record>
+    <record name="ProductImagePlaceholders" skipNull="true">
+        <field name="image" type="String"/>
+        <field name="small_image" type="String"/>
+        <field name="thumbnail" type="String"/>
+    </record>
+    <record name="StoreViewMedia">
+        <field name="storeViewCode" type="String"/>
+        <field name="mediaBaseUrl" type="String"/>
+        <field name="imagePlaceholders" type="ProductImagePlaceholders"/>
+    </record>
+    <record name="Website">
+        <field name="storeViewMedia" type="StoreViewMedia" repeated="true" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\StoreViewMedia">
+            <using field="websiteId"/>
+        </field>
+    </record>
     <record name="Export">
         <field name="scopesWebsite" type="Website" repeated="true" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Processor\Scopes">
             <using field="websiteId"/>

@@ -9,8 +9,9 @@ use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
 
 /**
  * The scopes website feed lands as one website document in the global scope,
- * with the store view codes of its store groups flattened into one list: the
- * writers of the other feeds fan their rows out over it.
+ * with the store views of its store groups flattened into one list: the
+ * writers of the other feeds fan their rows out over it. A store view carries
+ * the media base URL and the image placeholder URLs a product row leaves off.
  */
 class Websites implements FeedWriterInterface
 {
@@ -31,10 +32,16 @@ class Websites implements FeedWriterInterface
                 $deletes[] = (int)$row['websiteId'];
                 continue;
             }
+            $media = array_column((array)($row['storeViewMedia'] ?? []), null, 'storeViewCode');
             $storeViews = [];
             foreach ((array)($row['stores'] ?? []) as $storeGroup) {
                 foreach ((array)($storeGroup['storeViews'] ?? []) as $storeView) {
-                    $storeViews[] = (string)$storeView['storeViewCode'];
+                    $code = (string)$storeView['storeViewCode'];
+                    $storeViews[] = [
+                        'code' => $code,
+                        'mediaBaseUrl' => (string)($media[$code]['mediaBaseUrl'] ?? ''),
+                        'imagePlaceholders' => (array)($media[$code]['imagePlaceholders'] ?? []),
+                    ];
                 }
             }
             $upserts[(int)$row['websiteId']] = [

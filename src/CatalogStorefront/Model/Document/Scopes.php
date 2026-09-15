@@ -25,7 +25,7 @@ class Scopes implements ResetAfterRequestInterface
     /** The feed exports the groups from id 1, so the not logged in group is added. */
     private const NOT_LOGGED_IN_ID = 0;
 
-    /** @var array<string, string[]>|null store view codes by website code */
+    /** @var array<string, array<string, array>>|null store views by website code, then by store view code */
     private ?array $websites = null;
 
     /** @var array<string, int>|null group id by the code the feeds name the group with */
@@ -41,7 +41,7 @@ class Scopes implements ResetAfterRequestInterface
      */
     public function storeViews(): array
     {
-        return array_values(array_unique(array_merge([], ...array_values($this->websites()))));
+        return array_values(array_unique(array_merge([], ...array_map('array_keys', array_values($this->websites())))));
     }
 
     /**
@@ -49,7 +49,28 @@ class Scopes implements ResetAfterRequestInterface
      */
     public function storeViewsOfWebsite(string $websiteCode): array
     {
-        return $this->websites()[$websiteCode] ?? [];
+        return array_keys($this->websites()[$websiteCode] ?? []);
+    }
+
+    /**
+     * The media base URL and the image placeholder URLs of one store view, as
+     * the websites feed exported them under that store view's environment.
+     *
+     * @return array{mediaBaseUrl: string, imagePlaceholders: array<string, string>}
+     */
+    public function media(string $storeViewCode): array
+    {
+        foreach ($this->websites() as $storeViews) {
+            if (isset($storeViews[$storeViewCode])) {
+                return $storeViews[$storeViewCode];
+            }
+        }
+
+        throw new \RuntimeException(sprintf(
+            'No website document holds store view "%s": export the scopesWebsite feed '
+            . '(bin/magento indexer:reindex scopes_website_data_exporter).',
+            $storeViewCode
+        ));
     }
 
     /**
@@ -100,7 +121,14 @@ class Scopes implements ResetAfterRequestInterface
             }
             $this->websites = [];
             foreach ($documents as $document) {
-                $this->websites[(string)$document['code']] = array_map('strval', (array)($document['storeViews'] ?? []));
+                $storeViews = [];
+                foreach ((array)($document['storeViews'] ?? []) as $storeView) {
+                    $storeViews[(string)$storeView['code']] = [
+                        'mediaBaseUrl' => (string)($storeView['mediaBaseUrl'] ?? ''),
+                        'imagePlaceholders' => array_map('strval', (array)($storeView['imagePlaceholders'] ?? [])),
+                    ];
+                }
+                $this->websites[(string)$document['code']] = $storeViews;
             }
         }
 
