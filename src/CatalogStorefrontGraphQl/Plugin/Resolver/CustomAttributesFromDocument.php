@@ -102,7 +102,8 @@ class CustomAttributesFromDocument
                 $item = ['entity_type' => ProductAttributeInterface::ENTITY_TYPE_CODE, 'code' => $code, 'sort_order' => ''];
                 if (in_array($attribute['frontendInput'] ?? '', self::SELECT_INPUTS, true)) {
                     $selected = explode(',', $values[$code]);
-                    $item['selected_options'] = [];
+                    // Core's option list starts with the blank option, which an empty value selects.
+                    $item['selected_options'] = in_array('', $selected, true) ? [['value' => '', 'label' => ' ']] : [];
                     foreach ((array)($attribute['options'] ?? []) as $option) {
                         if (in_array((string)$option['id'], $selected, true)) {
                             $item['selected_options'][] = ['value' => (string)$option['id'], 'label' => $option['label']];
