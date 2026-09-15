@@ -118,10 +118,13 @@ Inside a module the folders name the stage of the pipeline:
 
 ## Prices
 
-The price feed rows are stored per customer group id, next to a nested price index
-with one entry per customer group (regular and final price, base currency, before tax)
-that the composite price aggregations run over: the mapping holds three fields
-whatever the number of customer groups. The display currency and the taxes are applied
+The price feed rows are stored per customer group id, each with the final price its
+discounts make of the regular price and the decimals that source is rounded to
+(`Model/DataExporter/Provider/FinalPrice`), next to a nested price index with one entry
+per customer group (regular and final price, base currency, before tax) that the
+composite price aggregations run over: the writer takes every entry from the row of its
+group or of the fallback row, and the mapping holds three fields whatever the number of
+customer groups. The display currency and the taxes are applied
 at request time the way core's price classes and tax adjustment apply them, a final price
 rounded to the decimals of its source (two for a special or tier price, four for a catalog
 rule price), through

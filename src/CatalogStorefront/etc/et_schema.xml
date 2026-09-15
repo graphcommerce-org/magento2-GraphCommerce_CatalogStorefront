@@ -65,6 +65,14 @@
             <using field="customerGroupId"/>
         </field>
     </record>
+    <record name="ProductPriceV2">
+        <field name="final" type="Float" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\FinalPrice">
+            <using field="productPriceId"/>
+        </field>
+        <field name="precision" type="Int" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\FinalPrice">
+            <using field="productPriceId"/>
+        </field>
+    </record>
     <record name="CustomerGroup">
         <field name="name" type="String" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\CustomerGroupName">
             <using field="customerGroupId"/>

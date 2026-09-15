@@ -17,13 +17,13 @@ class PricesTest extends TestCase
 
         $storage = $this->createMock(ProductDocumentStorageInterface::class);
         $storage->method('stored')->with('default', [7], ['prices'])->willReturn([
-            7 => ['prices' => [['group' => 'all', 'regular' => 10.0, 'discounts' => []]]],
+            7 => ['prices' => [['group' => 'all', 'regular' => 10.0, 'discounts' => [], 'final' => 10.0, 'precision' => 2]]],
         ]);
         $storage->expects(self::once())->method('upsert')->with('default', [
             7 => [
                 'prices' => [
-                    ['group' => '1', 'productId' => 7, 'websiteCode' => 'base', 'regular' => 10.0, 'discounts' => [['price' => 8.0]]],
-                    ['group' => 'all', 'regular' => 10.0, 'discounts' => []],
+                    ['group' => '1', 'productId' => 7, 'websiteCode' => 'base', 'regular' => 10.0, 'discounts' => [['price' => 8.0]], 'final' => 8.0, 'precision' => 2],
+                    ['group' => 'all', 'regular' => 10.0, 'discounts' => [], 'final' => 10.0, 'precision' => 2],
                 ],
                 'priceIndex' => [
                     ['group' => '0', 'regular' => 10.0, 'final' => 10.0, 'precision' => 2],
@@ -34,9 +34,9 @@ class PricesTest extends TestCase
 
         $writer = new Prices($storage, $scopes, new ProductPrice());
         $writer->write([
-            ['productId' => 7, 'websiteCode' => 'base', 'customerGroupCode' => sha1('1'), 'regular' => 10.0, 'discounts' => [['price' => 8.0]]],
-            ['productId' => 7, 'websiteCode' => 'base', 'customerGroupCode' => sha1('99'), 'regular' => 1.0],
-            ['productId' => 8, 'websiteCode' => 'other', 'customerGroupCode' => '0', 'regular' => 1.0],
+            ['productId' => 7, 'websiteCode' => 'base', 'customerGroupCode' => sha1('1'), 'regular' => 10.0, 'discounts' => [['price' => 8.0]], 'final' => 8.0, 'precision' => 2],
+            ['productId' => 7, 'websiteCode' => 'base', 'customerGroupCode' => sha1('99'), 'regular' => 1.0, 'final' => 1.0, 'precision' => 2],
+            ['productId' => 8, 'websiteCode' => 'other', 'customerGroupCode' => '0', 'regular' => 1.0, 'final' => 1.0, 'precision' => 2],
         ]);
     }
 
@@ -48,13 +48,13 @@ class PricesTest extends TestCase
         $storage->method('storedBySku')->with('default', ['A-1'])->willReturn([7 => ['sku' => 'A-1']]);
         $storage->method('stored')->with('default', [7], ['prices'])->willReturn([
             7 => ['prices' => [
-                ['group' => 'all', 'regular' => 10.0, 'discounts' => []],
-                ['group' => '1', 'regular' => 10.0, 'discounts' => [['price' => 8.0, 'code' => 'catalog_rule']]],
+                ['group' => 'all', 'regular' => 10.0, 'discounts' => [], 'final' => 10.0, 'precision' => 2],
+                ['group' => '1', 'regular' => 10.0, 'discounts' => [['price' => 8.0, 'code' => 'catalog_rule']], 'final' => 8.0, 'precision' => 4],
             ]],
         ]);
         $storage->expects(self::once())->method('upsert')->with('default', [
             7 => [
-                'prices' => [['group' => 'all', 'regular' => 10.0, 'discounts' => []]],
+                'prices' => [['group' => 'all', 'regular' => 10.0, 'discounts' => [], 'final' => 10.0, 'precision' => 2]],
                 'priceIndex' => [
                     ['group' => '0', 'regular' => 10.0, 'final' => 10.0, 'precision' => 2],
                     ['group' => '1', 'regular' => 10.0, 'final' => 10.0, 'precision' => 2],

@@ -13,7 +13,8 @@ use GraphCommerce\CatalogStorefrontApi\Document\FeedWriterInterface;
  * the store views of the row's website. Next to it, priceIndex carries one
  * entry per customer group with the regular and final price and the fallback
  * row already resolved, the nested list the composite price aggregations
- * read. The store views of the website and the customer groups come from the
+ * read; every row carries the final price and its precision, so the index is
+ * the entry of the group's own row or of the fallback row. The store views of the website and the customer groups come from the
  * scope documents. The feed names a group by the hash of its id and a batch
  * holds a product's rows one group at a time, so both are recomputed over the
  * rows already stored plus the batch; a stored row of a group that no longer
@@ -82,12 +83,12 @@ class Prices implements FeedWriterInterface
                 foreach ($groupIds as $groupId) {
                     $groupKey = $this->productPrice->groupKey($groupId);
                     $row = $this->productPrice->row($prices, $groupKey);
-                    if ($row !== null) {
+                    if ($row !== null && isset($row['final'], $row['precision'])) {
                         $index[] = [
                             'group' => $groupKey,
                             'regular' => (float)$row['regular'],
-                            'final' => $this->productPrice->finalPrice($row),
-                            'precision' => $this->productPrice->finalPrecision($row),
+                            'final' => (float)$row['final'],
+                            'precision' => (int)$row['precision'],
                         ];
                     }
                 }
