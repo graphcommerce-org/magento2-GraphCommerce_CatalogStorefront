@@ -35,6 +35,9 @@
     <type name="Magento\Store\Model\ResourceModel\StoreWebsiteRelation">
         <plugin name="graphcommerce_catalog_storefront_store_website_relation_memo" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Store\StoreWebsiteRelationMemo"/>
     </type>
+    <type name="Magento\Theme\Model\Theme\ThemeProvider">
+        <plugin name="graphcommerce_catalog_storefront_theme_by_path_memo" type="GraphCommerce\CatalogStorefrontWorker\Plugin\Theme\ThemeByPathMemo"/>
+    </type>
 
     <!-- Refresh changed config before request state, sessions and store context initialize. After the current headers are registered, clear any path and report decisions made during application construction or the reload. The proxies break the request and reload plugin cycles. -->
     <type name="GraphCommerce\CatalogStorefrontWorker\Plugin\State\ReloadPerGeneration">
