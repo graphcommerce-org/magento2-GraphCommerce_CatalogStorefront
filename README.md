@@ -42,7 +42,7 @@ Stores > Configuration > Catalog > Catalog > Catalog Storefront Document Store:
 
 | Setting | Effect |
 | --- | --- |
-| Enable Storefront Indexing | The feeds are written into the document store as they export. |
+| Enable Storefront Indexing | The feeds are written into the document store as they export. It switches the writers of these modules; the writers of another package answer to their own flag. |
 | Serve GraphQL From Documents | Per store view: catalog GraphQL reads come from documents. |
 | Storefront Key | Generated when the page is saved with the field empty. A request that sends it in the `X-Catalog-Storefront-Key` header picks its own path with the `X-Catalog-Storefront` header (`documents` or `core`) and gets its path and every fallback to core with its reason under `extensions.catalogStorefront` of the response. The admin API explorer and the parity gate send it. The path is a factor of the response cache id and of the resolver result cache keys. |
 | Index Prefix | The indices are named prefix, entity and store view code, for example `catalog_storefront_product_default`. |
@@ -107,8 +107,8 @@ Inside a module the folders name the stage of the pipeline:
   `Processor/` classes make a legacy feed export like the modern ones, the plugins fix
   what an exporter provider leaves out. They run at index time and may use SQL.
 - `Model/Document/`: the document store side. `Delivery` receives each feed batch and
-  hands it to every `Writer/` of that feed, so a second package consumes the same batch
-  next to the document writers. A writer reads the feed rows and its own store, and nothing
+  hands it to every enabled `Writer/` of that feed, so a second package consumes the same
+  batch next to the document writers and switches its own writers on and off. A writer reads the feed rows and its own store, and nothing
   else, so it can run on the other side of the wire: what a document
   needs comes from a provider on the record of its feed, and the store views with their
   media, the website ids and the customer groups come from the scope documents of the two
@@ -157,6 +157,8 @@ A module registers its parts through di.xml:
 
 - `writers` on `Model\Document\Delivery`: the `FeedWriterInterface` list of a feed name,
   keyed by writer name so several packages merge into one feed;
+  `flags` next to it: the configuration path that enables one writer name, so each package
+  switches its own writers and a name without a path always writes;
   `identities` next to it: per feed name, the cache tag and the row keys of the
   entities a batch touches, purged after the write.
 - `feeds` on `Model\Feeds`: the feed metadata per entity and indexer id, for the

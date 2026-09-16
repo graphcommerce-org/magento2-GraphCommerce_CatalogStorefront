@@ -8,7 +8,7 @@
                 <field id="index_enabled" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
                     <label>Enable Storefront Indexing</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                    <comment>Keeps the copy up to date as the catalog changes. After a period with this off, a full reindex of the catalog feeds brings the copy up to date again.</comment>
+                    <comment>Keeps the copy up to date as the catalog changes. After a period with this off, a full reindex of the catalog feeds brings the copy up to date again. Another package that consumes the same feeds has its own setting.</comment>
                 </field>
                 <field id="serve_graphql" translate="label comment" type="select" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Serve GraphQL From Documents</label>

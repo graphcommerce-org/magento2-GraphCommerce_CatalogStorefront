@@ -52,6 +52,10 @@
                     <item name="documents" xsi:type="object">GraphCommerce\CatalogStorefront\Model\Document\Writer\CustomerGroups</item>
                 </item>
             </argument>
+            <!-- The configuration flag of each writer family; a family without one always writes. -->
+            <argument name="flags" xsi:type="array">
+                <item name="documents" xsi:type="const">GraphCommerce\CatalogStorefront\Model\Config::INDEX_ENABLED</item>
+            </argument>
             <!-- The cache tags a feed batch purges after its write: cat_p is the product tag, cat_c the category tag. -->
             <argument name="identities" xsi:type="array">
                 <item name="products" xsi:type="array">

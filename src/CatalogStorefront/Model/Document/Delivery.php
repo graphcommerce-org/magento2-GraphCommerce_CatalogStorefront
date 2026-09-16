@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Model\Document;
 
-use GraphCommerce\CatalogStorefront\Model\Config;
 use GraphCommerce\CatalogStorefrontApi\Document\FeedWriteAcceptanceInterface;
 use GraphCommerce\CatalogStorefrontApi\Document\FeedWriterInterface;
 use Magento\DataExporter\Model\ExportFeedInterface;
@@ -11,6 +10,7 @@ use Magento\DataExporter\Model\FeedExportStatus;
 use Magento\DataExporter\Model\FeedExportStatusBuilder;
 use Magento\DataExporter\Model\Indexer\FeedIndexMetadata;
 use Magento\Framework\App\CacheInterface;
+use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\Event\ManagerInterface;
 use Magento\Framework\Indexer\CacheContextFactory;
 use Psr\Log\LoggerInterface;
@@ -19,9 +19,12 @@ use Psr\Log\LoggerInterface;
  * Local delivery for commerce-data-export feeds: each feed batch goes to every
  * writer registered for its feed name (di.xml `writers`, feed name to writer
  * name), in registration order. Each writer writes its own slice of the
- * documents. A feed without a writer is accepted and only
- * persisted in its feed table, as is every feed while storefront indexing is
- * off. A storage failure reports status 500 for the exporter's retry bookkeeping.
+ * documents. A writer name is a writer family, and di.xml `flags` gives a family
+ * its own configuration flag: the delivery skips a writer whose family is off and
+ * answers "Storefront indexing is off" when every writer of the feed is. A family
+ * without a flag always writes. A feed without a writer is accepted and only
+ * persisted in its feed table. A storage failure reports status 500 for the
+ * exporter's retry bookkeeping.
  * After a registered writer succeeds, an optional feed acceptor can durably record
  * the batch. Acceptor failures escape so the calling indexer can retain or requeue
  * its source work; they are not reduced to a feed-table status.
@@ -42,10 +45,11 @@ class Delivery implements ExportFeedInterface
      * @param array<string, FeedWriterInterface[]> $writers by feed name, then by writer name
      * @param array<string, array<string, string[]>> $identities feed name to cache tag to row keys
      * @param FeedWriteAcceptanceInterface[] $acceptors by feed name
+     * @param array<string, string> $flags writer name to the configuration path that enables it
      */
     public function __construct(
         private readonly FeedExportStatusBuilder $feedExportStatusBuilder,
-        private readonly Config $config,
+        private readonly ScopeConfigInterface $scopeConfig,
         private readonly LoggerInterface $logger,
         private readonly CacheContextFactory $cacheContextFactory,
         private readonly ManagerInterface $eventManager,
@@ -53,16 +57,23 @@ class Delivery implements ExportFeedInterface
         private readonly array $writers = [],
         private readonly array $identities = [],
         private readonly array $acceptors = [],
+        private readonly array $flags = [],
     ) {
     }
 
     public function export(array $data, FeedIndexMetadata $metadata): FeedExportStatus
     {
-        if (!$this->config->indexing()) {
+        $feed = $metadata->getFeedName();
+        $registered = $this->writers[$feed] ?? [];
+        $written = array_filter(
+            $registered,
+            fn(int|string $name): bool => !isset($this->flags[$name])
+                || $this->scopeConfig->isSetFlag($this->flags[$name]),
+            ARRAY_FILTER_USE_KEY
+        );
+        if ($registered && !$written) {
             return $this->feedExportStatusBuilder->build(self::STATUS_ACCEPTED, 'Storefront indexing is off');
         }
-        $feed = $metadata->getFeedName();
-        $written = $this->writers[$feed] ?? [];
         $started = microtime(true);
         try {
             foreach ($written as $writer) {

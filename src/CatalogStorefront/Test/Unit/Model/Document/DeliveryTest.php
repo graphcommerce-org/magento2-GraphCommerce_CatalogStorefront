@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Test\Unit\Model\Document;
 
-use GraphCommerce\CatalogStorefront\Model\Config;
 use GraphCommerce\CatalogStorefront\Model\Document\Delivery;
 use GraphCommerce\CatalogStorefrontApi\Document\FeedWriteAcceptanceInterface;
 use GraphCommerce\CatalogStorefrontApi\Document\FeedWriterInterface;
@@ -11,6 +10,7 @@ use Magento\DataExporter\Model\FeedExportStatus;
 use Magento\DataExporter\Model\FeedExportStatusBuilder;
 use Magento\DataExporter\Model\Indexer\FeedIndexMetadata;
 use Magento\Framework\App\CacheInterface;
+use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\Event\ManagerInterface;
 use Magento\Framework\Indexer\CacheContext;
 use Magento\Framework\Indexer\CacheContextFactory;
@@ -19,18 +19,26 @@ use Psr\Log\LoggerInterface;
 
 class DeliveryTest extends TestCase
 {
+    private const DOCUMENTS_FLAG = 'catalog/storefront_documents/index_enabled';
+    private const SOURCE_FLAG = 'catalog/other_package/writers_enabled';
+
     private ?int $statusCode = null;
 
-    /** @param FeedWriterInterface[] $writers */
+    /**
+     * @param FeedWriterInterface[] $writers
+     * @param string[] $off the configuration paths that answer false
+     */
     private function delivery(
         array $writers,
         ManagerInterface $events,
         CacheInterface $cache,
         ?FeedWriteAcceptanceInterface $acceptor = null,
-        bool $indexing = true,
+        array $off = [],
     ): Delivery {
-        $config = $this->createMock(Config::class);
-        $config->method('indexing')->willReturn($indexing);
+        $scopeConfig = $this->createMock(ScopeConfigInterface::class);
+        $scopeConfig->method('isSetFlag')->willReturnCallback(
+            static fn(string $path): bool => !in_array($path, $off, true),
+        );
         $statusBuilder = $this->createMock(FeedExportStatusBuilder::class);
         $statusBuilder->method('build')->willReturnCallback(function (int $code) {
             $this->statusCode = $code;
@@ -42,7 +50,7 @@ class DeliveryTest extends TestCase
 
         return new Delivery(
             $statusBuilder,
-            $config,
+            $scopeConfig,
             $this->createMock(LoggerInterface::class),
             $contextFactory,
             $events,
@@ -50,6 +58,7 @@ class DeliveryTest extends TestCase
             ['products' => $writers],
             ['products' => ['cat_p' => ['productId', 'parentId']]],
             $acceptor === null ? [] : ['products' => $acceptor],
+            ['documents' => self::DOCUMENTS_FLAG, 'source' => self::SOURCE_FLAG],
         );
     }
 
@@ -108,7 +117,7 @@ class DeliveryTest extends TestCase
         self::assertSame(500, $this->statusCode);
     }
 
-    public function testIndexingOffSkipsTheWriterAcceptorAndPurge(): void
+    public function testAFeedWhoseWritersAreAllOffSkipsTheAcceptorAndPurge(): void
     {
         $writer = $this->createMock(FeedWriterInterface::class);
         $writer->expects(self::never())->method('write');
@@ -119,8 +128,48 @@ class DeliveryTest extends TestCase
         $cache = $this->createMock(CacheInterface::class);
         $cache->expects(self::never())->method('clean');
 
-        $this->delivery(['documents' => $writer], $events, $cache, $acceptor, false)
+        $this->delivery(['documents' => $writer], $events, $cache, $acceptor, [self::DOCUMENTS_FLAG])
             ->export([['productId' => 1]], $this->metadata('products'));
+
+        self::assertSame(200, $this->statusCode);
+    }
+
+    public function testOneWriterFamilyOffLeavesTheOtherWritingAndAccepting(): void
+    {
+        $rows = [['productId' => 7, 'storeViewCode' => 'default']];
+        $documents = $this->createMock(FeedWriterInterface::class);
+        $documents->expects(self::never())->method('write');
+        $source = $this->createMock(FeedWriterInterface::class);
+        $source->expects(self::once())->method('write')->with($rows);
+        $acceptor = $this->createMock(FeedWriteAcceptanceInterface::class);
+        $acceptor->expects(self::once())->method('accept');
+        $events = $this->createMock(ManagerInterface::class);
+        $events->expects(self::once())->method('dispatch');
+
+        $this->delivery(
+            ['documents' => $documents, 'source' => $source],
+            $events,
+            $this->createMock(CacheInterface::class),
+            $acceptor,
+            [self::DOCUMENTS_FLAG],
+        )->export($rows, $this->metadata('products'));
+
+        self::assertSame(200, $this->statusCode);
+    }
+
+    public function testAWriterWithoutAFlagWritesWhileEveryFlagIsOff(): void
+    {
+        $rows = [['productId' => 7, 'storeViewCode' => 'default']];
+        $writer = $this->createMock(FeedWriterInterface::class);
+        $writer->expects(self::once())->method('write')->with($rows);
+
+        $this->delivery(
+            ['unflagged' => $writer],
+            $this->createMock(ManagerInterface::class),
+            $this->createMock(CacheInterface::class),
+            null,
+            [self::DOCUMENTS_FLAG, self::SOURCE_FLAG],
+        )->export($rows, $this->metadata('products'));
 
         self::assertSame(200, $this->statusCode);
     }
