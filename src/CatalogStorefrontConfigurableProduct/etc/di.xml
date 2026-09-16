@@ -1,31 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
-    <!-- A removed relation is reconstructed from this retained payload after its provider returns no row. -->
-    <virtualType name="Magento\ProductVariantDataExporter\Model\Indexer\ProductVariantFeedIndexMetadata"
-                 type="Magento\DataExporter\Model\Indexer\FeedIndexMetadata">
-        <arguments>
-            <argument name="minimalPayload" xsi:type="array">
-                <item name="parentId" xsi:type="string">parentId</item>
-            </argument>
-        </arguments>
-    </virtualType>
-    <type name="GraphCommerce\CatalogStorefront\Model\Document\Delivery">
-        <arguments>
-            <argument name="writers" xsi:type="array">
-                <item name="variants" xsi:type="array">
-                    <item name="documents" xsi:type="object">GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Document\Writer\Variants</item>
-                </item>
-            </argument>
-            <argument name="identities" xsi:type="array">
-                <item name="variants" xsi:type="array">
-                    <item name="cat_p" xsi:type="array">
-                        <item name="productId" xsi:type="string">productId</item>
-                        <item name="parentId" xsi:type="string">parentId</item>
-                    </item>
-                </item>
-            </argument>
-        </arguments>
-    </type>
     <type name="Magento\ConfigurableProductDataExporter\Model\Provider\Product\Options">
         <plugin name="graphcommerce_catalog_storefront_option_value_details" type="GraphCommerce\CatalogStorefrontConfigurableProduct\Plugin\DataExporter\OptionValueDetails"/>
     </type>
@@ -40,15 +14,6 @@
         <arguments>
             <argument name="ranges" xsi:type="array">
                 <item name="configurable" xsi:type="object">GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Read\ConfigurableRange</item>
-            </argument>
-        </arguments>
-    </type>
-    <type name="GraphCommerce\CatalogStorefront\Model\Feeds">
-        <arguments>
-            <argument name="feeds" xsi:type="array">
-                <item name="product" xsi:type="array">
-                    <item name="catalog_data_exporter_product_variants" xsi:type="object">Magento\ProductVariantDataExporter\Model\Indexer\ProductVariantFeedIndexMetadata</item>
-                </item>
             </argument>
         </arguments>
     </type>

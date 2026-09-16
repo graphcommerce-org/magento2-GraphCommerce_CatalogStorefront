@@ -6,21 +6,24 @@ namespace GraphCommerce\CatalogStorefront\Model\Document;
 use GraphCommerce\CatalogStorefrontApi\Storage\ProductDocumentStorageInterface;
 
 /**
- * Keeps the grouped and bundle links between documents, by product id, from
- * the products feed, which carries them by sku only: a child row lists its
- * parents, a parent row lists its children in its options. Both sides write
+ * Keeps the configurable, grouped and bundle links between documents, by
+ * product id, from the products feed, which carries them by sku only: a child
+ * row lists its parents, a parent row lists its children in `variants` for a
+ * configurable and in its options for a grouped or a bundle. Both sides write
  * whatever the store can resolve at that moment, so the order in which the
  * feed delivers parent and child does not matter: a child row sets its parent
  * id lists to the parents that exist, a parent row adds itself to the children
  * that exist and removes itself from the children it no longer lists or, when
  * deleted, from all of them. A child outside the batch gets its parent id
  * lists changed in the store itself, so a parallel batch that touches the
- * same child cannot lose the change. The price read aggregates over
- * `groupedParentIds` and fetches the selections by `bundleParentIds`.
+ * same child cannot lose the change. The price read aggregates over `parentIds`
+ * and `groupedParentIds` and fetches the selections by `bundleParentIds`; the
+ * variant reads take the children of a configurable from `variantIds`.
  */
 class CompositeLinks
 {
     private const TYPES = [
+        'configurable' => ['parentIds' => 'parentIds', 'childIds' => 'variantIds'],
         'grouped' => ['parentIds' => 'groupedParentIds', 'childIds' => 'groupedChildIds'],
         'bundle' => ['parentIds' => 'bundleParentIds', 'childIds' => 'bundleChildIds'],
     ];
@@ -55,13 +58,13 @@ class CompositeLinks
                 // Writers must clear a previously stored relation when its last option/value
                 // disappears, and a newly assembled empty composite must remain distinguishable
                 // from a document whose relation slice has never arrived.
-                $childSkus[$id] ??= [];
+                $childSkus[$id] = array_column((array)($row['variants'] ?? []), 'sku');
                 foreach ((array)($row['optionsV2'] ?? []) as $option) {
                     if (($option['type'] ?? null) === $types[$id]) {
-                        $childSkus[$id] = array_merge($childSkus[$id] ?? [], array_column((array)($option['values'] ?? []), 'sku'));
+                        $childSkus[$id] = array_merge($childSkus[$id], array_column((array)($option['values'] ?? []), 'sku'));
                     }
                 }
-                $skus = array_merge($skus, $childSkus[$id] ?? []);
+                $skus = array_merge($skus, $childSkus[$id]);
             }
         }
         $ids = [];

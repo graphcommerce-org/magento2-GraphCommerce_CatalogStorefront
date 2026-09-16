@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
 
 class EtConfigurationTest extends TestCase
 {
-    public function testModuleLoadsAfterTheVariantMetadataItExtends(): void
+    public function testModuleLoadsAfterTheVariantsFieldItReplaces(): void
     {
         $module = new \DOMDocument();
         self::assertTrue($module->load(dirname(__DIR__, 2) . '/etc/module.xml'));
@@ -18,42 +18,37 @@ class EtConfigurationTest extends TestCase
 
         self::assertSame(1, $xpath->query(
             '/config/module[@name="GraphCommerce_CatalogStorefrontConfigurableProduct"]'
-            . '/sequence/module[@name="Magento_ProductVariantDataExporter"]'
+            . '/sequence/module[@name="Magento_ConfigurableProductDataExporter"]'
         )?->length);
     }
 
-    public function testVariantTombstonesRetainTheirParentIdentity(): void
+    public function testTheVariantsFieldTakesThisProviderAndKeepsItsUsingFields(): void
     {
-        $adobe = InstalledVersions::getInstallPath('magento/module-product-variant-data-exporter');
+        $adobe = InstalledVersions::getInstallPath('magento/module-configurable-product-data-exporter');
         self::assertNotNull($adobe);
         $validation = $this->createStub(ValidationStateInterface::class);
         $validation->method('isValidationRequired')->willReturn(false);
         $merged = new Dom(
-            (string)file_get_contents($adobe . '/etc/di.xml'),
+            (string)file_get_contents($adobe . '/etc/et_schema.xml'),
             $validation,
-            [
-                '/config/(type|virtualType)' => 'name',
-                '/config/(type|virtualType)/arguments/argument' => 'name',
-                '/config/(type|virtualType)/arguments/argument(/item)+' => 'name',
-            ],
-            'xsi:type',
+            ['/config/record' => 'name', '/config/record/field' => 'name'],
         );
-        $merged->merge((string)file_get_contents(dirname(__DIR__, 2) . '/etc/di.xml'));
+        $merged->merge((string)file_get_contents(dirname(__DIR__, 2) . '/etc/et_schema.xml'));
 
         $xpath = new \DOMXPath($merged->getDom());
-        $items = $xpath->query(
-            '//virtualType[@name="Magento\\ProductVariantDataExporter\\Model\\Indexer\\ProductVariantFeedIndexMetadata"]'
-            . '/arguments/argument[@name="minimalPayload"]/item'
+        $field = $xpath->query('/config/record[@name="Product"]/field[@name="variants"]')?->item(0);
+        self::assertInstanceOf(\DOMElement::class, $field);
+        self::assertSame(
+            'GraphCommerce\CatalogStorefrontConfigurableProduct\Model\DataExporter\Provider\Variants',
+            $field->getAttribute('provider')
         );
-        self::assertNotFalse($items);
-        $payload = [];
-        foreach ($items as $item) {
-            self::assertInstanceOf(\DOMElement::class, $item);
-            $payload[$item->getAttribute('name')] = trim($item->textContent);
+        self::assertSame('Variant', $field->getAttribute('type'));
+        self::assertSame('true', $field->getAttribute('repeated'));
+        $using = [];
+        foreach ($xpath->query('using', $field) ?: [] as $node) {
+            self::assertInstanceOf(\DOMElement::class, $node);
+            $using[] = $node->getAttribute('field');
         }
-
-        self::assertSame('productId', $payload['productId'] ?? null);
-        self::assertSame('parentSku', $payload['parentSku'] ?? null);
-        self::assertSame('parentId', $payload['parentId'] ?? null);
+        self::assertSame(['productId', 'storeViewCode'], $using);
     }
 }

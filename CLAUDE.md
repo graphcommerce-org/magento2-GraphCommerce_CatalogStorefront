@@ -191,9 +191,9 @@ passes.
   and stock item feed fields / the stock prefiller (the MSI source item
   management service says which types own a quantity).
 - `CatalogStorefrontConfigurableProduct` / `...ConfigurableProductGraphQl`: the
-  variants writer, the option value details patch-up, the configurable range /
-  the configurable options document field (a GraphQL shape stored at index
-  time), the variants, options and options selection resolvers.
+  variants field of the products feed, the option value details patch-up, the
+  configurable range / the configurable options document field (a GraphQL shape
+  stored at index time), the variants, options and options selection resolvers.
 - `CatalogStorefrontBundleProduct` / `...BundleProductGraphQl`: the bundle
   attribute feed fields, the bundle range / the price_details prefiller, the
   bundle items resolver.
@@ -271,7 +271,7 @@ Inside a base module the folders name the stage of the pipeline:
   parent id lists changed in the store (`updateLists`), the only
   read-modify-write a parallel feed thread could race, since the exporter
   partitions a feed's batches by source entity id and every other merge
-  (prices per product, variant parents per child) stays inside one batch.
+  (prices per product) stays inside one batch.
 - `Model/Read/`: the request side any frontend shares: `ProductDocuments`,
   `ProductModelBuilder`, `PriceRanges` and `Price/`, `AttributeDocuments`.
 
@@ -402,14 +402,14 @@ image URLs come from the feed row (`Model/DataExporter/Provider/ImageUrls`).
   that group's stored row; every row carries the final price and its precision,
   `Model/DataExporter/Provider/FinalPrice`) plus `priceIndex`, a nested list
   with one entry per customer group holding the regular and final price with
-  the fallback row resolved, in base currency before tax, inventory = `stock`,
-  variants = `variantIds` on the configurable parent). Reviews are documents of their own (entity `review`, one per
+  the fallback row resolved, in base currency before tax, inventory = `stock`).
+  Reviews are documents of their own (entity `review`, one per
   review and store view where it is visible, with the vote percents over the
   rating's scale); the product document carries nothing about them. `Model/ProductPrice` holds the price semantics both sides
-  share. `Model/Document/CompositeLinks` keeps the grouped and bundle links by id
-  (`groupedParentIds` and `bundleParentIds` on the children, the child id
-  lists on the parent) from the products feed, which carries them by sku only,
-  written from whichever side the feed delivers last. The feed folds a fixed
+  share. `Model/Document/CompositeLinks` keeps the configurable, grouped and bundle
+  links by id (`parentIds`, `groupedParentIds` and `bundleParentIds` on the
+  children, the child id lists on the parent) from the products feed, which
+  carries them by sku only, written from whichever side the feed delivers last. The feed folds a fixed
   bundle price type into the product type `bundle_fixed`;
   `Model/DataExporter/Provider/BundleAttributes` adds the sku and shipment type the
   exporter lacks. The categories feed lands as one category document per
@@ -614,10 +614,9 @@ image URLs come from the feed row (`Model/DataExporter/Provider/ImageUrls`).
   registered for it (di.xml `feeds` on `Model/Feeds`), runs their indexers
   and promotes the fresh indices; the reads keep the old documents until then;
   about ten seconds for the demo catalog. By hand: stage or drop the index, truncate `cde_products_feed`,
-  `cde_product_prices_feed`, `cde_product_variants_feed`,
-  `inventory_data_exporter_stock_status_feed` and
+  `cde_product_prices_feed`, `inventory_data_exporter_stock_status_feed` and
   `catalog_data_exporter_product_reviews`, then reindex the products, stock,
-  prices, variants and reviews feeds. A mapping change needs this too; a new
+  prices and reviews feeds. A mapping change needs this too; a new
   customer group does it for the prices feed by itself. The metadata documents
   rebuild the same way: drop the category, attribute or rating index, truncate
   `cde_categories_feed`, `cde_product_attributes_feed` or

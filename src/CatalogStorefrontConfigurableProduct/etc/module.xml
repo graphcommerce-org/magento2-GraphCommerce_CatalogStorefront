@@ -5,7 +5,6 @@
             <module name="GraphCommerce_CatalogStorefront"/>
             <module name="GraphCommerce_CatalogStorefrontPrice"/>
             <module name="Magento_ConfigurableProductDataExporter"/>
-            <module name="Magento_ProductVariantDataExporter"/>
             <module name="Magento_Swatches"/>
         </sequence>
     </module>

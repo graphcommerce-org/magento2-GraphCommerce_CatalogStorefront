@@ -2,7 +2,7 @@
 
 A catalog read model for Magento 2 / Mage-OS, built on `magento/commerce-data-export`.
 
-The feeds (products, prices, inventory, variants, reviews, categories, attributes)
+The feeds (products, prices, inventory, reviews, categories, attributes)
 are computed by the maintained exporter modules as ordinary Magento indexers. This
 package implements the delivery seam (`ExportFeedInterface`) to assemble the feed
 slices into one product document per store view in OpenSearch, and serves catalog
@@ -87,7 +87,7 @@ modules next to the `*GraphQl` ones.
 | `GraphCommerce_CatalogStorefrontProfiler` | Times the document store client in a MageOS_Profiler trace, request bodies included |
 | `GraphCommerce_CatalogStorefrontSearch` | Cheaper core fulltext listings, each behind a setting: the entity id tie-break on a field instead of a script, one field name lookup per attribute per request, optional search term recording. Stands alone, without the document store |
 | `GraphCommerce_CatalogStorefrontInventory` / `...InventoryGraphQl` | The stock slice / stock status, only_x_left_in_stock, quantity, min and max sale qty |
-| `GraphCommerce_CatalogStorefrontConfigurableProduct` / `...ConfigurableProductGraphQl` | Variants and the configurable range / configurable options, variants, options selection |
+| `GraphCommerce_CatalogStorefrontConfigurableProduct` / `...ConfigurableProductGraphQl` | The variants field of the products feed and the configurable range / configurable options, variants, options selection |
 | `GraphCommerce_CatalogStorefrontBundleProduct` / `...BundleProductGraphQl` | Bundle feed fields and the bundle range / bundle items, price details |
 | `GraphCommerce_CatalogStorefrontGroupedProduct` / `...GroupedProductGraphQl` | The grouped range / grouped items |
 | `GraphCommerce_CatalogStorefrontDownloadable` / `...DownloadableGraphQl` | The downloadable range / downloadable links and samples |
@@ -208,8 +208,7 @@ Desktop at 6 GB for MariaDB, OpenSearch and the worker together:
 | Products feed | 2.5 million rows in 64 minutes, 570 rows a second; the document store takes 0.41 ms a row, 15 of the 64 minutes; the rest is the exporter |
 | Prices feed | 2.5 million rows in 9 minutes, 0.21 ms a row in the store |
 | Stock feed | 494 000 rows in 7 minutes, 0.75 ms a row in the store |
-| Variants feed | 194 000 rows in 4 minutes, 0.86 ms a row in the store |
-| Rebuild | `catalog-storefront:rebuild product` into staged indices: 109 minutes (products feed 71, prices 15, variants 5, stock 18); `rebuild attribute` 5 seconds for 1 095 attributes per store view; a feed run over unchanged rows writes nothing |
+| Rebuild | `catalog-storefront:rebuild product` into staged indices: 104 minutes (products feed 71, prices 15, stock 18); `rebuild attribute` 5 seconds for 1 095 attributes per store view; a feed run over unchanged rows writes nothing |
 | Documents | 502 050 product documents per store view, 1 to 3 GB per store view on disk, 12 GB in all; categories and attributes below 1 MB per store view |
 | OpenSearch heap | 2 GB trips the parent circuit breaker while the fulltext indexer and the feeds write at once; 3 GB carries the load, next to the worker in a 10 GB Docker VM |
 | Exporter feed tables | 24 GB for 1.8 million products rows with `PERSIST_EXPORTED_FEED` set, 174 bytes a row without it; the document store never reads them, so leave it unset |
