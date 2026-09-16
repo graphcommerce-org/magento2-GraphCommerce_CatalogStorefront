@@ -7,10 +7,19 @@
         <field name="ratingScales" type="ReviewRatingScale" repeated="true" provider="GraphCommerce\CatalogStorefrontReview\Model\DataExporter\Provider\RatingScales">
             <using field="reviewId"/>
         </field>
+        <field name="productReviewSummaries" type="ProductReviewSummary" repeated="true" provider="GraphCommerce\CatalogStorefrontReview\Model\DataExporter\Provider\ProductReviewSummaries">
+            <using field="productId"/>
+        </field>
     </record>
     <record name="ReviewRatingScale">
         <field name="ratingId" type="Int"/>
         <field name="scale" type="Int"/>
+    </record>
+    <record name="ProductReviewSummary" skipNull="true">
+        <field name="storeViewCode" type="String"/>
+        <field name="state" type="String"/>
+        <field name="count" type="Int"/>
+        <field name="average" type="String"/>
     </record>
     <record name="Export">
         <field name="reviews" type="Review" repeated="true"
