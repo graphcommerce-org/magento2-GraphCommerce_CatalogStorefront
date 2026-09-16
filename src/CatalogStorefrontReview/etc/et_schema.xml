@@ -10,6 +10,9 @@
         <field name="productReviewSummaries" type="ProductReviewSummary" repeated="true" provider="GraphCommerce\CatalogStorefrontReview\Model\DataExporter\Provider\ProductReviewSummaries">
             <using field="productId"/>
         </field>
+        <field name="sku" type="String" provider="GraphCommerce\CatalogStorefrontReview\Model\DataExporter\Provider\ProductSkus">
+            <using field="productId"/>
+        </field>
     </record>
     <record name="ReviewRatingScale">
         <field name="ratingId" type="Int"/>
