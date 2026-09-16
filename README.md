@@ -107,10 +107,12 @@ Inside a module the folders name the stage of the pipeline:
   `Processor/` classes make a legacy feed export like the modern ones, the plugins fix
   what an exporter provider leaves out. They run at index time and may use SQL.
 - `Model/Document/`: the document store side. `Delivery` receives each feed batch and
-  hands it to the `Writer/` of that feed. A writer reads the feed rows and the document
-  store, and nothing else, so it can run on the other side of the wire: what a document
-  needs comes from a provider on the record of its feed, and the store views and customer
-  groups come from the scope documents of the two scopes feeds (`Model/Document/Scopes`).
+  hands it to every `Writer/` of that feed, so a second package consumes the same batch
+  next to the document writers. A writer reads the feed rows and its own store, and nothing
+  else, so it can run on the other side of the wire: what a document
+  needs comes from a provider on the record of its feed, and the store views with their
+  media, the website ids and the customer groups come from the scope documents of the two
+  scopes feeds (`Model/Document/Scopes`).
 - `Model/Read/`: the request side any frontend shares: product documents to models,
   the price ranges, the display prices, the metadata readers.
 - In a GraphQl module: `Model/DocumentHydration` and `Model/Prefill/`, `Plugin/Resolver/`,
@@ -153,11 +155,13 @@ not, because the nested entries are per product, group and store view.
 
 A module registers its parts through di.xml:
 
-- `writers` on `Model\Document\Delivery`: a `FeedWriterInterface` per feed name;
+- `writers` on `Model\Document\Delivery`: the `FeedWriterInterface` list of a feed name,
+  keyed by writer name so several packages merge into one feed;
   `identities` next to it: per feed name, the cache tag and the row keys of the
   entities a batch touches, purged after the write.
 - `feeds` on `Model\Feeds`: the feed metadata per entity and indexer id, for the
-  rebuild and the status command.
+  rebuild and the status command. The rebuild runs the entities in this order, so the
+  attribute and category documents a product row names exist before the products feed runs.
 - `prefillers` on the GraphQl module's `Model\DocumentHydration`: a `PrefillerInterface` fills fields on
   the product value from the model and the document, so the executor returns them
   without a resolver call. List the fields under `prefilledFields` on
@@ -396,7 +400,8 @@ writes. A module that writes a feed registers it under `feeds` on `Model\Feeds`.
 The scope documents stand outside the rebuild: the two scopes feeds of
 `magento/module-scopes-data-exporter` write one website document and one customer group
 document under the index name `global`, and the writers of the other feeds read the store
-views and the groups from them. Export them before the catalog feeds
+views with their media base URL and image placeholder URLs, the website ids and the groups
+from them. Export them before the catalog feeds
 (`bin/magento indexer:reindex scopes_website_data_exporter scopes_customergroup_data_exporter`);
 a catalog feed whose scope documents are missing is refused and the feed machinery retries
 it by cron.

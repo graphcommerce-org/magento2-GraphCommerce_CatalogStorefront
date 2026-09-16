@@ -75,7 +75,8 @@ passes.
   `Model/Strict` (the fallback
   report of a keyed request), `Model/Feeds` (the feeds per entity, for the
   rebuild and status commands), `Model/Document/Scopes` (the store views of
-  every website and the customer groups, from the documents the two scopes
+  every website with their media base URL and image placeholder URLs, the id of a
+  website code and the customer groups, from the documents the two scopes
   feeds write under the index name `global`; every writer fans its rows out
   over them, and a slice writer whose rows name no website writes where a
   product document is), `Plugin/Customer/PricesFeedOnNewGroup` (a new or
@@ -261,8 +262,8 @@ Inside a base module the folders name the stage of the pipeline:
   (nothing here is a new feed); `Processor/` classes make a legacy feed export
   like the modern ones; the plugins fix what an exporter provider leaves out.
 - `Model/Document/`: the document store side. `Delivery` implements the
-  exporter's `ExportFeedInterface` and hands each batch to the `Writer/` of its
-  feed; `CompositeLinks` keeps the composite relations by id. A writer that merges into stored
+  exporter's `ExportFeedInterface` and hands each batch to every `Writer/` of its
+  feed, in registration order; `CompositeLinks` keeps the composite relations by id. A writer that merges into stored
   documents reads them through `stored()` and `storedBySku()`, the index that
   takes the writes, so a staged rebuild and a first build see what they wrote
   (the read alias points at the old index, or at nothing, until promote);
@@ -278,7 +279,8 @@ Inside a GraphQl module: `Model/DocumentHydration`, `Model/Prefill/`,
 `Plugin/Resolver/`, `Plugin/DataProvider/`, `Plugin/Layer/`, `Plugin/Query/`.
 
 A module registers its parts in its own `etc/di.xml`: `writers` (by feed
-name) on `Delivery`, `ranges` (by product type id) on `PriceRanges`, and on the GraphQL side `prefillers`,
+name, then by writer name, so a second package consumes the same feed next to the
+document writer) on `Delivery`, `ranges` (by product type id) on `PriceRanges`, and on the GraphQL side `prefillers`,
 `priceFields` on `DocumentHydration`,
 `prefilledFields` on `RoutePrefilledFields`. Prefillers run in di.xml order, so a later
 one may rewrite what an earlier one filled. The composite price searches
@@ -385,8 +387,8 @@ image URLs come from the feed row (`Model/DataExporter/Provider/ImageUrls`).
 
 ## Shape
 
-- Write: `Model/Document/Delivery` hands each feed batch to its writer
-  (`Model/Document/Writer/*`, di.xml `writers`) and then purges the cache tags
+- Write: `Model/Document/Delivery` hands each feed batch to the writers of its
+  feed (`Model/Document/Writer/*`, di.xml `writers`) and then purges the cache tags
   of the products and categories the batch touched (di.xml `identities`, the
   `clean_cache_by_tags` event plus the app cache, as an indexer does), so the
   page, response and resolver caches hold nothing built from the replaced
