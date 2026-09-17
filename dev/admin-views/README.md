@@ -1,15 +1,10 @@
 # Admin Views smoke
 
-`smoke.php` boots Magento's Admin area and checks the read-only **Catalog >
-Catalog Storefront Views** surface without authenticating a user or issuing an
-HTTP request. It verifies the merged route and ACL, the GET-only controller,
-the factual data sources, the exact merged layout declaration, and renders each
-of the six native Magento UI listings with the Admin theme. This exercises the
-listing data providers without issuing an HTTP request.
-Its JSON report contains hashes and public identifiers, not rendered HTML,
-Admin URLs, session data or credentials.
-
-Run it against a store-backed Magento installation:
+`smoke.php` boots the Admin area of a store-backed installation and renders the six
+listings of Catalog > Catalog Storefront with the Admin theme, without an HTTP request and
+without an Admin user. It checks the merged route and ACL, the GET-only controller, the
+data sources and the merged layout declaration, and writes a JSON report of hashes and
+public identifiers.
 
 ```sh
 CATALOG_VIEWS_SMOKE=read-only \
@@ -17,77 +12,49 @@ MAGENTO_ROOT=/var/www/html \
 php dev/admin-views/smoke.php
 ```
 
-Strict data checks are the default. `CATALOG_VIEWS_REQUIRE_DATA=relaxed` keeps
-the data check informational for an incomplete development database, while
-route, ACL and render failures still fail the command. Set
-`CATALOG_VIEWS_PACKAGE_REFERENCE` to require an exact Composer source commit.
-The report always records the installed reference when Composer provides one.
+`CATALOG_VIEWS_REQUIRE_DATA=relaxed` keeps the data check informational on a development
+database, while a route, ACL or render failure still fails the command.
+`CATALOG_VIEWS_PACKAGE_REFERENCE` requires an exact composer source commit; the report
+records the installed reference that composer gives.
 
-The native smoke does not prove the final authenticated HTTP presentation or
-authorization response; use the browser check below for that.
-Booting the Admin area may warm normal Magento configuration and layout caches.
-The smoke does not save configuration or products, run indexers, query catalog
-documents, create an Admin user, or print a resolved Admin URL.
+The smoke saves no configuration, runs no indexer, reads no catalog document and creates no
+Admin user. Booting the Admin area fills the normal configuration and layout caches.
 
-## Kubernetes identity wrapper
-
-`online.sh` streams `smoke.php` into an existing writer container. It binds the
-result to an explicitly selected namespace, pod UID, pulled image ID and package
-commit, and checks the same pod identity before and after the smoke. The wrapper
-requires `kubectl` and `jq`:
+`online.sh` streams `smoke.php` into a running writer container with `kubectl` and `jq`. It
+binds the result to a namespace, a pod UID, a pulled image id and a package commit, and
+checks the same pod identity before and after the run:
 
 ```sh
-CATALOG_VIEWS_NAMESPACE=m2gc-catalog-cloud \
-CATALOG_VIEWS_POD=magento-web-REQUIRED \
-CATALOG_VIEWS_EXPECTED_POD_UID=REQUIRED \
-CATALOG_VIEWS_EXPECTED_IMAGE_ID='docker-pullable://ghcr.io/ho-nl/project-backend@sha256:REQUIRED' \
-CATALOG_VIEWS_PACKAGE_REFERENCE=REQUIRED \
+CATALOG_VIEWS_NAMESPACE=<namespace> \
+CATALOG_VIEWS_POD=<pod> \
+CATALOG_VIEWS_EXPECTED_POD_UID=<uid> \
+CATALOG_VIEWS_EXPECTED_IMAGE_ID=<imageID> \
+CATALOG_VIEWS_PACKAGE_REFERENCE=<commit> \
 dev/admin-views/online.sh > catalog-views-admin.json
 ```
 
-Resolve the pod UID and `status.containerStatuses[].imageID` independently
-after the intended release is Ready. A changing or replaced pod fails the
-report; an Environment Ready condition alone is not release identity proof.
-The external deployment workflow owns those expected values. The OSS smoke has
-no environment name, image repository or release-tag assumption.
+Resolve the pod UID and `status.containerStatuses[].imageID` after the intended release is
+Ready. A replaced pod fails the report.
 
-## Browser validation
-
-An authenticated browser remains the visual and authorization check. Using an
-existing Admin session, open **Catalog > Catalog Storefront Views** and compare
-the page with the smoke report:
-
-1. The page contains exactly Catalog Views, Catalog Sources, Price Books,
-   Stocks, Catalog Layers and Catalog Policies, in that order.
-2. Views and Sources contain one row per active Magento store view; locale and
-   scope identifiers match Magento configuration.
-3. Price Books contains the real `all` fallback followed by customer-group
-   contexts. Product-price counts remain unavailable because the page does not
-   scan catalog documents.
-4. Catalog Layers is empty until independent layers exist. Installed content,
-   inventory and review modules must not appear as layer records.
-5. Catalog Policies shows the derived in-stock-only rule where configured; there is no independently managed policy registry.
-6. Unavailable management actions are disabled and do not save data.
-7. The six sections retain the supplied compact table hierarchy at narrow
-   widths without widening the Admin page.
-
-Do not create a user or reset a password for this check. If the existing session
-opens the sign-in screen, record that authenticated browser evidence is
-unavailable. A screenshot should contain only the page content, excluding the
-address bar, cookies and other session-bearing browser UI.
-
-Source counts use scoped base-feed import receipts and independent pending/failed badges. Validate the SQL behavior on a local fixture (all writes are rolled back):
+Two probes check the counts against a local fixture and roll every write back:
 
 ```sh
 MAGENTO_ROOT=/path/to/magento php dev/admin-views/verify-source-feed-counts.php default
-```
-
-The in-stock-only policy is derived from the source store configuration. It does not imply a managed policy registry or an immediate change to an already published search generation.
-
-The Stocks section uses real MSI configuration when the inventory adapter is enabled. Verify Inventory Sources (distinct from Catalog Sources), linked Views and stock-scoped receipts. Without that adapter, Stocks is empty and View Stock values are unavailable; no default Stock is fabricated.
-
-Stock receipt scope and acknowledged-delete behavior can be verified with the rollback-only local probe:
-
-```sh
 MAGENTO_ROOT=/path/to/magento php dev/admin-views/verify-stock-feed-counts.php 1
 ```
+
+An authenticated browser stays the visual and authorization check. Open Catalog > Catalog
+Storefront with an existing session and compare the page with the report:
+
+1. The page holds Catalog Views, Catalog Sources, Price Books, Stocks, Catalog Layers and
+   Catalog Policies, in that order.
+2. Views and Sources hold one row per active store view, with the locale and the scope
+   identifiers of the Magento configuration.
+3. Price Books holds the `all` fallback followed by the customer group keys.
+4. Catalog Layers is empty, and the content, inventory and review modules add no row.
+5. Catalog Policies shows the in-stock-only rule where the store configuration sets it.
+6. The management actions are disabled and save nothing.
+7. The six listings keep their compact table hierarchy at narrow widths.
+
+A screenshot holds the page content alone, without the address bar and other
+session-bearing browser interface.

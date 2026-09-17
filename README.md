@@ -1,462 +1,503 @@
 # GraphCommerce Catalog Storefront
 
-A catalog read model for Magento 2 / Mage-OS, built on `magento/commerce-data-export`.
+Magento keeps the write side: the Admin, the catalog tables and the indexers stay as they
+are. The catalog reads come from one document per product and store view in OpenSearch:
+the catalog GraphQL queries, and, per store view, the rendered category, search and
+product pages of a Luma or Hyvä theme. A field the documents do not carry is answered by
+the core resolver of that field, so the storefront code and the GraphQL schema stay the
+same.
 
-The feeds (products, prices, inventory, variants, reviews, categories, attributes)
-are computed by the maintained exporter modules as ordinary Magento indexers. This
-package implements the delivery seam (`ExportFeedInterface`) to assemble the feed
-slices into one product document per store view in OpenSearch, and serves catalog
-GraphQL reads from those documents; any miss falls back to the core resolver.
+[`magento/commerce-data-export`](https://github.com/magento/commerce-data-export) is
+Adobe's exporter: it turns the catalog into feed rows for Adobe's SaaS services, as
+ordinary Magento indexers. This package implements the exporter's delivery seam and
+writes those rows into the documents ([docs/feed-writer.md](docs/feed-writer.md)).
 
-## Scope
+## Install and enable
 
-This package runs in the monolith, next to the catalog database. The read path serves
-from documents and may read the database where a document cannot answer, or where a
-lookup is cheaper than carrying the data on the document; the fallback to the core
-resolver is the norm. The feeds are a latency layer over the database, not a
-replacement. A request with the storefront key gets every fallback to core reported, and
-a MageOS_Profiler trace shows the statements a request runs, so the cost of a lookup
-stays visible and a lookup can become a document field later. Extensions plug in
-through the Api modules, never through a preference on a class of this package.
+The shop runs Mage-OS or Magento Open Source 2.4.7 or later on PHP 8.1 to 8.4, with
+OpenSearch as the search engine of Stores > Configuration > Catalog > Catalog Search. The
+documents use that same connection through core's OpenSearch client.
+`magento/commerce-data-export` 103.4 or later comes from repo.magento.com, or from the
+Mage-OS fork [mage-os/mageos-commerce-data-export](https://github.com/mage-os/mageos-commerce-data-export),
+which an install without Adobe keys adds as composer `path` repositories, as
+[.github/workflows/ci.yml](.github/workflows/ci.yml) does.
 
-## Requirements
+1. Install the package and compile. Composer autoload registers every module, and
+   `setup:upgrade` enables them.
 
-- Mage-OS or Magento Open Source 2.4.7 or later, with OpenSearch as the configured
-  search engine. The document store uses the same connection (Stores > Configuration
-  > Catalog > Catalog Search) through core's OpenSearch client. Elasticsearch is not
-  supported.
-- `magento/commerce-data-export` 103.4 or later. Adobe publishes it on
-  repo.magento.com. Mage-OS keeps a fork at
-  [mage-os/mageos-commerce-data-export](https://github.com/mage-os/mageos-commerce-data-export)
-  (and a mirror, `mage-os/mirror-commerce-data-export`), both updated on 3 September
-  2026; its modules are not on repo.mage-os.org yet, so an install without Adobe keys
-  clones the fork and adds its module directories as composer `path` repositories,
-  as the CI workflow does.
-- A fulltext reindex after the install. The Search module writes the product id into the
-  fulltext document as an integer field and sorts every listing's tie-break on it, where core
-  runs a script over every matching document; the install invalidates the fulltext indexer.
+   ```sh
+   composer require graphcommerce/magento-catalog-storefront
+   bin/magento setup:upgrade
+   bin/magento setup:di:compile
+   ```
 
-## Settings
+2. Reindex the catalog search. `GraphCommerce_CatalogStorefrontSearch` writes the product
+   id into the fulltext document and sorts every listing's tie-break on it; the install
+   invalidates the fulltext indexer for that field.
 
-Stores > Configuration > Catalog > Catalog > Catalog Storefront Document Store:
+   ```sh
+   bin/magento indexer:reindex catalogsearch_fulltext
+   ```
 
-| Setting | Effect |
-| --- | --- |
-| Enable Storefront Indexing | The feeds are written into the document store as they export. It switches the writers of these modules; the writers of another package answer to their own flag. |
-| Serve GraphQL From Documents | Per store view: catalog GraphQL reads come from documents. |
-| Storefront Key | Generated when the page is saved with the field empty. A request that sends it in the `X-Catalog-Storefront-Key` header picks its own path with the `X-Catalog-Storefront` header (`documents` or `core`) and gets its path and every fallback to core with its reason under `extensions.catalogStorefront` of the response. The admin API explorer and the parity gate send it. The path is a factor of the response cache id and of the resolver result cache keys. |
-| Index Prefix | The indices are named prefix, entity and store view code, for example `catalog_storefront_product_default`. |
+3. Export the two scopes feeds. Every other writer reads the store views with their
+   media base URL, the website ids and the customer groups from their documents, and
+   refuses a batch whose scope documents are missing.
 
-Stores > Configuration > Catalog > Catalog > Catalog Storefront Search, from the
-`GraphCommerce_CatalogStorefrontSearch` module, which also runs without the document store:
+   ```sh
+   bin/magento indexer:reindex scopes_website_data_exporter scopes_customergroup_data_exporter
+   ```
 
-| Setting | Effect |
-| --- | --- |
-| Sort Ties On The Product Id Field | On by default. Every listing sorts equal products by product id; core computes the id with a script for every matching product (41 ms of an unfiltered listing over 308 000 products), the module reads it from a field it writes into the fulltext document (6 ms). Needs a fulltext reindex after the install, which the install schedules. |
-| Record Search Terms | Off by default: the search terms report and the suggestions stop updating, the request path stops writing. |
+4. Build the documents. `catalog-storefront:rebuild` stages a fresh index per entity and
+   store view, truncates the feed tables so the exporter sends every row, runs the feed
+   indexers and promotes the indices when they are through.
 
-Stores > Configuration > Catalog > Catalog > Layered Navigation > Price Navigation Step
-Calculation gets a fourth option, Single range: the `price` aggregation is one option from
-the lowest to the highest price of the result, the bounds a price slider reads. Core's
-modes split it into intervals with two or three more search queries per listing.
+   ```sh
+   bin/magento catalog-storefront:rebuild
+   ```
 
-## Modules
+5. Keep the documents up to date. The feed indexers follow the catalog through their mview
+   changelogs, so cron exports each change.
 
-The root package registers one module per directory under `src/`, and each directory is a
-composer package of its own (`graphcommerce/module-catalog-storefront-<name>`) with the core
-modules it needs, so the GraphQL, MSI and product type requirements sit in the modules that
-use them and a subtree split publishes them one by one; the root package replaces them all.
-The cut follows core: a base module holds what any frontend can use, its `GraphQl` twin holds
-the GraphQL resolver plugins and prefillers. A Hyvä or Luma integration adds `*Frontend`
-modules next to the `*GraphQl` ones.
+   ```sh
+   bin/magento indexer:set-mode schedule \
+     catalog_data_exporter_products catalog_data_exporter_product_prices \
+     catalog_data_exporter_product_variants catalog_data_exporter_categories \
+     catalog_data_exporter_product_attributes inventory_data_exporter_stock_status \
+     catalog_data_exporter_product_reviews catalog_data_exporter_rating_metadata \
+     scopes_website_data_exporter scopes_customergroup_data_exporter
+   ```
 
-| Module | Serves |
-| --- | --- |
-| `GraphCommerce_CatalogStorefrontApi` | The contracts: document stores, feed writers, document fields, product documents, price ranges |
-| `GraphCommerce_CatalogStorefrontGraphQlApi` | The GraphQL contracts: prefillers, hydration |
-| `GraphCommerce_CatalogStorefrontOpenSearch` | The document stores on OpenSearch, through core's client |
-| `GraphCommerce_CatalogStorefront` | Feed delivery with the cache purge after a write, documents to models, metadata readers, the fallback report, the storefront key, the rebuild and status commands, plugins on non-GraphQL core |
-| `GraphCommerce_CatalogStorefrontGraphQl` | Listings and layered navigation, categories, media, URL rewrites, custom attributes, linked products, the request path, the parity command |
-| `GraphCommerce_CatalogStorefrontQuoteGraphQl` | The display fields of a cart item's product, merged into the item the quote loaded |
-| `GraphCommerce_CatalogStorefrontWishlistGraphQl` | Wish list item products, one document request per list |
-| `GraphCommerce_CatalogStorefrontSalesGraphQl` | Order item products, one document request per order |
-| `GraphCommerce_CatalogStorefrontPrice` / `...PriceGraphQl` | Display prices and price ranges: currency and tax at read time through core's tax service / the prices prefiller, the customer's tax address |
-| `GraphCommerce_CatalogStorefrontWorker` | What a persistent PHP worker keeps between requests: kept schemas, validated documents, the guest tax, customer group and currency rate memos, each lifted by a cache generation. Nothing is keyed by customer. Only for FrankenPHP worker mode. |
-| `GraphCommerce_CatalogStorefrontExplorer` | The path switcher in the MageOS_GraphQLAdminHtml API explorer |
-| `GraphCommerce_CatalogStorefrontAdminhtml` | Read-only derived store-view assembly, customer-group price keys and feed indexer state in Magento Admin |
-| `GraphCommerce_CatalogStorefrontProfiler` | Times the document store client in a MageOS_Profiler trace, request bodies included |
-| `GraphCommerce_CatalogStorefrontSearch` | Cheaper core fulltext listings, each behind a setting: the entity id tie-break on a field instead of a script, one field name lookup per attribute per request, optional search term recording. Stands alone, without the document store |
-| `GraphCommerce_CatalogStorefrontInventory` / `...InventoryGraphQl` | The stock slice / stock status, only_x_left_in_stock, quantity, min and max sale qty |
-| `GraphCommerce_CatalogStorefrontConfigurableProduct` / `...ConfigurableProductGraphQl` | Variants and the configurable range / configurable options, variants, options selection |
-| `GraphCommerce_CatalogStorefrontBundleProduct` / `...BundleProductGraphQl` | Bundle feed fields and the bundle range / bundle items, price details |
-| `GraphCommerce_CatalogStorefrontGroupedProduct` / `...GroupedProductGraphQl` | The grouped range / grouped items |
-| `GraphCommerce_CatalogStorefrontDownloadable` / `...DownloadableGraphQl` | The downloadable range / downloadable links and samples |
-| `GraphCommerce_CatalogStorefrontReview` / `...ReviewGraphQl` | Review and rating feeds / reviews, rating summary and breakdown |
+6. Serve the catalog GraphQL of a store view from the documents.
 
-Each module depends only on the core modules it plugs into. Enable the ones the
-shop's product types and features need, plus the two Api modules, OpenSearch, the two Price modules, the base
-and the GraphQl module. The Worker module belongs on a FrankenPHP worker deployment
-only; under php-fpm it costs a cache read per request and keeps nothing.
+   ```sh
+   bin/magento config:set --scope=stores --scope-code=default catalog/storefront_documents/serve_graphql 1
+   bin/magento cache:flush
+   ```
 
-## Folders
+7. Generate the storefront key. It unlocks the path header and the fallback report for a
+   request that sends it.
 
-Inside a module the folders name the stage of the pipeline:
+   ```sh
+   bin/magento config:set catalog/storefront_documents/key ""
+   bin/magento config:show catalog/storefront_documents/key
+   ```
 
-- `Model/DataExporter/` and `Plugin/DataExporter/`: patch-ups of commerce-data-export.
-  `Provider/` classes add fields to the exporter's existing records through `et_schema.xml`,
-  `Processor/` classes make a legacy feed export like the modern ones, the plugins fix
-  what an exporter provider leaves out. They run at index time and may use SQL.
-- `Model/Document/`: the document store side. `Delivery` receives each feed batch and
-  hands it to every enabled `Writer/` of that feed, so a second package consumes the same
-  batch next to the document writers and switches its own writers on and off. A writer reads the feed rows and its own store, and nothing
-  else, so it can run on the other side of the wire: what a document
-  needs comes from a provider on the record of its feed, and the store views with their
-  media, the website ids and the customer groups come from the scope documents of the two
-  scopes feeds (`Model/Document/Scopes`).
-- `Model/Read/`: the request side any frontend shares: product documents to models,
-  the price ranges, the display prices, the metadata readers.
-- In a GraphQl module: `Model/DocumentHydration` and `Model/Prefill/`, `Plugin/Resolver/`,
-  `Plugin/DataProvider/`, `Plugin/Layer/`, `Plugin/Query/`.
+8. Check the result. `catalog-storefront:status` prints the documents per store view
+   against the products of the website, and per feed its rows, the rows a retry is pending
+   for, the last export and the indexer state. It fails on waiting rows and on an invalid
+   indexer, so a deployment check can call it.
 
-## Prices
+   ```sh
+   bin/magento catalog-storefront:status
+   ```
 
-The price feed rows are stored per customer group id, each with the final price its
-discounts make of the regular price and the decimals that source is rounded to
-(`Model/DataExporter/Provider/FinalPrice`), next to a nested price index with one entry
-per customer group (regular and final price, base currency, before tax) that the
-composite price aggregations run over: the writer takes every entry from the row of its
-group or of the fallback row, and the mapping holds three fields whatever the number of
-customer groups. The display currency and the taxes are applied
-at request time the way core's price classes and tax adjustment apply them, a final price
-rounded to the decimals of its source (two for a special or tier price, four for a catalog
-rule price), through
-core's own tax service with the product's tax class (a dynamic bundle's selections
-with their own); the Worker module keeps its rate lookups between requests.
-Fixed product taxes travel on the document as the weee rows of the store's website and of
-all websites (`fixedProductTaxes`, exported by the Price module; its mview subscription on
-`weee_tax` takes effect after `indexer:reset` of the products feed, since the triggers are
-generated at the mode switch). The read side picks the rows of the request's destination and
-taxes them as core's weee model does; the list display setting decides whether they enter
-the price, as GraphQL renders no product page. A composite goes to core while fixed product
-taxes are active, since its children carry the taxes. A new or deleted customer group changes the index
-entries of every product, so its save truncates the prices feed table and invalidates the
-feed indexer; the next cron run re-exports every row.
+9. Read one request's own answer. The key plus `X-Catalog-Storefront: documents` picks the
+   path for that request alone, and `extensions.catalogStorefront` carries the path and
+   every fallback to core with its reason.
 
-The price slice grows with the customer groups, the document writes do not: a product's
-rows of every group arrive in one feed batch, so a catalog rule change costs one document
-write per product and store view whatever the number of groups. Measured on the demo
-catalog with a rule on all groups, four groups against fifty-four: the price feed export
-went from 4694 to 15794 rows in four seconds, a rule product's document from 6 KB to 23 KB,
-the product index from 2 MB to 12 MB (one nested price entry per product and group), and the
-200-item listing on the worker from 78 ms to 86 ms. Tens of groups are fine; thousands are
-not, because the nested entries are per product, group and store view.
+   ```sh
+   curl -s https://shop.example/graphql \
+     -H 'Content-Type: application/json' \
+     -H 'X-Catalog-Storefront-Key: <key>' \
+     -H 'X-Catalog-Storefront: documents' \
+     -d '{"query":"{products(search:\"bag\",pageSize:24){items{sku name price_range{minimum_price{final_price{value}}}}}}"}'
+   ```
 
-## Extending
+10. Compare both paths over the whole query set.
+    [`catalog-storefront:parity`](src/CatalogStorefrontGraphQl/Console/Command/Parity.php)
+    runs every query of [dev/parity/queries](dev/parity/queries) on the core path and on
+    the document path and diffs the responses.
 
-A module registers its parts through di.xml:
+    ```sh
+    bin/magento catalog-storefront:parity https://shop.example/graphql
+    ```
 
-- `writers` on `Model\Document\Delivery`: the `FeedWriterInterface` list of a feed name,
-  keyed by writer name so several packages merge into one feed;
-  `flags` next to it: the configuration path that enables one writer name, so each package
-  switches its own writers and a name without a path always writes;
-  `identities` next to it: per feed name, the cache tag and the row keys of the
-  entities a batch touches, purged after the write.
-- `feeds` on `Model\Feeds`: the feed metadata per entity and indexer id, for the
-  rebuild and the status command. The rebuild runs the entities in this order, so the
-  attribute and category documents a product row names exist before the products feed runs.
-- `prefillers` on the GraphQl module's `Model\DocumentHydration`: a `PrefillerInterface` fills fields on
-  the product value from the model and the document, so the executor returns them
-  without a resolver call. List the fields under `prefilledFields` on
-  `Plugin\Query\RoutePrefilledFields`.
-- `ranges` on `Model\Read\PriceRanges`: a `PriceRangeInterface` per product type id.
-- `mappings` on `EntityMappings`: the fields of an entity that filter, sort or aggregate.
-- `judges` on the parity command: a `JudgeInterface` adds a verdict per query next to the
-  response diff, with both responses in hand.
+## Why a read model
 
-Another search engine implements the two storage interfaces of the Api module and
-sets the preferences in its own di.xml, as the OpenSearch module does.
+### What core pays for, per request
 
-`docs/skills/catalog-storefront-compatibility/SKILL.md` is the guide for a module that
-adds catalog data: what to build at index time and at request time, and how to prove
-it with the parity gate. It is written to be loaded as a skill by an LLM.
+Core builds a product list from the catalog tables at the moment the visitor asks for it.
+Each listed product costs a row in `catalog_product_entity_<backend type>` per attribute
+the page selects, a `catalog_product_index_price` row per customer group and website, a
+stock join,
+and, for a configurable, grouped or bundle product, the load of its children with their
+own attributes and prices. The cost follows the catalog shape: the large profile below
+holds 1 095 attributes per store view, 5 websites, 4 customer groups and 192 000 variants
+under 8 000 configurable products.
 
-## Measured
+Measured with the GraphCommerce product list query
+([dev/parity/queries/13-graphcommerce-product-list.graphql](dev/parity/queries/13-graphcommerce-product-list.graphql)),
+guest, prices excluding tax, median over the wire, no page cache, on the large profile of
+`setup:performance:generate-fixtures` (502 050 products in 5 websites, 3 000 categories,
+20 catalog price rules):
 
-The GraphCommerce product list query for 200 items (`dev/parity/queries/13-*.graphql`
-with `pageSize: 200`) on the demo catalog, over the wire on a development machine, median
-of fifteen requests after three warm ones, guest, prices excluding tax:
-
-| Runtime | Core path | Document path |
-| --- | --- | --- |
-| php-fpm (PHP 8.4, opcache on) | 816 ms | 112 ms |
-| FrankenPHP worker (Worker module on) | 425 ms | 78 ms |
-
-The document path carries most of the gain on php-fpm already; the worker adds the kept
-schema and the memos. Both runtimes read the same database and OpenSearch.
-
-## Measured at scale
-
-The large performance profile of `setup:performance:generate-fixtures` without its orders
-(`setup/performance-toolkit/profiles/ce/large-catalog.xml`), on a laptop with Docker
-Desktop at 6 GB for MariaDB, OpenSearch and the worker together:
-
-| | |
-| --- | --- |
-| Catalog | 300 000 simple and 8 000 configurable products with 192 000 variants, 502 050 products in all, every one in 5 websites; 3 000 categories; 4 customer groups; 20 catalog price rules |
-| Generation | 25 minutes |
-| Core indexers | stock 28 minutes (core's legacy stock indexer runs an attribute query per product under MSI), category products 2, price 2, EAV 1, fulltext about 5 per store view of 308 000 visible products |
-| Products feed | 2.5 million rows in 64 minutes, 570 rows a second; the document store takes 0.41 ms a row, 15 of the 64 minutes; the rest is the exporter |
-| Prices feed | 2.5 million rows in 9 minutes, 0.21 ms a row in the store |
-| Stock feed | 494 000 rows in 7 minutes, 0.75 ms a row in the store |
-| Variants feed | 194 000 rows in 4 minutes, 0.86 ms a row in the store |
-| Rebuild | `catalog-storefront:rebuild product` into staged indices: 109 minutes (products feed 71, prices 15, variants 5, stock 18); `rebuild attribute` 5 seconds for 1 095 attributes per store view; a feed run over unchanged rows writes nothing |
-| Documents | 502 050 product documents per store view, 1 to 3 GB per store view on disk, 12 GB in all; categories and attributes below 1 MB per store view |
-| OpenSearch heap | 2 GB trips the parent circuit breaker while the fulltext indexer and the feeds write at once; 3 GB carries the load, next to the worker in a 10 GB Docker VM |
-| Exporter feed tables | 24 GB for 1.8 million products rows with `PERSIST_EXPORTED_FEED` set, 174 bytes a row without it; the document store never reads them, so leave it unset |
-
-Read side, the GraphCommerce product list query, median over the wire, guest, excluding
-tax, no page cache, php-fpm on the host and the FrankenPHP worker in the Docker network next
-to OpenSearch and MariaDB (a round trip from the host to a container costs 0.3 ms against
-0.04 ms inside it, which core's hundreds of statements per listing pay and the document path
-does not):
-
-| Listing | fpm core | fpm documents | worker core | worker documents |
+| Listing | php-fpm, core | php-fpm, documents | worker, core | worker, documents |
 | --- | --- | --- | --- | --- |
 | 24 items of a 12 463-product category | 238 ms | 93 ms | 133 ms | 41 ms |
 | 200 items of that category | 1 433 ms | 145 ms | 624 ms | 98 ms |
 | 200 items of a search over 308 000 visible products | 1 549 ms | 210 ms | 519 ms | 148 ms |
 | 200 items unfiltered | 1 661 ms | 194 ms | 629 ms | 130 ms |
-| 24 items unfiltered | 271 ms | 132 ms | 172 ms | 79 ms |
 
-The unfiltered listings pay for core's facet aggregations over every visible product in the
-search index, on both paths. A trace of the 24-item category listing on the document path,
-php-fpm, 93 ms in all: 24 ms of bootstrap, 18 ms in which core builds the GraphQL schema
-from its stitched config, 17 ms for core's search (5 ms in OpenSearch), 10 ms for the
-document multi-search of the five requests, 3 ms for the review documents, 8 ms for the
-aggregations (one multi-search primes the attribute documents of the option ids and the names
-of the aggregated categories before core's layer builders run; the builders then ask no
-question of their own), 4 ms after the response for core's cache id. The core path spends its time in price range
-resolvers and hundreds of SQL statements. On the FrankenPHP worker the same request answers
-in 41 ms: bootstrap and schema build are gone, a repeated query is parsed and validated once
-per process (core's parser drops its cache between requests, 7 ms a request without the kept
-documents), the search takes 7 ms, the multi-search 3 ms, the aggregations 5 ms; the worker then spends 6 to 12 ms resetting state before it takes the
-next request: the reload processors (system config, stores, search request config) run once per
-config generation, so what is left is the object manager's own reset with its three garbage
-collection runs.
+### What a cache does with that cost
 
-The package replaces Magento's `AttributeOptionProvider` on the normal GraphQL path too. Core's
-query has no EAV entity-type predicate and groups by attribute code, so an equally named customer
-attribute can leak an option into a product facet. It also leaves equal merchant sort positions
-unordered. The replacement restricts the query to product attributes and orders ties by numeric
-option id; plugins declared for Magento's provider remain in its inherited interceptor chain.
-Another module that declares a preference for the same concrete provider conflicts by Magento's
-normal DI merge rules. Attribute metadata must be rebuilt before the document path has the added
-facet sort order; older documents keep their existing option order until then.
+The cost stays on the request. A cache holds the answer of a request that already paid it,
+and the next miss pays it again. The misses are the normal traffic of a catalog:
 
-A page beyond hit 10 000 of a listing is where OpenSearch's result window ends. Core's adapter
-opens a point in time and walks the result in windows of 10 000 hits until it reaches the page,
-with the layered navigation counts computed again in every window: page 2000 of an unfiltered
-listing over 300 000 products takes 32 windows and 2.4 seconds. The search module's Result Window
-setting puts a window that covers the catalog on the index and tells the adapter, so the same page
-is one query of about 0.2 seconds.
+- A feed write purges the cache tags of the products and categories in its batch
+  (`identities` on [`Model/Document/Delivery`](src/CatalogStorefront/Model/Document/Delivery.php)),
+  so every price change, stock change and product save empties the entries of those
+  products. A catalog reindex and a cache flush empty all of them.
+- The long tail of URLs: a category page 7, a sort order, a page size and a filter
+  combination are each a cache entry of their own, and layered navigation multiplies them.
+- Customer group prices: core's GraphQL response cache id carries the customer group and
+  the customer's tax rate
+  (`Magento\CustomerGraphQl\CacheIdFactorProviders\CustomerGroupProvider` and
+  `CustomerTaxRateProvider`), so each group and each tax destination fills its own slot.
 
-Core's search sorted every listing by score and then by a painless script that parses the
-document id as a tie-break, which runs for every matching document: 41 ms of an unfiltered
-listing over 308 000 visible products, 8 ms of a 12 000-product category. The fulltext
-document now carries the product id as an integer field and the tie-break sorts on it: 6 ms
-and 1 ms, the same order. What remains of the unfiltered search is its 30 aggregations,
-28 ms, of which the category terms aggregation over an integer field takes 10; the same
-aggregation over a keyword field takes 2, which core's category builder cannot take yet
-because it compares the bucket keys strictly as integers.
+### What this package does
 
-Two reads used to load whole indices per request. The facet labels loaded every attribute
-document of the store view (1.3 MB at 1 095 attributes, 40 ms on php-fpm) before the
-attribute index got mappings for the option id, the filterable mode and the code; one query
-now fetches the few attributes a facet needs. `custom_attributesV2` loaded the same set once
-per request; a prefiller now fetches the codes the page's documents carry in one search (15 ms
-for a 100-product page with hundreds of codes, the option labels being the payload). An
-unfiltered listing's category facet labels the 500 categories of core's bucket from the
-category documents: 4 ms on the worker with the name and the path read from doc values
-instead of the parsed source; the search by id replaced a multi-get that cost three times as
-much for hundreds of ids.
-A page fetch takes its documents whole. Leaving the unselected keys out through a source
-filter made OpenSearch parse every document: 15 ms of server time for 200 documents against
-10 ms for the whole documents, and the smaller transfer did not pay it back. The documents
-got smaller instead: a configurable carried its options twice, raw as `optionsV2` and shaped
-as `configurableOptions`, and the raw entries were a third of its 13 KB; the field that
-builds the shape drops them, and a configurable is 9 KB. The 200-item multi-search went from
-18 to 12 ms on the worker for it. The shape itself is stored compact: per value the
-index, the label and the swatch, per option the ids, code, label and position; every uid,
-every repeated id and the label triple are derived at read time. On 200 configurables of the
-large catalog the options went from 715 KB to 174 KB and the whole page from 1.66 MB to
-1.19 MB, the multi-search from 22 to 18 ms of OpenSearch time; the wire was gzipped before,
-so the saving is parse time and memory. What remains is the document lookup itself, 5 ms, the price
-aggregations, 5 ms, and the transfer and decode of 1.7 MB. The pure lookup would need the
-listing slice stored as one field of its own to get lower.
+The cost is paid one time at the feed side, when the data changes. The exporter builds the
+row of every changed entity, hashes it and drops the row whose hash equals its last
+export; the rest reaches the writers ([docs/feed-writer.md](docs/feed-writer.md)). On the
+large profile the document store takes 0.41 ms per products row, 0.21 ms per prices row,
+0.75 ms per stock row and 0.86 ms per variants row: 15 minutes of the 64 minutes the
+2.5 million products rows take, the rest being the exporter's own queries and hashing.
 
-Per row the document store is a quarter of the export; the exporter's own queries and
-hashing are the rest. A full `indexer:reindex` of a feed re-sends every row whose hash or
-status changed, and a core reindex that runs before the category and price indexes are
-complete changes every products row, so the feeds run after the core indexers, in one call
-each (`indexer:reindex <core ids>` then `indexer:reindex <feed ids>`), or the products feed
-exports twice.
+A request is then a search plus a document read. A listing page costs two OpenSearch round
+trips: core's product search, and one multi-search that takes the documents of the page
+with the price aggregations of their composites. The number of products in the catalog
+does not enter that request.
 
-## Parity gate
+### The arguments against it
 
-```sh
-bin/magento catalog-storefront:parity https://shop.example/graphql
+**"Varnish covers it."** A miss pays the core path: 1 433 ms against 145 ms for a 200-item
+category listing on php-fpm. Every feed write empties the entries of the products it
+touched, which is what keeps the prices true.
+
+**"MySQL and indexer tuning is enough."** The numbers above are measured with every core
+indexer complete: stock, price, category products, EAV and fulltext. A 24-item category
+listing still costs 238 ms on php-fpm, because the request itself joins the attribute and
+price rows of its 24 products. Tuning pays where the work is the search engine's:
+`GraphCommerce_CatalogStorefrontSearch` sorts the listing tie-break on a field instead of
+a painless script over every match (41 ms to 6 ms on an unfiltered listing over 308 000
+visible products) and puts a result window over the catalog on the index (page 2000 of
+that listing: 2.4 seconds in 32 windows against 0.2 seconds in one query). That module
+needs no documents. The 238 ms of the 24-item listing stay on the request: they are PHP
+time and database time, in core's own resolvers.
+
+**"Our catalog is small."** The cost per request follows the attributes, store views,
+customer groups and children of a product, not the number of products. On the demo catalog
+the same 200-item query takes 816 ms on the core path against 112 ms on the document path
+(php-fpm), and 425 ms against 78 ms on a FrankenPHP worker. Customer groups are the
+clearest example: with a catalog rule on all groups, 4 groups against 54 take the prices
+feed from 4 694 to 15 794 rows, a rule product's document from 6 KB to 23 KB, and the
+200-item listing on the worker from 78 ms to 86 ms, because a product's rows of every
+group arrive in one batch and the document keeps one nested entry per group.
+
+**"A read model gets out of sync."** Three mechanisms answer for it. The exporter compares
+the hash of every row with its last export, so a full reindex re-sends what changed and
+writes nothing for the rest. A read the documents cannot answer falls back to the core
+resolver, and a request with the storefront key names every fallback with its reason.
+`catalog-storefront:parity` diffs both paths query by query, and `--soak` repeats the
+accepted queries with the customer, the page size, the sku list and the path order varied
+per request: 3 000 requests, 0 differences, memory slope 250.7 KB per 100 requests against
+a 1 500 KB limit
+([docs/validation/2026-09-15-worker-soak-local.json](docs/validation/2026-09-15-worker-soak-local.json)).
+`catalog-storefront:status` fails while a feed row waits or a feed indexer is invalid.
+
+## What is served from documents
+
+The path header and the setting decide per request. Every plugin below gates on
+[`Model/Mode`](src/CatalogStorefront/Model/Mode.php) first, so `X-Catalog-Storefront: core`
+runs core alone.
+
+| Read path | Module | Falls back to core when |
+| --- | --- | --- |
+| `products` search, filter and sort | `...GraphQl` | a listed product has no document |
+| `categories`, `categoryList`, a product's `categories` | `...GraphQl` | the filter is one the category documents do not answer, or the page is past the last |
+| `aggregations`, layered navigation labels, price step | `...GraphQl`, base | the store view has no attribute documents, or the filtered categories have no document |
+| `custom_attributesV2`, `attributesList` | `...GraphQl` | the filter names a property the attribute documents do not carry |
+| `media_gallery`, `url_rewrites` | `...GraphQl` | the document carries none |
+| `related_products`, `upsell_products`, `crosssell_products` | `...GraphQl` | the product of the query has no document |
+| `price_range`, `price`, `price_tiers`, `tier_prices`, `fixed_product_taxes` | `...PriceGraphQl` | fixed product taxes are active on a composite product |
+| `stock_status`, `only_x_left_in_stock`, `quantity`, `min_sale_qty`, `max_sale_qty` | `...InventoryGraphQl` | the product has no document |
+| `configurable_options`, `variants`, `configurable_product_options_selection` | `...ConfigurableProductGraphQl` | the configurable document carries no `configurableOptions` |
+| `items` and `price_details` of a bundle | `...BundleProductGraphQl` | the product has no document |
+| `items` of a grouped product | `...GroupedProductGraphQl` | the product has no document |
+| `downloadable_product_links`, `downloadable_product_samples` | `...DownloadableGraphQl` | a sample carries no `sample_id` |
+| `rating_summary`, `review_count`, `reviews` | `...ReviewGraphQl` | the page is past the last |
+| The products of cart items, wish list items and order items | `...QuoteGraphQl`, `...WishlistGraphQl`, `...SalesGraphQl` | an item's product has no document |
+| Rendered category and search listing pages, product detail pages | `...ProductFrontend` | one product of the page has no document, and the page then loads from the database with the ids logged |
+| A configurable's children, super attributes and lowest price on a rendered page | `...ConfigurableProductFrontend` | the product has no document |
+
+## Reference
+
+### Commands
+
+| Command | Does |
+| --- | --- |
+| `catalog-storefront:rebuild [product\|category\|attribute\|review\|rating ...]` | Stages a fresh index per store view, truncates the feed tables of the entity, runs its feed indexers, promotes the indices. `--promote` promotes what a feed run outside the command filled. |
+| `catalog-storefront:status` | Documents per store view and per feed the rows, the waiting rows, the last export and the indexer state. Fails on waiting rows or an invalid indexer. |
+| `catalog-storefront:parity <endpoint>` | Both paths over `dev/parity/queries`, diffed. `--queries`, `--header`, `--dump`, `--report`, `--attempts`, `--warm`, `--candidate-endpoint`, `--insecure`, and the soak options `--soak`, `--token`, `--token-file`, `--probe-header`, `--probe-share`, `--memory-sample`, `--memory-slope`, `--worker-container`, `--worker-process`. |
+| `catalog-storefront:parity:listing <base url>` | Renders `dev/parity/listing-pages.txt` on both paths and compares the lines. `--pages`, `--dump`, `--warm`, `--host`, `--header`. |
+| `catalog-storefront:parity:detail <base url>` | The same for `dev/parity/detail-pages.txt`. `--marker` names the text a real product page carries, so an error page is not judged. |
+
+### Settings
+
+Stores > Configuration > Catalog > Catalog > Catalog Storefront Document Store:
+
+| Path | Default | Effect |
+| --- | --- | --- |
+| `catalog/storefront_documents/index_enabled` | 1 | The writers of these modules store each feed batch. Another package that consumes the same feeds has its own flag. |
+| `catalog/storefront_documents/serve_graphql` | 0, per store view | The catalog GraphQL reads come from documents. |
+| `catalog/storefront_documents/serve_plp` | 0, per store view | Rendered category and search listing pages build their products from documents. |
+| `catalog/storefront_documents/serve_pdp` | 0, per store view | A rendered product detail page takes its product from a document. |
+| `catalog/storefront_documents/key` | Generated on a save with the field empty | The value of the `X-Catalog-Storefront-Key` header that unlocks the path header and the fallback report. |
+| `catalog/storefront_documents/index_prefix` | `catalog_storefront` | The first part of every index name. |
+
+Stores > Configuration > Catalog > Catalog > Catalog Storefront Search, from
+`GraphCommerce_CatalogStorefrontSearch`, which runs without the document store:
+
+| Path | Default | Effect |
+| --- | --- | --- |
+| `catalog/storefront_search/entity_id_sort` | 1 | The listing tie-break sorts on the product id field of the fulltext document. Needs a fulltext reindex, which the install schedules. |
+| `catalog/storefront_search/record_search_terms` | 0 | Magento writes the search term of every search. Off, the search terms report and the suggestions keep their current state. |
+| `catalog/storefront_search/result_window` | 0 | The hits the engine serves with one query. 0 leaves the engine's own limit of 10 000. A save puts the window on the product search index of every store view. |
+
+Stores > Configuration > Catalog > Catalog > Layered Navigation > Price Navigation Step
+Calculation takes a fourth value, Single range: the `price` aggregation is one option from
+the lowest to the highest price of the result, which is what a price slider reads. Core's
+other modes run two or three more search queries per listing for the intervals.
+
+### Headers
+
+| Header | Value | Effect |
+| --- | --- | --- |
+| `X-Catalog-Storefront-Key` | The configured key | The request may pick its path and gets the fallback report. |
+| `X-Catalog-Storefront` | `documents` or `core` | The path of this request. It is a factor of the response cache id, of the resolver result cache keys and of the page cache id, and a keyed GraphQL request is never cacheable. |
+
+### Indices
+
+Each entity and store view has one index behind a read alias `<prefix>_<entity>_<store view
+code>` and a write alias `<prefix>_<entity>_<store view code>_write`, for example
+`catalog_storefront_product_default`. The entities are `product`, `category`, `attribute`,
+`review` and `rating`. The two scopes feeds write `<prefix>_website_global` and
+`<prefix>_customer_group_global`. Every mapping is `dynamic: false` and maps only the
+fields a request filters, sorts or aggregates on (`EntityMappings` in
+[src/CatalogStorefront/etc/di.xml](src/CatalogStorefront/etc/di.xml)); every other field
+stays in `_source`. A mapping change reaches an index through `setup:di:compile` and then
+`catalog-storefront:rebuild <entity>`.
+
+## Extend
+
+### Add a field to the product document
+
+Declare the field on the exporter's record with a provider, in the `etc/et_schema.xml` of
+your module. The provider takes the keys the `using` nodes name and answers one row per
+entity and store view, under the key the exporter joins on.
+[`Provider/TaxClass`](src/CatalogStorefront/Model/DataExporter/Provider/TaxClass.php) is
+the same shape against the EAV tables.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_DataExporter:etc/et_schema.xsd">
+    <record name="Product">
+        <field name="rentalDays" type="Int" provider="Vendor\Rental\Model\DataExporter\Provider\RentalDays">
+            <using field="productId"/>
+            <using field="storeViewCode"/>
+        </field>
+    </record>
+</config>
 ```
 
-runs every query in `dev/parity/queries/` (or `--queries=<dir>`) against the core path
-and the document path, picked per request with the `X-Catalog-Storefront` header, and
-diffs the responses. It sends the storefront key, so the configuration must have been
-saved once, and prints every fallback of the document path. `--dump=<dir>` keeps both
-responses of every query. A query file sends its own request
-headers through `# @header Content-Currency: EUR` comment lines; `--header "Authorization:
-Bearer <token>"` sends a customer token with every query, which makes it a signed-in gate,
-and `--header "Store: second"` runs it on another store view. A query file states the
-headers its run must send through `# @requires Authorization` and the headers its run must
-not send through `# @requires !Authorization`; a query whose requirement the run does not
-meet is skipped. A query that fails is requested
-again, up to `--attempts` times (three by default), before its verdict counts: a worker thread
-that has not served the shape yet answers from a cold state once. See `CLAUDE.md` for the
-operating notes, the fixtures the query set needs and the known deviations.
+```php
+namespace Vendor\Rental\Model\DataExporter\Provider;
 
-The set covers the catalog queries plus the three lists whose items carry a product:
-`30-cart-guest` reads the guest cart of `dev/parity/fixtures/guest-cart.php` with a simple
-and a bundle item, `31-wishlist-customer` the wish list of
-`dev/parity/fixtures/customer-wishlist.php` and `32-order-customer` the order of
-`dev/parity/fixtures/customer-order.php`, the last two on a signed-in run. Each selects the
-product fields the documents serve next to the item's own prices and quantity. Their
-subject is a database entity, so the gate lists the statements core runs for the quote, the
-wish list and the order instead of failing on them.
+use Magento\Framework\App\ResourceConnection;
 
-`--soak=<requests>` runs, after the gate, the queries the judges accept for as many
-requests, with the context varied per request: the customer takes turns between the guest
-and every `--token` (or every line of `--token-file`), which varies the customer group, the
-response cache id and the tax destination; the page size of an argument and of a query
-variable steps through the whole, the half, the quarter and one less than the size the
-query names; a sku list rotates; and the two paths of a request alternate their order.
-Every request is judged as the gate judges it, so state a memo keeps from the request
-before shows up as a diff with the request number, the context, the header names and the
-query. A query the judges refuse in a context is left out of that context, so the soak
-measures the worker and not the gaps of the catalog it runs against. `--probe-header
-"Name: value"` sends, on `--probe-share` percent of the requests (25 by default), one more
-document-path request with those headers before the judged pair, so a read path that only
-such a header reaches takes part in the soak; its answer is counted, not judged.
+class RentalDays
+{
+    public function __construct(private readonly ResourceConnection $resourceConnection)
+    {
+    }
 
-`--memory-sample=<requests>` samples the resident memory of the worker process every so
-many requests, through `docker exec` on `--worker-container` and the process named by
-`--worker-process`. The gate prints the first and the last sample, the peak, the least
-squares slope over the second half of the run in KB per 100 requests, and the table of
-samples. The first half is the warm-up: a thread still fills its memos and builds the
-schema of a query shape it did not serve yet. A slope above `--memory-slope` fails the
-soak; its default of 1500 KB per 100 requests is the noise of a worker of 25 threads,
-whose resident memory swings about 7 MB around its level between samples, while a memo
-that keeps one document per request adds ten times as much. `docs/validation/` holds the
-record of a run.
+    public function get(array $values): array
+    {
+        $ids = array_unique(array_map(static fn(array $value) => (int)$value['productId'], $values));
+        $connection = $this->resourceConnection->getConnection();
+        $days = $connection->fetchPairs(
+            $connection->select()
+                ->from($this->resourceConnection->getTableName('vendor_rental_product'), ['product_id', 'days'])
+                ->where('product_id IN (?)', $ids)
+        );
+        $output = [];
+        foreach ($values as $value) {
+            $id = (int)$value['productId'];
+            if (!isset($days[$id])) {
+                continue;
+            }
+            $output[$value['storeViewCode'] . '_' . $id] = [
+                'productId' => $value['productId'],
+                'storeViewCode' => $value['storeViewCode'],
+                'rentalDays' => (int)$days[$id],
+            ];
+        }
 
-Use `--candidate-endpoint=https://candidate.example/graphql` to send document-path
-requests to a separate installation while core requests stay on the positional endpoint.
-Both endpoints must accept the configured storefront key and represent the same catalog,
-store, customer context, and query fixtures. `--warm=2` is the default warmup per path.
-TLS certificates are verified; use `--insecure` only for local development certificates.
-Redirects and non-success HTTP responses fail the gate.
-
-`--report=/existing/directory/parity.json` writes a versioned JSON report containing
-query names, expanded-query SHA-256 hashes, attempt counts, verdicts, and diagnostics.
-The command fails if any query fails or the report cannot be written. Transport failures,
-GraphQL errors, missing data, and empty product results cannot pass by comparing alike.
-Use a fresh report path for each run and check the command exit code: setup failures may
-exit before a report is written. Treat reports and response dumps as diagnostic artifacts;
-they are not publication authorization or proof of customer, catalog, or release identity.
-
-## Status
-
-```sh
-bin/magento catalog-storefront:status
+        return $output;
+    }
+}
 ```
 
-prints per store view the documents of every entity, the product documents next to the
-products assigned to the store's website, and per feed its rows, the rows the store did
-not accept yet (the feed machinery retries them by cron), the last export and the state
-of its indexer. It fails when rows are waiting or an indexer is invalid, so a deployment
-check can call it.
+The products writer stores the whole feed row, so `rentalDays` is on the document after
+`bin/magento setup:di:compile` and `bin/magento catalog-storefront:rebuild product`. Serve
+it with a prefiller, which fills the field on the product value the executor hands to the
+child fields:
 
-## Rebuild
+```php
+namespace Vendor\Rental\Model\Prefill;
 
-```sh
-bin/magento catalog-storefront:rebuild [product|category|attribute|review|rating ...]
+use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
+use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillRequest;
+
+class RentalDays implements PrefillerInterface
+{
+    public function fill(array $models, array $documents, PrefillRequest $request): array
+    {
+        if (!$request->selects('rental_days')) {
+            return [];
+        }
+
+        return array_map(
+            static fn(array $document) => ['rental_days' => $document['rentalDays'] ?? null],
+            $documents
+        );
+    }
+}
 ```
 
-stages a fresh index per store view for the given entities (all by default), truncates the
-feed tables of the feeds that write them, so the exporter re-exports every row instead of
-skipping the unchanged ones, runs those feed indexers into the fresh indices, and then
-moves the reads over and deletes the old indices. The reads keep the current documents
-until the export is through; a rebuild that fails leaves them untouched and the next
-rebuild replaces the staged index. Needed after a mapping change and whenever the
-documents drifted from the database. Each entity and store view has one index behind two
-aliases, `<prefix>_<entity>_<store view>` for the reads and its `_write` twin for the
-writes. A module that writes a feed registers it under `feeds` on `Model\Feeds`.
+```xml
+<type name="GraphCommerce\CatalogStorefrontGraphQl\Model\DocumentHydration">
+    <arguments>
+        <argument name="prefillers" xsi:type="array">
+            <item name="rental" xsi:type="object">Vendor\Rental\Model\Prefill\RentalDays</item>
+        </argument>
+    </arguments>
+</type>
+<type name="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query\RoutePrefilledFields">
+    <arguments>
+        <argument name="prefilledFields" xsi:type="array">
+            <item name="ProductInterface" xsi:type="array">
+                <item name="rental_days" xsi:type="string">rental_days</item>
+            </item>
+        </argument>
+    </arguments>
+</type>
+```
 
-The scope documents stand outside the rebuild: the two scopes feeds of
-`magento/module-scopes-data-exporter` write one website document and one customer group
-document under the index name `global`, and the writers of the other feeds read the store
-views with their media base URL and image placeholder URLs, the website ids and the groups
-from them. Export them before the catalog feeds
-(`bin/magento indexer:reindex scopes_website_data_exporter scopes_customergroup_data_exporter`);
-a catalog feed whose scope documents are missing is refused and the feed machinery retries
-it by cron.
+A field the prefiller leaves empty routes to the core resolver, so a product without a
+document keeps core's answer.
+
+### Add a writer
+
+A writer takes the rows of one feed and stores them. It reads its rows and its own document
+store, and nothing else. Register it under the feed name, next to the writers that are
+there: the delivery calls every writer of the feed with the batch.
+[`Writer/Stock`](src/CatalogStorefrontInventory/Model/Document/Writer/Stock.php) is a
+complete example of a slice writer, and
+[src/CatalogStorefrontInventory/etc/di.xml](src/CatalogStorefrontInventory/etc/di.xml) of
+its registration:
+
+```xml
+<type name="GraphCommerce\CatalogStorefront\Model\Document\Delivery">
+    <arguments>
+        <argument name="writers" xsi:type="array">
+            <item name="products" xsi:type="array">
+                <item name="rental" xsi:type="object">Vendor\Rental\Model\Document\Writer\Rental</item>
+            </item>
+        </argument>
+        <argument name="flags" xsi:type="array">
+            <item name="rental" xsi:type="string">vendor_rental/documents/index_enabled</item>
+        </argument>
+        <argument name="identities" xsi:type="array">
+            <item name="products" xsi:type="array">
+                <item name="cat_p" xsi:type="array">
+                    <item name="productId" xsi:type="string">productId</item>
+                </item>
+            </item>
+        </argument>
+    </arguments>
+</type>
+```
+
+The writer name is a family: `flags` gives the family a configuration path, and the
+delivery skips it while that path is off. `identities` names the cache tags and the row
+keys the batch purges after the write.
+
+[docs/feed-writer.md](docs/feed-writer.md) holds the full path from a MySQL write to a
+document: the feeds, their providers, the change tracking and every writer with its index.
+
+### Other extension points
+
+| Argument | On | Adds |
+| --- | --- | --- |
+| `feeds` | [`Model/Feeds`](src/CatalogStorefront/Model/Feeds.php) | The feed indexers of an entity, for the rebuild and the status command. The rebuild runs the entities in this order. |
+| `ranges` | [`Model/Read/PriceRanges`](src/CatalogStorefrontPrice/Model/Read/PriceRanges.php) | A `PriceRangeInterface` per product type id. |
+| `mappings` | `EntityMappings` | The fields of an entity a request filters, sorts or aggregates on. |
+| `judges` | The parity command | A `JudgeInterface` verdict per query, with both responses in hand. |
+
+Another search engine implements
+[`ProductDocumentStorageInterface`](src/CatalogStorefrontApi/Storage/ProductDocumentStorageInterface.php)
+and
+[`MetadataDocumentStorageInterface`](src/CatalogStorefrontApi/Storage/MetadataDocumentStorageInterface.php)
+and sets the preferences in its own di.xml, as
+[`GraphCommerce_CatalogStorefrontOpenSearch`](src/CatalogStorefrontOpenSearch) does.
+
+[docs/skills/catalog-storefront-compatibility/SKILL.md](docs/skills/catalog-storefront-compatibility/SKILL.md)
+is the guide for a module that adds catalog data: what to build at index time and at
+request time, and how to prove it with the parity gate. An LLM loads it as a skill.
+
+## Modules
+
+Each directory under `src/` is a Magento module and a composer package
+(`graphcommerce/module-catalog-storefront-<name>`) that depends on the core modules it
+plugs into; the root package replaces them all. Enable the modules the shop's product
+types and features need, next to the two Api modules, OpenSearch, the two Price modules,
+the base module and the GraphQl module.
+
+| Module | Adds |
+| --- | --- |
+| [`...Api`](src/CatalogStorefrontApi) | The contracts: document stores, feed writers, document fields, product documents, price ranges |
+| [`...GraphQlApi`](src/CatalogStorefrontGraphQlApi) | The GraphQL contracts: prefillers, hydration, parity judges |
+| [`...OpenSearch`](src/CatalogStorefrontOpenSearch) | The document stores on OpenSearch, through core's client |
+| [`GraphCommerce_CatalogStorefront`](src/CatalogStorefront) | Feed delivery with the cache purge, the writers of the products, prices, categories, attributes and scopes feeds, documents to models, the fallback report, the storefront key, the rebuild and status commands |
+| [`...GraphQl`](src/CatalogStorefrontGraphQl) | Listings, layered navigation, categories, media, URL rewrites, custom attributes, linked products, the request path, the parity command |
+| [`...Price`](src/CatalogStorefrontPrice) / [`...PriceGraphQl`](src/CatalogStorefrontPriceGraphQl) | Display currency and tax at read time through core's tax service / the prices prefiller and the customer's tax address |
+| [`...Inventory`](src/CatalogStorefrontInventory) / [`...InventoryGraphQl`](src/CatalogStorefrontInventoryGraphQl) | The stock slice / the stock fields |
+| [`...ConfigurableProduct`](src/CatalogStorefrontConfigurableProduct) / [`...GraphQl`](src/CatalogStorefrontConfigurableProductGraphQl) / [`...Frontend`](src/CatalogStorefrontConfigurableProductFrontend) | Variants and the configurable range / options, variants, selection / a configurable on a rendered page |
+| [`...BundleProduct`](src/CatalogStorefrontBundleProduct) / [`...GraphQl`](src/CatalogStorefrontBundleProductGraphQl) | Bundle feed fields and the bundle range / bundle items and price details |
+| [`...GroupedProduct`](src/CatalogStorefrontGroupedProduct) / [`...GraphQl`](src/CatalogStorefrontGroupedProductGraphQl) | The grouped range / grouped items |
+| [`...Downloadable`](src/CatalogStorefrontDownloadable) / [`...GraphQl`](src/CatalogStorefrontDownloadableGraphQl) | The downloadable range / links and samples |
+| [`...Review`](src/CatalogStorefrontReview) / [`...GraphQl`](src/CatalogStorefrontReviewGraphQl) / [`...Frontend`](src/CatalogStorefrontReviewFrontend) | Review and rating feeds / rating summary, breakdown and reviews / the rating collection of the rendered review form |
+| [`...QuoteGraphQl`](src/CatalogStorefrontQuoteGraphQl) | The display fields of a cart item's product |
+| [`...WishlistGraphQl`](src/CatalogStorefrontWishlistGraphQl) | Wish list item products, one document request per list |
+| [`...SalesGraphQl`](src/CatalogStorefrontSalesGraphQl) | Order item products, one document request per order |
+| [`...ProductFrontend`](src/CatalogStorefrontProductFrontend) | Rendered listing and product detail pages from documents, and their two parity commands |
+| [`...Search`](src/CatalogStorefrontSearch) | Cheaper core fulltext listings, each behind a setting. Runs without the document store |
+| [`...Worker`](src/CatalogStorefrontWorker) | What a FrankenPHP worker keeps between requests. Costs a cache read per request under php-fpm |
+| [`...Elasticsuite`](src/CatalogStorefrontElasticsuite) | The document store on the cluster Smile ElasticSuite is configured with |
+| [`...Explorer`](src/CatalogStorefrontExplorer) | The path switcher in the MageOS_GraphQLAdminHtml API explorer |
+| [`...Adminhtml`](src/CatalogStorefrontAdminhtml) | Catalog > Catalog Storefront: the store views, customer group price keys and feed state, read-only |
+| [`...Profiler`](src/CatalogStorefrontProfiler) | A MageOS_Profiler span per document store request |
 
 ## Tests
 
-`phpunit.xml.dist` runs the unit tests of every module against the Magento
-installation that holds the package (`MAGENTO_ROOT`, else the project two levels up).
-`.github/workflows/ci.yml` runs them on the latest Mage-OS release through the
-[graycore actions](https://github.com/graycoreio/github-actions-magento2), then installs
-the sample data with OpenSearch, MySQL and Valkey as service containers, adds the query set's
-fixtures, exports the feeds and runs the parity gate in five setups: excluding tax,
-catalog prices including tax, both prices displayed, fixed product taxes in the price, and a
-fuzz setup of six random settings from the table in `dev/parity/fuzz.php` (the run id is the
-seed, a workflow dispatch replays one; a failing seed becomes a fixed setup); each as a
-guest, as a signed-in customer with a Michigan address, and on the store view of a second
-website that sells every product. `dev/parity/freshness.php` then changes a price and a
-fixed product tax, updates the scheduled feed views as the indexer cron does and reads the
-document back, and puts a product out of stock and flips the out of stock display setting
-through the admin config model, which must invalidate the products and the categories feed
-so the category count follows: a table or a setting the feeds do not watch shows up here.
-The exporter packages test the feed content themselves (products, categories, urls, stock,
-prices per website, invalidation); the gate proves the read side and the module's own
-providers. The writer tests under `Test/Unit/Model/Document` hold the document contract: a
-feed batch in, the documents out. PHPUnit runs from its phar in both
-jobs: Magento's composer.json excludes every `Test` directory from the classmap, which
-drops PHPUnit's own event classes.
-
-## Install
-
-```sh
-composer require graphcommerce/magento-catalog-storefront
-bin/magento setup:upgrade --keep-generated
-bin/magento setup:di:compile
-```
-
-The package registers every module through its autoload. A development install adds
-`"preferred-install": {"graphcommerce/magento-catalog-storefront": "source"}` to the
-project's composer config, so `vendor/graphcommerce/magento-catalog-storefront` is a git
-working copy. Then run the commerce-data-export indexers and turn on Serve GraphQL From
-Documents.
-
-## Ideas and to do
-
-1. **Subtree split.** The module directories to their own repositories and packages,
-   so the modules install separately while the repository stays one.
-2. **Luma frontend integration.** `*Frontend` modules next to the `*GraphQl` ones: the
-   product listing collection, the product page and the layered navigation read from the
-   base modules. The price rendering goes through the pricing system, so it needs its
-   own document-backed price providers.
-3. **Hyvä frontend integration.** The same base as Luma with Hyvä's view models.
-4. **Parity on every surface.** The gate compares GraphQL responses. A Luma or Hyvä
-   listing needs a gate of its own: the rendered listing and product page on both
-   paths, so an integrator proves an extension on every surface it touches.
-5. **REST integration.** The product repository and the search API behind the same
-   document models, for headless setups that read the catalog over REST.
+`phpunit.xml.dist` runs the unit tests of every module against the Magento installation
+that holds the package (`MAGENTO_ROOT`, else the project two levels up). The writer tests
+under `Test/Unit/Model/Document` hold the document contract: a feed batch in, the documents
+out. [.github/workflows/ci.yml](.github/workflows/ci.yml) runs them on the latest Mage-OS
+release, installs the sample data with OpenSearch, MySQL and Valkey, adds the fixtures of
+the query set, exports the feeds and runs the parity gate in five price setups, each as a
+guest, as a signed-in customer and on a second website.
+[dev/parity/freshness.php](dev/parity/freshness.php) then changes a price, a fixed product
+tax and a stock status and reads the documents back, so a table or a setting the feeds do
+not watch shows up.
