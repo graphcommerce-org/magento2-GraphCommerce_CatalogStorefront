@@ -2,19 +2,22 @@
 declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontApi\Service;
 
-/** Imported catalog records of one Catalog Source. Trusted local adapter, not remote authentication. */
+/** Imported catalog records of one entity. Trusted local adapter, not remote authentication. */
 interface SourceFeedInterface
 {
     /**
-     * catalog-source-feed-v9: product, category and attribute records of one Source. A product
-     * record is named by its SKU, a category by its ID and an attribute by its code. JSON and
-     * scalars only. UPSERT replaces a complete owned record; DELETE removes it. The whole batch
-     * is validated before any write, and the writes are not atomic over the records.
-     * Acceptance implies neither search visibility nor publication.
+     * Product, category and attribute records. Every item names its Catalog Source in
+     * `source.locale`, a product is named by its SKU, a category by its slug path and an attribute
+     * by its code. JSON and scalars only. CREATE replaces a whole record, UPDATE merges its scalar
+     * and object fields and replaces its lists, DELETE removes it. An invalid item is reported with
+     * its field and its message; the valid items of the same batch are accepted. Acceptance implies
+     * no search visibility.
      *
-     * @param array{contract:string,sourceId:int,records:list<array{entity:string,id:int|string,operation:string,data?:array}>} $batch
-     * @return array{accepted:int}
-     * @throws \InvalidArgumentException where a record is invalid or was rejected by storage.
+     * @param string $entity product, productMetadata, category or categoryMetadata
+     * @param string $operation CREATE, UPDATE or DELETE
+     * @param list<array> $items the records
+     * @return array{status:string,acceptedCount:int,errors?:list<array{itemIndex:int,code:string,message:string,value:string}>}
+     * @throws \InvalidArgumentException where the whole batch is unusable.
      */
-    public function submit(array $batch): array;
+    public function submit(string $entity, string $operation, array $items): array;
 }
