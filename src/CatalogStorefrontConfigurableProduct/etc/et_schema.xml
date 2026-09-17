@@ -13,8 +13,6 @@
             <using field="productId"/>
             <using field="storeViewCode"/>
         </field>
-        <!-- Only the provider is replaced; the exporter's own declaration keeps the type and the using fields. -->
-        <field name="variants" provider="GraphCommerce\CatalogStorefrontConfigurableProduct\Model\DataExporter\Provider\Variants"/>
     </record>
     <record name="ConfigurableOption">
         <field name="id" type="Int"/>

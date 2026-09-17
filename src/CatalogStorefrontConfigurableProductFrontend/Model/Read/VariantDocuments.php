@@ -40,6 +40,9 @@ class VariantDocuments implements ResetAfterRequestInterface
      * The child ids a parent document names, ascending, so a partially indexed parent falls back
      * rather than rendering a short option list.
      *
+     * Keys are prefixed ("v123") to keep the map a JSON object; a null value is a link the feed
+     * reports removed.
+     *
      * @return int[]
      */
     public static function childIds(array $document): array

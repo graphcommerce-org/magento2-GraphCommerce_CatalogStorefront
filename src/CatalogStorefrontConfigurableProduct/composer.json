@@ -8,6 +8,7 @@
         "magento/framework": "*",
         "magento/module-configurable-product": "*",
         "magento/module-configurable-product-data-exporter": "*",
+        "magento/module-product-variant-data-exporter": "*",
         "graphcommerce/module-catalog-storefront": "self.version",
         "graphcommerce/module-catalog-storefront-price": "self.version"
     },

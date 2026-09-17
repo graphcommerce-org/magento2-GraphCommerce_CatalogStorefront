@@ -2,6 +2,7 @@
 
 Configurable products in the documents.
 
-- `Model/DataExporter/Provider/Variants` lists a configurable's children by sku on the parent's products feed row, where the exporter's own provider answers an empty list. With `parents` on the child row it gives `CatalogStorefront/Model/Document/CompositeLinks` both sides of the relation, which it keeps by id as `variantIds` on the parent and `parentIds` on the child.
-- `etc/mview.xml` subscribes the products feed to `catalog_product_super_link` by `parent_id`, so a link change re-exports the parent; the child follows the exporter's own `catalog_product_relation` subscription.
+- The variants feed writer: variant ids on the parent, parent ids on the variant.
 - The option value details added to the exporter's options, the super attributes and their values stored compact on the document (`Model/Read/ConfigurableOptions` expands them), and the configurable price range over the variants' price index.
+
+`etc/di.xml` keeps `parentId` in the minimal variant payload the exporter retains, so a removed relation still names both sides. A deletion row without that parent id is refused instead of leaving a stale relation in the documents; `bin/magento catalog-storefront:rebuild product` writes every retained variants row again.
