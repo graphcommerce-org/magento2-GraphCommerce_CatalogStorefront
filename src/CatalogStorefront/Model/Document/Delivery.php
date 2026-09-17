@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Model\Document;
 
-use GraphCommerce\CatalogStorefrontApi\Document\FeedWriteAcceptanceInterface;
 use GraphCommerce\CatalogStorefrontApi\Document\FeedWriterInterface;
 use Magento\DataExporter\Model\ExportFeedInterface;
 use Magento\DataExporter\Model\FeedExportStatus;
@@ -25,9 +24,6 @@ use Psr\Log\LoggerInterface;
  * without a flag always writes. A feed without a writer is accepted and only
  * persisted in its feed table. A storage failure reports status 500 for the
  * exporter's retry bookkeeping.
- * After a registered writer succeeds, an optional feed acceptor can durably record
- * the batch. Acceptor failures escape so the calling indexer can retain or requeue
- * its source work; they are not reduced to a feed-table status.
  *
  * Every write is logged at debug level with its row count and duration, so
  * an export's time splits between the exporter and the store. After a write, the cache tags of the entities the batch touched (di.xml
@@ -44,7 +40,6 @@ class Delivery implements ExportFeedInterface
     /**
      * @param array<string, FeedWriterInterface[]> $writers by feed name, then by writer name
      * @param array<string, array<string, string[]>> $identities feed name to cache tag to row keys
-     * @param FeedWriteAcceptanceInterface[] $acceptors by feed name
      * @param array<string, string> $flags writer name to the configuration path that enables it
      */
     public function __construct(
@@ -56,7 +51,6 @@ class Delivery implements ExportFeedInterface
         private readonly CacheInterface $cache,
         private readonly array $writers = [],
         private readonly array $identities = [],
-        private readonly array $acceptors = [],
         private readonly array $flags = [],
     ) {
     }
@@ -83,9 +77,6 @@ class Delivery implements ExportFeedInterface
             $this->logger->error(sprintf('catalog-storefront: storing feed "%s" failed: %s', $feed, $e->getMessage()));
 
             return $this->feedExportStatusBuilder->build(self::STATUS_RETRY, $e->getMessage());
-        }
-        if ($written && isset($this->acceptors[$feed])) {
-            $this->acceptors[$feed]->accept($data, $metadata);
         }
         if ($written) {
             $this->logger->debug(sprintf(

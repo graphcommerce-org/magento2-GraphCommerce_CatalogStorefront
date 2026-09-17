@@ -2,9 +2,8 @@
 
 `smoke.php` boots the Admin area of a store-backed installation and renders the six
 listings of Catalog > Catalog Storefront with the Admin theme, without an HTTP request and
-without an Admin user. It checks the merged route and ACL, the GET-only controller, the
-data sources and the merged layout declaration, and writes a JSON report of hashes and
-public identifiers.
+without an Admin user. It checks the merged route and ACL, the GET-only controller and the
+merged layout declaration, and writes a JSON report of hashes and public identifiers.
 
 ```sh
 CATALOG_VIEWS_SMOKE=read-only \
@@ -12,8 +11,6 @@ MAGENTO_ROOT=/var/www/html \
 php dev/admin-views/smoke.php
 ```
 
-`CATALOG_VIEWS_REQUIRE_DATA=relaxed` keeps the data check informational on a development
-database, while a route, ACL or render failure still fails the command.
 `CATALOG_VIEWS_PACKAGE_REFERENCE` requires an exact composer source commit; the report
 records the installed reference that composer gives.
 
@@ -50,8 +47,9 @@ Storefront with an existing session and compare the page with the report:
    Catalog Policies, in that order.
 2. Views and Sources hold one row per active store view, with the locale and the scope
    identifiers of the Magento configuration.
-3. Price Books holds the `all` fallback followed by the customer group keys.
-4. Catalog Layers is empty, and the content, inventory and review modules add no row.
+3. Price Books holds a root book per base currency, each website under its root and one
+   customer group book under every website.
+4. Catalog Layers is empty.
 5. Catalog Policies shows the in-stock-only rule where the store configuration sets it.
 6. The management actions are disabled and save nothing.
 7. The six listings keep their compact table hierarchy at narrow widths.

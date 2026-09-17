@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 use Composer\InstalledVersions;
 use GraphCommerce\CatalogStorefrontAdminhtml\Controller\Adminhtml\Views\Index;
-use GraphCommerce\CatalogStorefrontAdminhtml\Model\DerivedViews;
+use GraphCommerce\CatalogStorefrontAdminhtml\Ui\DataProvider\RegistryListing;
 use Magento\Framework\Acl\AclResource\ProviderInterface as AclResourceProviderInterface;
 use Magento\Framework\App\Action\HttpGetActionInterface;
 use Magento\Framework\App\Area;
@@ -44,7 +44,6 @@ $expectedPackageReference = trim((string)(getenv('CATALOG_VIEWS_PACKAGE_REFERENC
 require $root . '/app/bootstrap.php';
 
 $checks = [];
-$requireData = (getenv('CATALOG_VIEWS_REQUIRE_DATA') ?: 'strict') === 'strict';
 $failure = static function (string $name, string $reason) use (&$checks): void {
     $checks[$name] = ['passed' => false, 'reason' => $reason];
 };
@@ -95,7 +94,7 @@ try {
     $stage = 'module';
     /** @var ModuleManager $modules */
     $modules = $objects->get(ModuleManager::class);
-    $sourceFile = (new ReflectionClass(DerivedViews::class))->getFileName();
+    $sourceFile = (new ReflectionClass(RegistryListing::class))->getFileName();
     $sourceSha256 = is_string($sourceFile) && is_file($sourceFile)
         ? hash_file('sha256', $sourceFile)
         : false;
@@ -133,44 +132,6 @@ try {
     $containsResource($aclResources->getAclResources(), ACL)
         ? $pass('acl', ['resource' => ACL])
         : $failure('acl', 'resource is missing from the merged ACL tree');
-
-    $stage = 'data';
-    /** @var DerivedViews $data */
-    $data = $objects->get(DerivedViews::class);
-    $views = $data->views();
-    $groups = $data->groups();
-    $contributions = $data->contributions();
-    $viewShapeReady = array_reduce($views, static function (bool $valid, array $view): bool {
-        return $valid
-            && isset($view['id'], $view['code'], $view['name'], $view['website']['id'], $view['website']['code'])
-            && isset($view['store']['id'], $view['store']['code'], $view['store']['rootCategoryId'])
-            && array_key_exists('locale', $view)
-            && isset($view['currency']['base'], $view['currency']['default'], $view['currency']['allowed'])
-            && array_key_exists('indexing', $view)
-            && array_key_exists('graphqlDocuments', $view)
-            && array_key_exists('productListingDocuments', $view);
-    }, true);
-    $dataReady = $views !== []
-        && $viewShapeReady
-        && $groups['available']
-        && $groups['items'] !== []
-        && $contributions !== [];
-    if ($dataReady || !$requireData) {
-        $pass('data', [
-            'ready' => $dataReady,
-            'activeStoreViews' => count($views),
-            'customerGroups' => count($groups['items']),
-            'installedDocumentContributors' => count($contributions),
-        ]);
-    } else {
-        $checks['data'] = [
-            'passed' => false,
-            'reason' => 'one or more factual Admin data sources are unavailable',
-            'activeStoreViews' => count($views),
-            'customerGroupsAvailable' => $groups['available'],
-            'installedDocumentContributors' => count($contributions),
-        ];
-    }
 
     $stage = 'request';
     /** @var Http $request */

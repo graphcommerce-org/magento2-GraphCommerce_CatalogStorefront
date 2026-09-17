@@ -6,7 +6,7 @@ namespace GraphCommerce\CatalogStorefrontApi\Service;
 interface SourceFeedInterface
 {
     /**
-     * catalog-source-feed-v8: product, category and attribute records of one Source. A product
+     * catalog-source-feed-v9: product, category and attribute records of one Source. A product
      * record is named by its SKU, a category by its ID and an attribute by its code. JSON and
      * scalars only. UPSERT replaces a complete owned record; DELETE removes it. The whole batch
      * is validated before any write, and the writes are not atomic over the records.

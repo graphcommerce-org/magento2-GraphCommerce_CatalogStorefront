@@ -4,7 +4,7 @@ namespace GraphCommerce\CatalogStorefront\Model\Registry;
 
 use GraphCommerce\CatalogStorefrontApi\Service\SourceMetadataInterface;
 
-/** Cloud policy pickers have no local EAV fallback when a service is unavailable. */
+/** A Policy attribute picker states that a Source describes no attributes; it never reads EAV. */
 class UnavailableSourceMetadata implements SourceMetadataInterface
 {
     public function describe(int $sourceId): array

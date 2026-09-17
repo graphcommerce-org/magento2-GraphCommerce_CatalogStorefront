@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
 
 class ReadOnlyConfigurationTest extends TestCase
 {
-    public function testNativeDisplayDoesNotExposeGenericMutation(): void
+    public function testTheMagentoConfigurationIsPresentedWithoutMutation(): void
     {
         $native = $this->createMock(NativeResources::class);
         $native->expects(self::never())->method('snapshot');
@@ -19,13 +19,13 @@ class ReadOnlyConfigurationTest extends TestCase
         foreach (Definition::KINDS as $kind) {
             try {
                 $service->save($kind, ['type' => 'generic', 'code' => 'test', 'name' => 'Test']);
-                self::fail('OSS must not save ' . $kind);
+                self::fail('The base module must not save ' . $kind);
             } catch (LocalizedException $e) {
-                self::assertStringContainsString('Catalog Cloud', $e->getMessage());
+                self::assertStringContainsString('cannot be saved here', $e->getMessage());
             }
             try {
                 $service->delete($kind, 1, 0);
-                self::fail('OSS must not delete ' . $kind);
+                self::fail('The base module must not delete ' . $kind);
             } catch (LocalizedException $e) {
                 self::assertStringContainsString('cannot be deleted', $e->getMessage());
             }

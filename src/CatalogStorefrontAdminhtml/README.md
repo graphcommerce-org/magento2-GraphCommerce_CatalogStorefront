@@ -8,8 +8,8 @@ The page holds six native UI listings, each built from the Magento configuration
 
 | Listing | Rows |
 | --- | --- |
-| Catalog Views, Catalog Sources | One per active store view, with its locale, currency, search engine and the state of its feed indexers |
-| Price Books | The `all` fallback price key and one key per customer group, with the currency of the store views that use it |
+| Catalog Views, Catalog Sources | One per active store view, with its locale, its stock, its price books and its policies |
+| Price Books | A root book per base currency, each website under its root and one customer group book under every website |
 | Stocks | The MSI stocks, where GraphCommerce_CatalogStorefrontInventory is enabled |
 | Catalog Layers | Empty |
 | Catalog Policies | The in-stock-only rule of the store configuration, where it is set |

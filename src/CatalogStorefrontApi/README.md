@@ -9,8 +9,7 @@ other than Magento_Framework and the exporter's `Magento_DataExporter`.
 - [`Storage\EntityMappings`](Storage/EntityMappings.php): the fields of an entity a request
   filters, sorts or aggregates on, which is what the index maps.
 - [`Document\FeedWriterInterface`](Document/FeedWriterInterface.php): writes the rows of one
-  feed. [`Document\FeedWriteAcceptanceInterface`](Document/FeedWriteAcceptanceInterface.php)
-  persists the acceptance of a batch after its writer succeeded.
+  feed.
 - [`Read\ProductDocumentsInterface`](Read/ProductDocumentsInterface.php),
   [`Read\DocumentContext`](Read/DocumentContext.php),
   [`Read\PriceRangeInterface`](Read/PriceRangeInterface.php) and

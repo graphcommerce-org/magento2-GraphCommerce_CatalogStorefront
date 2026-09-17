@@ -6,14 +6,14 @@ use GraphCommerce\CatalogStorefrontApi\Service\ConfigurationInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Exception\NoSuchEntityException;
 
-/** OSS can explain native resources, but contains no generic storage or mutation implementation. */
+/** Presents the catalog resources Magento itself holds. It stores nothing of its own. */
 class ReadOnlyConfiguration implements ConfigurationInterface
 {
     public function __construct(private readonly NativeResources $native, private readonly Definition $definition) {}
     public function capabilities(): array
     {
         return ['mode' => 'native', 'can_manage' => false,
-            'message' => 'This shows your current native catalog configuration. Connect Catalog Cloud to create and manage independent catalog resources.'];
+            'message' => 'This shows the catalog configuration of your Magento store views, websites, customer groups and stocks. It is read only.'];
     }
     public function all(string $kind): array
     {
@@ -27,7 +27,7 @@ class ReadOnlyConfiguration implements ConfigurationInterface
     }
     public function save(string $kind, array $data): array
     {
-        throw new LocalizedException(__('Connect Catalog Cloud to create and manage independent catalog resources.'));
+        throw new LocalizedException(__('Catalog resources follow the Magento configuration and cannot be saved here.'));
     }
     public function delete(string $kind, int $id, int $version): void
     {
