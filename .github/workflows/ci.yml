@@ -60,6 +60,15 @@ jobs:
           curl -sSL -o phpunit.phar https://phar.phpunit.de/phpunit-12.phar
           MAGENTO_ROOT=${{ steps.magento.outputs.path }} php phpunit.phar -c phpunit.xml.dist
 
+  # The Admin JavaScript components, on the Node test runner of the runner image. They read the
+  # source files and need no Magento installation.
+  admin-js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Admin component tests
+        run: node --test src/*/Test/Unit/Ui/*.test.cjs dev/registry/*.test.cjs
+
   # The parity gate: a Mage-OS install with sample data and OpenSearch, the feeds exported into the
   # document store, every query of dev/parity/queries on both paths, in the four price setups,
   # as a guest, as a signed-in customer and on a second website's store view. A query states the
