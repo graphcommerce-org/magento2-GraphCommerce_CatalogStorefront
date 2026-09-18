@@ -12,7 +12,7 @@ use Magento\Framework\Indexer\IndexerRegistry;
 /**
  * A new customer group needs an entry in every product's price index, a
  * deleted one must leave it, and the price feed re-exports only rows whose
- * hash changed. So the feed table is truncated and its indexer invalidated:
+ * hash changed. So the feed table is emptied and its indexer invalidated:
  * the next cron run re-exports every row, with the groups as they are.
  */
 class PricesFeedOnNewGroup
@@ -52,7 +52,8 @@ class PricesFeedOnNewGroup
 
     private function reexport(): void
     {
-        $this->resourceConnection->getConnection()->truncateTable(
+        // A data patch saves a group inside a transaction, where MySQL refuses TRUNCATE.
+        $this->resourceConnection->getConnection()->delete(
             $this->resourceConnection->getTableName($this->feed->getFeedTableName())
         );
         $this->indexerRegistry->get($this->indexerId)->invalidate();
