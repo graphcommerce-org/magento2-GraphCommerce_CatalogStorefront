@@ -31,8 +31,8 @@ define(['Magento_Ui/js/form/components/fieldset', 'uiRegistry', 'jquery', 'mage/
                     f.native_store_id.visible(nativeView);
                     if (!nativeView) {
                         privateView = f.protection.value() === 'private';
-                        if (privateView) f.book_mode.value('single');
-                        f.book_mode.disabled(!this.editable || privateView);
+                        if (privateView && f.book_mode.value() === 'all') f.book_mode.value('selected');
+                        f.book_mode.disabled(!this.editable);
                         mode = f.book_mode.value();
                         f.book_ids.visible(mode === 'selected');
                         f.book_id.visible(mode === 'single');

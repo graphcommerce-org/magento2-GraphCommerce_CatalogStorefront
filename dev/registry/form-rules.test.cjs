@@ -1,4 +1,3 @@
-// Tests our rules around native Magento fields. These are unit tests, not browser validation.
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -26,13 +25,23 @@ test('managed View exposes only Store View and freezes saved type',()=>{
     assert.equal(f.type.disabled(),true);assert.equal(f.native_store_id.visible(),true);
     ['name','code','source_id','stock_id','protection','book_mode','book_ids','book_id','layer_ids','policy_ids','enabled'].forEach(name=>assert.equal(f[name].visible(),false,name));
 });
-test('private forces single; public all/selected/single switch pickers',()=>{
+test('private View keeps selected Books and permits a single Book',()=>{
     const {fields:f}=form('views',{type:'generic',protection:'public',book_mode:'all'});
     assert.equal(f.book_id.visible(),false);assert.equal(f.book_ids.visible(),false);
     f.book_mode.value('selected');assert.equal(f.book_ids.visible(),true);assert.equal(f.book_id.visible(),false);
-    f.protection.value('private');assert.equal(f.book_mode.value(),'single');assert.equal(f.book_mode.disabled(),true);
+    f.book_ids.value(['2','3']);
+    f.protection.value('private');assert.equal(f.book_mode.value(),'selected');assert.equal(f.book_mode.disabled(),false);
+    assert.deepEqual(f.book_ids.value(),['2','3']);assert.equal(f.book_ids.visible(),true);
+    f.book_mode.value('single');
     assert.equal(f.book_id.visible(),true);assert.equal(f.book_ids.visible(),false);
     f.protection.value('public');assert.equal(f.book_mode.disabled(),false);
+});
+test('private View requires an explicit Book selection',()=>{
+    const {fields:f}=form('views',{type:'generic',protection:'public',book_mode:'all'});
+    f.protection.value('private');assert.equal(f.book_mode.value(),'selected');assert.equal(f.book_ids.visible(),true);
+    f.book_mode.value('all');assert.equal(f.book_mode.value(),'selected');
+    f.protection.value('public');f.book_mode.value('all');assert.equal(f.book_mode.value(),'all');
+    assert.equal(f.book_ids.visible(),false);assert.equal(f.book_id.visible(),false);
 });
 test('read-only protection cannot unlock editing',()=>{
     const {fields:f}=form('views',{type:'generic',protection:'private',book_mode:'selected'},0,false);
