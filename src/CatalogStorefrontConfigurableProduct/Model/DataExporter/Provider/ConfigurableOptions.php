@@ -98,7 +98,7 @@ class ConfigurableOptions
                 'code' => $option['id'],
                 'label' => $option['label'] ?? null,
                 'position' => (int)($option['sortOrder'] ?? 0),
-                'useDefault' => (bool)($option['useDefault'] ?? false),
+                'useDefault' => isset($option['useDefault']) ? (bool)$option['useDefault'] : null,
                 'values' => $values,
             ];
         }

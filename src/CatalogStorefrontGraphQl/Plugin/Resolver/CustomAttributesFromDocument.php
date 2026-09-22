@@ -74,7 +74,7 @@ class CustomAttributesFromDocument
             $storeCode = $context->getExtensionAttributes()->getStore()->getCode();
             $values = [];
             foreach ((array)$document['customAttributes'] as $entry) {
-                $values[$entry['attributeCode']] = (string)($entry['value'] ?? '');
+                $values[$entry['attributeCode']] = isset($entry['value']) ? (string)$entry['value'] : null;
             }
             $attributes = array_filter(
                 $this->attributeDocuments->byCodes($storeCode, array_keys($values)),
@@ -101,8 +101,11 @@ class CustomAttributesFromDocument
             foreach ($this->filterCustomAttribute->execute($attributes) as $code => $attribute) {
                 $item = ['entity_type' => ProductAttributeInterface::ENTITY_TYPE_CODE, 'code' => $code, 'sort_order' => ''];
                 if (in_array($attribute['frontendInput'] ?? '', self::SELECT_INPUTS, true)) {
-                    $selected = explode(',', $values[$code]);
-                    // Core's option list starts with the blank option, which an empty value selects.
+                    // Core's option list starts with the blank option, which an empty value selects, as does a null
+                    // value of a select; a null value of a multiselect selects nothing.
+                    $selected = $values[$code] === null
+                        ? ($attribute['frontendInput'] === 'select' ? [''] : [])
+                        : explode(',', $values[$code]);
                     $item['selected_options'] = in_array('', $selected, true) ? [['value' => '', 'label' => ' ']] : [];
                     foreach ((array)($attribute['options'] ?? []) as $option) {
                         if (in_array((string)$option['id'], $selected, true)) {
@@ -111,7 +114,8 @@ class CustomAttributesFromDocument
                     }
                     $item[AttributeValueTypeFromDocument::KEY] = 'AttributeSelectedOptions';
                 } else {
-                    $item['value'] = $values[$code];
+                    // Core answers an empty string for a null value: the field is not nullable.
+                    $item['value'] = $values[$code] ?? '';
                     $item[AttributeValueTypeFromDocument::KEY] = 'AttributeValue';
                 }
                 $items[] = $item;

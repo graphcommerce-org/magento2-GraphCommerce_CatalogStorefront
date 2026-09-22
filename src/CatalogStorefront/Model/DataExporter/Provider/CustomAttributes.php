@@ -13,9 +13,9 @@ use Magento\Store\Model\StoreManagerInterface;
 
 /**
  * Exports per product and store view the raw value of every attribute of the
- * product's attribute set that has a value, the store view value over the
+ * product's attribute set that has a value row, the store view value over the
  * default one, as a full product load puts them on the model: the custom
- * attributes field lists these. The tier price backend adds its attribute the
+ * attributes field lists these, and a NULL row is a null value. The tier price backend adds its attribute the
  * way the product load does, so its value is the string core serializes.
  */
 class CustomAttributes
@@ -117,7 +117,8 @@ class CustomAttributes
                         'productId' => $id,
                         'storeViewCode' => $storeViewCode,
                         'type' => $types[$id],
-                        'customAttributes' => ['attributeCode' => $code, 'value' => (string)$value],
+                        // A value row that holds NULL is a null value on the loaded model, so the document keeps it as null.
+                        'customAttributes' => ['attributeCode' => $code, 'value' => $value === null ? null : (string)$value],
                     ];
                 }
             }
