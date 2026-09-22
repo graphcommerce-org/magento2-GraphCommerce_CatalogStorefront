@@ -1,5 +1,5 @@
 {
-  products(filter: { category_id: { eq: "3" } }, pageSize: 100) {
+  products(filter: { category_id: { eq: "{{category_id:simple:special-price}}" } }, pageSize: 100) {
     items {
       sku __typename
       price_range {

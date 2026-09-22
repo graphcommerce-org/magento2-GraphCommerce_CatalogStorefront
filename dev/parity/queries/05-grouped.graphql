@@ -1,5 +1,5 @@
 {
-  products(filter: { sku: { eq: "24-WG085_Group" } }) {
+  products(filter: { sku: { eq: "{{sku:grouped}}" } }) {
     items {
       uid sku name __typename
       ... on GroupedProduct {

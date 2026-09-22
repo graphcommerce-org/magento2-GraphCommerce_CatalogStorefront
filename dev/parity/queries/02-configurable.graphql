@@ -1,5 +1,5 @@
 {
-  products(filter: { sku: { eq: "WJ02" } }) {
+  products(filter: { sku: { eq: "{{sku:configurable}}" } }) {
     items {
       uid sku name __typename stock_status
       ... on ConfigurableProduct {

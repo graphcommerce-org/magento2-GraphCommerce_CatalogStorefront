@@ -1,5 +1,5 @@
 {
-  products(filter: { sku: { eq: "GC-BUNDLE-FIXED" } }) {
+  products(filter: { sku: { eq: "{{sku:bundle:fixed}}" } }) {
     items {
       uid sku name __typename
       ... on BundleProduct {

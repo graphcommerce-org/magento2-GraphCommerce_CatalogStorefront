@@ -7,6 +7,7 @@ use GraphCommerce\CatalogStorefrontGraphQlApi\Parity\JudgeInterface;
 use GraphCommerce\CatalogStorefront\Model\Config;
 use GraphCommerce\CatalogStorefront\Model\Mode;
 use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
+use GraphCommerce\CatalogStorefrontGraphQl\Model\Parity\Picks;
 use Magento\Catalog\Model\Product;
 use Magento\Eav\Model\Config as EavConfig;
 use Magento\Framework\GraphQl\Query\Uid;
@@ -26,12 +27,21 @@ use Symfony\Component\Console\Output\OutputInterface;
  * sees the steady state, and a query that fails is requested again up to
  * `--attempts` times before its verdict counts: a worker thread that has not
  * served the shape yet answers from a cold state once. A query file sends extra request headers through
- * comment lines of the form `# @header Content-Currency: EUR`, names a
- * configurable option value as `{{option_uid:<attribute code>:<admin label>}}`,
- * resolved to the installation's ids, and states the headers a run must send
- * for it through `# @requires Authorization` and the headers a run must not
- * send through `# @requires !Authorization`; a query whose requirement the
- * run does not meet is skipped. `--header`
+ * comment lines of the form `# @header Content-Currency: EUR` and names its
+ * products and categories through placeholders that [`Picks`](../../Model/Parity/Picks.php)
+ * resolves from the catalog of the installation: `{{sku:<kind>}}`,
+ * `{{skus:<kind>:<count>}}`, `{{url_key:<kind>}}`, `{{category_id:<kind>}}`,
+ * `{{category_url_path:<kind>}}`, `{{option_uid:<kind>}}` (the first option
+ * of the first super attribute of that configurable product, or
+ * `{{option_uid:<attribute code>:<admin label>}}` for a named one),
+ * `{{search_term}}` and `{{cart_id}}` (a guest cart the run creates on the
+ * reference endpoint with two of the first simple product, a child of a
+ * configurable one where none is visible). A query whose placeholder
+ * the catalog cannot fill is skipped. `# @requires Authorization` states a
+ * header the run must send, `# @requires !Authorization` one it must not
+ * send, and `# @requires-field ProductInterface.activity` a field the schema
+ * of the reference endpoint must hold; a query whose requirement the run
+ * does not meet is skipped. `--header`
  * sends one with every query, a customer token for a signed-in gate. Other
  * modules add verdicts through di.xml `judges`. `--soak` runs the accepted
  * queries again for as many requests, with the customer, the page size, the
@@ -68,6 +78,7 @@ class Parity extends Command
         private readonly Config $config,
         private readonly EavConfig $eavConfig,
         private readonly Uid $uidEncoder,
+        private readonly Picks $picks,
         private readonly array $judges = [],
     ) {
         parent::__construct();
@@ -136,17 +147,7 @@ class Parity extends Command
         $set = [];
         foreach ($files as $file) {
             $name = basename($file, '.graphql');
-            $query = preg_replace_callback(
-                '/\{\{option_uid:([\w-]+):([^}]+)\}\}/',
-                function (array $match): string {
-                    $attribute = $this->eavConfig->getAttribute(Product::ENTITY, $match[1]);
-
-                    return $this->uidEncoder->encode(
-                        'configurable/' . $attribute->getId() . '/' . $attribute->getSource()->getOptionId($match[2])
-                    );
-                },
-                (string)file_get_contents($file)
-            );
+            $query = (string)file_get_contents($file);
             preg_match_all('/^#\s*@header\s+([\w-]+):\s*(.+?)\s*$/m', $query, $matches, PREG_SET_ORDER);
             $headers = array_combine(array_column($matches, 1), array_column($matches, 2)) + $shared;
             preg_match_all('/^#\s*@requires\s+(!?)([\w-]+)\s*$/m', $query, $required, PREG_SET_ORDER);
@@ -165,6 +166,24 @@ class Parity extends Command
                         $unmet
                     ))
                 ));
+                continue;
+            }
+            preg_match_all('/^#\s*@requires-field\s+(\w+)\.(\w+)\s*$/m', $query, $fields, PREG_SET_ORDER);
+            $missing = array_filter($fields, fn(array $field) => !$this->hasField($endpoint, $key, $headers, $field[1], $field[2]));
+            if ($missing) {
+                $skipped++;
+                $output->writeln(sprintf(
+                    'SKIP  %s: the schema has no %s',
+                    $name,
+                    implode(', ', array_map(static fn(array $field) => $field[1] . '.' . $field[2], $missing))
+                ));
+                continue;
+            }
+            try {
+                $query = $this->resolve($query, $endpoint, $key, $shared);
+            } catch (\RuntimeException $e) {
+                $skipped++;
+                $output->writeln(sprintf('SKIP  %s: %s', $name, $e->getMessage()));
                 continue;
             }
             foreach ([Mode::CORE, Mode::DOCUMENTS] as $mode) {
@@ -281,9 +300,14 @@ class Parity extends Command
                 if ($unmet) {
                     continue;
                 }
-                [$ok] = $this->attempt($endpoints, $entry['query'], $name, $key, $headers, $attempts, null, $output);
+                try {
+                    $query = $this->resolve($entry['query'], $endpoints[Mode::CORE], $key, $shared);
+                } catch (\RuntimeException) {
+                    continue;
+                }
+                [$ok] = $this->attempt($endpoints, $query, $name, $key, $headers, $attempts, null, $output);
                 if ($ok) {
-                    $work[$label][] = ['name' => $name, 'query' => $entry['query'], 'headers' => $headers];
+                    $work[$label][] = ['name' => $name, 'query' => $query, 'headers' => $headers];
                 }
             }
             $output->writeln(sprintf('SOAK  %s: %d of %d queries', $label, count($work[$label] ?? []), count($set)));
@@ -526,6 +550,112 @@ class Parity extends Command
                 return [$ok, $verdict->fetch(), $attempt];
             }
         }
+    }
+
+    private ?string $cartId = null;
+
+    /**
+     * The query with its placeholders filled from the catalog. The guest cart
+     * of `{{cart_id}}` is created on the reference endpoint on its first use.
+     *
+     * @param array<string, string> $headers
+     * @throws \RuntimeException where the catalog cannot fill a placeholder
+     */
+    private function resolve(string $query, string $endpoint, string $key, array $headers): string
+    {
+        return preg_replace_callback(
+            '/\{\{(\w+)(?::([^}]*))?\}\}/',
+            function (array $match) use ($endpoint, $key, $headers): string {
+                [, $name, $argument] = $match + [2 => ''];
+                $kind = $argument === '' ? 'any' : $argument;
+                $value = match ($name) {
+                    'sku' => $this->picks->skus($kind, 1)[0] ?? null,
+                    'skus' => $this->skuList($argument),
+                    'url_key' => $this->picks->urlKey($kind),
+                    'category_id' => $this->picks->categoryId($kind),
+                    'category_url_path' => $this->picks->categoryUrlPath($kind),
+                    'option_uid' => str_contains($argument, ':') ? $this->namedOptionUid($argument) : $this->picks->optionUid($kind),
+                    'search_term' => $this->picks->searchTerm(),
+                    'cart_id' => $this->cartId ??= $this->cartId($endpoint, $key, $headers),
+                    default => throw new \RuntimeException(sprintf('unknown placeholder {{%s}}', $name)),
+                };
+                if ($value === null || $value === '') {
+                    throw new \RuntimeException(sprintf('the catalog has no %s for {{%s}}', str_replace(':', ' ', $kind), $match[1] . ($argument === '' ? '' : ':' . $argument)));
+                }
+
+                return (string)$value;
+            },
+            $query
+        );
+    }
+
+    /**
+     * `{{skus:<kind>:<count>}}`: the skus as a GraphQL list body, `"a", "b"`.
+     */
+    private function skuList(string $argument): ?string
+    {
+        $count = 1;
+        $kind = $argument === '' ? 'any' : $argument;
+        if (preg_match('/^(.*):(\d+)$/', $kind, $match)) {
+            $kind = $match[1];
+            $count = max(1, (int)$match[2]);
+        }
+        $skus = $this->picks->skus($kind, $count);
+
+        return $skus ? implode(', ', array_map(static fn(string $sku) => json_encode($sku), $skus)) : null;
+    }
+
+    private function namedOptionUid(string $argument): string
+    {
+        [$code, $label] = explode(':', $argument, 2);
+        $attribute = $this->eavConfig->getAttribute(Product::ENTITY, $code);
+
+        return $this->uidEncoder->encode('configurable/' . $attribute->getId() . '/' . $attribute->getSource()->getOptionId($label));
+    }
+
+    /**
+     * A guest cart on the reference endpoint with two of the first simple product.
+     *
+     * @param array<string, string> $headers
+     * @throws \RuntimeException
+     */
+    private function cartId(string $endpoint, string $key, array $headers): string
+    {
+        $sku = $this->picks->skus('simple', 1)[0]
+            ?? $this->picks->skus('simple:child', 1)[0]
+            ?? throw new \RuntimeException('the catalog has no simple product for {{cart_id}}');
+        $created = $this->request($endpoint, 'mutation { createEmptyCart }', Mode::CORE, $key, $headers);
+        $cartId = $created['data']['createEmptyCart'] ?? null;
+        if (!is_string($cartId) || $cartId === '') {
+            throw new \RuntimeException('the endpoint created no guest cart for {{cart_id}}: ' . json_encode($created['errors'][0]['message'] ?? $created));
+        }
+        $added = $this->request($endpoint, sprintf(
+            'mutation { addProductsToCart(cartId: %s, cartItems: [{ sku: %s, quantity: 2 }]) { user_errors { message } } }',
+            json_encode($cartId),
+            json_encode($sku)
+        ), Mode::CORE, $key, $headers);
+        $error = $added['errors'][0]['message'] ?? $added['data']['addProductsToCart']['user_errors'][0]['message'] ?? null;
+        if ($error !== null) {
+            throw new \RuntimeException(sprintf('the endpoint refused %s in the guest cart for {{cart_id}}: %s', $sku, $error));
+        }
+
+        return $cartId;
+    }
+
+    /** @var array<string, string[]> the field names per type of the reference endpoint */
+    private array $schemaFields = [];
+
+    /**
+     * @param array<string, string> $headers
+     */
+    private function hasField(string $endpoint, string $key, array $headers, string $type, string $field): bool
+    {
+        if (!isset($this->schemaFields[$type])) {
+            $response = $this->request($endpoint, sprintf('{ __type(name: %s) { fields { name } } }', json_encode($type)), Mode::CORE, $key, $headers);
+            $this->schemaFields[$type] = array_column((array)($response['data']['__type']['fields'] ?? []), 'name');
+        }
+
+        return in_array($field, $this->schemaFields[$type], true);
     }
 
     private function judge(OutputInterface $output, string $name, array $core, array $documents): bool

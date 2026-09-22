@@ -1,5 +1,5 @@
 query {
-  products(filter: { sku: { in: ["24-WG080", "24-MB01", "24-WG085_Group", "GC-BUNDLE-FIXED", "WJ02", "240-LV04"] } }, pageSize: 20) {
+  products(filter: { sku: { in: [{{skus:any:fpt:6}}] } }, pageSize: 20) {
     items {
       sku __typename
       price_range {

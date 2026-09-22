@@ -1,5 +1,7 @@
+# @requires-field CategoryTree.seo_text
+# The seo_text attribute of dev/parity/fixtures/category-attribute.php.
 query {
-  categoryList(filters: { ids: { eq: "20" } }) {
+  categoryList(filters: { ids: { eq: "{{category_id:any}}" } }) {
     id
     name
     seo_text

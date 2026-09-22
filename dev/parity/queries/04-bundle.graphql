@@ -1,5 +1,5 @@
 {
-  products(filter: { sku: { eq: "24-WG080" } }) {
+  products(filter: { sku: { eq: "{{sku:bundle}}" } }) {
     items {
       uid sku name __typename
       ... on BundleProduct {

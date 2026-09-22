@@ -1,11 +1,11 @@
 query {
-  products(filter: { url_key: { eq: "josie-yoga-jacket" } }) {
+  products(filter: { url_key: { eq: "{{url_key:configurable}}" } }) {
     __typename
     items {
       __typename
       uid
       ... on ConfigurableProduct {
-        configurable_product_options_selection(configurableOptionValueUids: ["{{option_uid:size:M}}"]) {
+        configurable_product_options_selection(configurableOptionValueUids: ["{{option_uid:configurable}}"]) {
           __typename
           configurable_options {
             __typename

@@ -1,5 +1,5 @@
 query {
-  products(filter: { url_key: { eq: "josie-yoga-jacket" } }) {
+  products(filter: { url_key: { eq: "{{url_key:configurable}}" } }) {
     aggregations {
       attribute_code
       count
@@ -523,7 +523,7 @@ query {
       }
     }
   }
-  relatedUpsells: products(filter: { url_key: { eq: "josie-yoga-jacket" } })
+  relatedUpsells: products(filter: { url_key: { eq: "{{url_key:configurable}}" } })
   {
     items {
       uid
