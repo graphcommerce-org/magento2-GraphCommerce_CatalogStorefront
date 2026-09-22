@@ -3,7 +3,7 @@
     <module name="GraphCommerce_CatalogStorefrontExplorer">
         <sequence>
             <module name="GraphCommerce_CatalogStorefrontGraphQl"/>
-            <module name="MageOS_GraphQLAdminHtml"/>
+            <module name="GraphCommerce_GraphiQLAdminHtml"/>
         </sequence>
     </module>
 </config>

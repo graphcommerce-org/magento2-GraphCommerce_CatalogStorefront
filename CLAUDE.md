@@ -183,7 +183,7 @@ passes.
   rate resource bumps the tax or currency
   generation (`Plugin/Bump`). Not needed under php-fpm.
 - `CatalogStorefrontExplorer`: the Catalog switcher (Default, Documents,
-  Database) of the MageOS_GraphQLAdminHtml explorer, through its
+  Database) of the GraphCommerce_GraphiQLAdminHtml explorer, through its
   `headerSwitchers` block argument; `Model/Switcher` builds it at page load so
   the Documents and Database options send the storefront key with the path.
 - `CatalogStorefrontInventory` / `...InventoryGraphQl`: the stock feed writer
