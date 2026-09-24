@@ -97,6 +97,7 @@
             "src/CatalogStorefrontConfigurableProduct/registration.php",
             "src/CatalogStorefrontConfigurableProductGraphQl/registration.php",
             "src/CatalogStorefrontConfigurableProductFrontend/registration.php",
+            "src/CatalogStorefrontCategoryFrontend/registration.php",
             "src/CatalogStorefrontBundleProduct/registration.php",
             "src/CatalogStorefrontBundleProductGraphQl/registration.php",
             "src/CatalogStorefrontGroupedProduct/registration.php",
