@@ -42,7 +42,10 @@ class ParityDetail extends Command
      */
     private const PER_RENDER = [
         '/_[0-9a-f]{13}\b/' => '_UID',
+        '/="id[A-Za-z0-9]{8}"/' => '="idRANDOM"',
+        '/\belem[A-Za-z0-9]{8}/' => 'elemRANDOM',
         '/"data_id":\d+/' => '"data_id":TIME',
+        '/"timestamp":\d+/' => '"timestamp":TIME',
     ];
 
     /**
@@ -283,6 +286,7 @@ class ParityDetail extends Command
                 $headers
             )),
             'ignore_errors' => true,
+            'follow_location' => 0,
             'timeout' => 120,
         ], 'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
 

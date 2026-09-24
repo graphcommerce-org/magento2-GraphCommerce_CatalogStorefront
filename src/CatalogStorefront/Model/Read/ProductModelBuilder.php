@@ -160,7 +160,7 @@ class ProductModelBuilder
                 'value_id' => $index + 1,
                 'file' => $this->mediaFile($entry['url'] ?? null),
                 'label' => $entry['label'] ?? '',
-                'position' => $entry['sort_order'] ?? $index + 1,
+                'position' => (string)($entry['sort_order'] ?? $index + 1),
                 'types' => (array)($entry['types'] ?? []),
                 'media_type' => 'image',
                 'disabled' => 0,
