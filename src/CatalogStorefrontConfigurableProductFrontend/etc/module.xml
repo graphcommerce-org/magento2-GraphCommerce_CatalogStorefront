@@ -5,6 +5,7 @@
             <module name="GraphCommerce_CatalogStorefrontProductFrontend"/>
             <module name="GraphCommerce_CatalogStorefrontConfigurableProduct"/>
             <module name="Magento_ConfigurableProduct"/>
+            <module name="Magento_Swatches"/>
         </sequence>
     </module>
 </config>

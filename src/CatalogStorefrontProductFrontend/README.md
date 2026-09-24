@@ -11,7 +11,10 @@ under Catalog > Catalog > Catalog Storefront Document Store:
   [`ListingHydration`](Plugin/Listing/ListingHydration.php) hydrates a marked collection
   only, so child, related and bundle collections stay on core. The select of the collection
   still runs: it carries the ids, the order and the `minimal_price` and `max_price`
-  columns. The attribute load is what the documents replace.
+  columns. The attribute load is what the documents replace. The same read carries the child
+  price ranges of the page's composite products for the customer group, and
+  [`Model/Read/ListingDocuments`](Model/Read/ListingDocuments.php) keeps the documents and the
+  ranges for the cards.
 - [`Plugin/Detail/ProductDocument`](Plugin/Detail/ProductDocument.php) builds the product of
   a `catalog_product_view` request from its document instead of loading it, so a
   configurable builds its children, its options and its price without a query. The cart,

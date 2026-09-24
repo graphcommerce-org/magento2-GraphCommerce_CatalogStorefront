@@ -6,10 +6,16 @@ namespace GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Test\Unit\M
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
 use GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Model\Read\DocumentLowestPriceOptionsProvider;
+use GraphCommerce\CatalogStorefrontProductFrontend\Model\Read\ListingDocuments;
 use Magento\Catalog\Model\Product;
+use Magento\Catalog\Model\ProductFactory;
+use Magento\CatalogInventory\Api\StockConfigurationInterface;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 use Magento\ConfigurableProduct\Pricing\Price\LowestPriceOptionsProvider;
 use Magento\Customer\Model\Session as CustomerSession;
+use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Store\Api\Data\StoreInterface;
+use Magento\Store\Model\StoreManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -18,17 +24,55 @@ class DocumentLowestPriceOptionsProviderTest extends TestCase
 {
     private LowestPriceOptionsProvider&MockObject $core;
 
+    private ListingDocuments $listing;
+
+    private bool $showOutOfStock = false;
+
+    private bool $weee = false;
+
+    /** @var array<int, array<string, mixed>> the data of every child the provider built from a range */
+    private array $built = [];
+
     private function provider(): DocumentLowestPriceOptionsProvider
     {
         $this->core = $this->createMock(LowestPriceOptionsProvider::class);
+        $this->listing = new ListingDocuments();
 
         $session = $this->createMock(CustomerSession::class);
         $session->method('getCustomerGroupId')->willReturn(0);
+
+        $store = $this->createMock(StoreInterface::class);
+        $store->method('getCode')->willReturn('default');
+        $storeManager = $this->createMock(StoreManagerInterface::class);
+        $storeManager->method('getStore')->willReturn($store);
+
+        $stock = $this->createMock(StockConfigurationInterface::class);
+        $stock->method('isShowOutOfStock')->willReturnCallback(fn () => $this->showOutOfStock);
+
+        $config = $this->createMock(ScopeConfigInterface::class);
+        $config->method('isSetFlag')->willReturnCallback(fn () => $this->weee);
+
+        $factory = $this->createMock(ProductFactory::class);
+        $factory->method('create')->willReturnCallback(function () {
+            $child = $this->createMock(Product::class);
+            $child->method('setData')->willReturnCallback(function (array $data) use ($child) {
+                $this->built[] = $data;
+
+                return $child;
+            });
+
+            return $child;
+        });
 
         return new DocumentLowestPriceOptionsProvider(
             $this->core,
             new ProductPrice(),
             $session,
+            $this->listing,
+            $storeManager,
+            $stock,
+            $config,
+            $factory,
             $this->createMock(LoggerInterface::class)
         );
     }
@@ -60,10 +104,10 @@ class DocumentLowestPriceOptionsProviderTest extends TestCase
     /**
      * @param Product[] $children
      */
-    private function parent(array $children, bool $withDocument = true): Product
+    private function parent(array $children, bool $withDocument = true, bool $inStock = true, bool $childrenAsked = true): Product
     {
         $type = $this->createMock(Configurable::class);
-        $type->method('getUsedProducts')->willReturn($children);
+        $type->expects($childrenAsked ? $this->any() : $this->never())->method('getUsedProducts')->willReturn($children);
 
         $product = $this->createMock(Product::class);
         $product->method('getId')->willReturn(100);
@@ -71,11 +115,69 @@ class DocumentLowestPriceOptionsProviderTest extends TestCase
         $product->method('getTypeInstance')->willReturn($type);
         $product->method('getData')->willReturnCallback(
             static fn(string $key) => $key === ProductDocumentsInterface::DOCUMENT_KEY && $withDocument
-                ? ['type' => Configurable::TYPE_CODE]
+                ? ['type' => Configurable::TYPE_CODE, 'inStock' => $inStock]
                 : null
         );
 
         return $product;
+    }
+
+    /**
+     * @param array<int, array{0: float, 1: float, 2: float, 3: float}> $byTaxClass
+     */
+    private function range(float $minRegular, float $minFinal, array $byTaxClass = []): array
+    {
+        return [$minRegular, $minFinal, $minRegular, $minFinal, $byTaxClass];
+    }
+
+    private function ranges(?array $salable, ?array $all = null): void
+    {
+        $this->listing->add('default', [], ['configurable' => [100 => ['salable' => $salable, 'all' => $all]]]);
+    }
+
+    public function testBuildsOneChildPerTaxClassFromThePageRanges(): void
+    {
+        $provider = $this->provider();
+        $this->ranges($this->range(10.0, 8.0, [2 => [10.0, 8.0, 30.0, 25.0], 5 => [12.0, 12.0, 20.0, 20.0]]));
+
+        $children = $provider->getProducts($this->parent([], childrenAsked: false));
+
+        $this->assertCount(2, $children);
+        $this->assertSame([
+            ['type_id' => 'simple', 'store_id' => 0, 'tax_class_id' => 2, 'price' => 10.0, 'catalog_rule_price' => 8.0, 'tier_price' => []],
+            ['type_id' => 'simple', 'store_id' => 0, 'tax_class_id' => 5, 'price' => 12.0, 'catalog_rule_price' => null, 'tier_price' => []],
+        ], $this->built);
+    }
+
+    public function testAnOutOfStockParentPricesFromEveryChildWhenOutOfStockIsShown(): void
+    {
+        $provider = $this->provider();
+        $this->showOutOfStock = true;
+        $this->ranges(null, $this->range(15.0, 15.0));
+
+        $provider->getProducts($this->parent([], inStock: false, childrenAsked: false));
+
+        $this->assertSame(15.0, $this->built[0]['price']);
+    }
+
+    public function testARangeWithoutAPricedChildUsesTheChildren(): void
+    {
+        $provider = $this->provider();
+        $this->ranges(null, $this->range(15.0, 15.0));
+        $child = $this->child(1, $this->entries(['regular' => 10.0, 'final' => 10.0]));
+
+        $this->assertSame([$child], $provider->getProducts($this->parent([$child])));
+    }
+
+    public function testFixedProductTaxesLeaveTheRangesAlone(): void
+    {
+        $provider = $this->provider();
+        $this->weee = true;
+        $this->ranges($this->range(10.0, 8.0));
+        $child = $this->child(1, $this->entries(['regular' => 10.0, 'final' => 10.0]));
+
+        $this->assertSame([$child], $provider->getProducts($this->parent([$child])));
+        $this->assertSame([], $this->built);
     }
 
     public function testPicksTheCheapestByFinalAndByRegularWhenTheyAreDifferentChildren(): void
