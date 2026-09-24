@@ -7,6 +7,11 @@
                     <label>Index Prefix</label>
                     <comment>The document indices are named prefix, entity and store view code, on the search engine connection of Stores > Configuration > Catalog > Catalog Search.</comment>
                 </field>
+                <field id="read_compression" translate="label comment" type="select" sortOrder="70" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Compress Document Reads</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Reads travel gzipped. The engine spends CPU on the compression to save bandwidth; on a cluster network the plain transfer of 200 documents is faster.</comment>
+                </field>
             </group>
         </section>
     </system>

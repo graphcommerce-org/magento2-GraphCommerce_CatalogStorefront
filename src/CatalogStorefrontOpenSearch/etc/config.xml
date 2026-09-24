@@ -4,6 +4,7 @@
         <catalog>
             <storefront_documents>
                 <index_prefix>catalog_storefront</index_prefix>
+                <read_compression>0</read_compression>
             </storefront_documents>
         </catalog>
     </default>
