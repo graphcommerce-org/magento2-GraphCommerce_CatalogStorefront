@@ -96,6 +96,14 @@ class CategoryDocuments implements ResetAfterRequestInterface
         return $models;
     }
 
+    /**
+     * A document read elsewhere, so the page's load of that category reads nothing.
+     */
+    public function add(string $storeViewCode, array $document): void
+    {
+        $this->documents[$storeViewCode][(int)($document['id'] ?? $document['categoryId'] ?? 0)] = $document;
+    }
+
     public function _resetState(): void
     {
         $this->documents = [];

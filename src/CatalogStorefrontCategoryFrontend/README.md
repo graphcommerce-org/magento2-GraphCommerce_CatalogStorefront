@@ -9,6 +9,9 @@ and its `X-Catalog-Storefront` header. Frontend area only.
   category carries its request path, so `getUrl()` asks no rewrite.
 - [`Plugin/HasChildrenFromDocuments`](Plugin/HasChildrenFromDocuments.php) answers
   `hasChildren()` from the documents of the levels below.
+- [`Plugin/RouteFromDocument`](Plugin/RouteFromDocument.php) routes a category URL from the
+  document with that URL path. A path without one, a product, a CMS page or a redirect, takes
+  the rewrite table.
 - [`Model/Read/CategoryDocuments`](Model/Read/CategoryDocuments.php) reads each document once
   per request.
 

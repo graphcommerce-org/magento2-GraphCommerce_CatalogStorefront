@@ -5,6 +5,10 @@
         <plugin name="graphcommerce_catalog_storefront_category_from_documents"
                 type="GraphCommerce\CatalogStorefrontCategoryFrontend\Plugin\ResourceFromDocuments"/>
     </type>
+    <type name="Magento\UrlRewrite\Model\CompositeUrlFinder">
+        <plugin name="graphcommerce_catalog_storefront_category_route"
+                type="GraphCommerce\CatalogStorefrontCategoryFrontend\Plugin\RouteFromDocument" sortOrder="-100"/>
+    </type>
     <type name="Magento\Catalog\Model\Category">
         <plugin name="graphcommerce_catalog_storefront_category_has_children"
                 type="GraphCommerce\CatalogStorefrontCategoryFrontend\Plugin\HasChildrenFromDocuments"/>

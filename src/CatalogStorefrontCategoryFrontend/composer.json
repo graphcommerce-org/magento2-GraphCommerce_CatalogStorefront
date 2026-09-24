@@ -9,6 +9,7 @@
         "magento/module-catalog": "*",
         "magento/module-catalog-url-rewrite": "*",
         "magento/module-store": "*",
+        "magento/module-url-rewrite": "*",
         "graphcommerce/module-catalog-storefront": "self.version",
         "graphcommerce/module-catalog-storefront-api": "self.version",
         "graphcommerce/module-catalog-storefront-product-frontend": "self.version"
