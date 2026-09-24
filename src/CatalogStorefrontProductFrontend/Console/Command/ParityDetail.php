@@ -6,6 +6,10 @@ namespace GraphCommerce\CatalogStorefrontProductFrontend\Console\Command;
 use GraphCommerce\CatalogStorefront\Model\Config;
 use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
 use GraphCommerce\CatalogStorefrontProductFrontend\Model\Mode;
+use Magento\Catalog\Model\Product\Url as ProductUrl;
+use Magento\CatalogUrlRewrite\Model\CategoryUrlPathGenerator;
+use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Store\Model\ScopeInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -60,6 +64,7 @@ class ParityDetail extends Command
      */
     public function __construct(
         private readonly Config $config,
+        private readonly ScopeConfigInterface $scopeConfig,
         private readonly array $perRender = [],
         ?string $name = null,
     ) {
@@ -98,7 +103,7 @@ class ParityDetail extends Command
         foreach (preg_split('/\R/', (string)file_get_contents($file)) ?: [] as $line) {
             $line = trim($line);
             if ($line !== '' && !str_starts_with($line, '#')) {
-                $pages[] = $line;
+                $pages[] = strtr($line, $this->suffixes());
             }
         }
         if (!$pages) {
@@ -275,6 +280,19 @@ class ParityDetail extends Command
     /**
      * @return array{status: int, body: string, url: string, location: string}
      */
+    /**
+     * The URL suffixes of the store, for a page listed with {category_suffix} or {product_suffix}.
+     *
+     * @return array<string, string>
+     */
+    private function suffixes(): array
+    {
+        return [
+            '{category_suffix}' => (string)$this->scopeConfig->getValue(CategoryUrlPathGenerator::XML_PATH_CATEGORY_URL_SUFFIX, ScopeInterface::SCOPE_STORE),
+            '{product_suffix}' => (string)$this->scopeConfig->getValue(ProductUrl::XML_PATH_PRODUCT_URL_SUFFIX, ScopeInterface::SCOPE_STORE),
+        ];
+    }
+
     private function request(string $url, string $mode, string $key, array $shared): array
     {
         $headers = [Mode::HEADER => $mode, StorefrontKey::HEADER => $key] + $shared;

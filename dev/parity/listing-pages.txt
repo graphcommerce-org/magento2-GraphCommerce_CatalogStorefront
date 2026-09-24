@@ -1,18 +1,19 @@
 # Listing pages the parity gate renders on both paths.
 # One path per line, relative to the base URL. Blank lines and # comments ignored.
+# {category_suffix} and {product_suffix} are the store's URL suffixes.
 #
 # Cover the two collection providers separately: the category layer and the search
 # layer both come through ItemCollectionProvider, but only the category one is
 # exercised by browsing.
 
 # Configurable-heavy: the page the configurable seams were built for.
-/women/tops-women.html
+/women/tops-women{category_suffix}
 
 # The same page deeper, so a per-product defect shows up where it is loudest.
-/women/tops-women.html?product_list_limit=36
+/women/tops-women{category_suffix}?product_list_limit=36
 
 # Simple products only: the listing path with none of the configurable work.
-/gear/fitness-equipment.html
+/gear/fitness-equipment{category_suffix}
 
 # The search layer, which shares the seam but not the category code path.
 /catalogsearch/result/?q=shirt
