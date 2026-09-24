@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing;
 
-use Magento\Catalog\Model\Layer\Search\ItemCollectionProvider;
+use Magento\Catalog\Model\Layer\ItemCollectionProviderInterface;
 use Magento\Catalog\Model\ResourceModel\Product\Collection;
 
 /**
@@ -22,12 +22,12 @@ class CollectionFlag
     public const FLAG = 'gc_storefront_listing';
 
     /**
-     * @param ItemCollectionProvider $subject
+     * @param ItemCollectionProviderInterface $subject
      * @param mixed $result
      * @return mixed
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
-    public function afterGetCollection(ItemCollectionProvider $subject, $result)
+    public function afterGetCollection(ItemCollectionProviderInterface $subject, $result)
     {
         if ($result instanceof Collection) {
             $result->setFlag(self::FLAG, true);

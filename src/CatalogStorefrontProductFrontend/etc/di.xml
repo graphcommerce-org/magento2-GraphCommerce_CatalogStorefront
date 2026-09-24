@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
-    <!-- Marks the listing collection. ElasticSuite's category layer is a virtualType of this class. -->
-    <type name="Magento\Catalog\Model\Layer\Search\ItemCollectionProvider">
+    <!-- Marks the listing collection of every layer: the core, the Elasticsearch and the ElasticSuite providers each implement this interface. -->
+    <type name="Magento\Catalog\Model\Layer\ItemCollectionProviderInterface">
         <plugin name="graphcommerce_catalog_storefront_product_listing_collection_flag"
                 type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\CollectionFlag"/>
     </type>
