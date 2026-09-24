@@ -114,11 +114,18 @@ class BundlePriceRange implements PriceRangeInterface
                     $childProduct = $this->displayPrice->forTaxClass($product, isset($child['taxClassId']) ? (int)$child['taxClassId'] : null);
                     $unitRegular = round($unitRegular, 2);
                     $unitFinal = round($unitFinal, 2);
-                    // Core rounds each selection's taxed amount to cents before it sums them.
-                    $rounded = static fn(Amount $amount): Amount => new Amount(round($amount->value, 2), round($amount->tax, 2));
+                    // Core rounds each selection's taxed amount to cents before it sums them, and the tax
+                    // adjustment of a dynamic bundle is the taxed amount minus the selection's untaxed value.
+                    $taxed = function (float $base, bool $discounted) use ($childProduct, $store, $qty): Amount {
+                        $amount = $this->displayPrice->amount($base, $discounted, $childProduct, $store);
+                        $value = round($amount->value, 2);
+                        $untaxed = round((float)$this->priceCurrency->convert($base, $store), 2);
+
+                        return (new Amount($value, $value - $untaxed, round($amount->weee, 2), round($amount->weeeTax, 2)))->times($qty);
+                    };
                     $amounts = [
-                        'regular' => $rounded($this->displayPrice->amount($unitRegular, false, $childProduct, $store)->times($qty)),
-                        'final' => $rounded($this->displayPrice->amount($unitFinal, $unitFinal < $unitRegular, $childProduct, $store)->times($qty)),
+                        'regular' => $taxed($unitRegular, false),
+                        'final' => $taxed($unitFinal, $unitFinal < $unitRegular),
                     ];
                 }
                 $selectionValues[$index][] = $amounts + ['salable' => (bool)($child['stock']['isSalable'] ?? false)];
