@@ -5,11 +5,7 @@
             <module name="GraphCommerce_CatalogStorefrontGraphQl"/>
             <module name="Opengento_Application"/>
             <module name="Magento_GraphQl"/>
-            <module name="Magento_CustomerGraphQl"/>
-            <module name="Magento_Deploy"/>
-            <module name="Magento_Tax"/>
             <module name="Magento_Theme"/>
-            <module name="Magento_Authorization"/>
             <module name="Magento_Directory"/>
         </sequence>
     </module>

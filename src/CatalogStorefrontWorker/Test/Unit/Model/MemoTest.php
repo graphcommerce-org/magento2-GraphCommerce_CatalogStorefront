@@ -28,7 +28,7 @@ class MemoTest extends TestCase
             return true;
         });
         $generations = new Generation($cache);
-        $memo = new Memo($generations, Generation::TAX, 2);
+        $memo = new Memo($generations, Generation::CONFIG, 2);
 
         $calls = 0;
         $compute = static function () use (&$calls): int {
@@ -39,7 +39,7 @@ class MemoTest extends TestCase
         $generations->_resetState();
         self::assertSame(1, $memo->get('a', $compute));
 
-        $generations->bump(Generation::TAX);
+        $generations->bump(Generation::CONFIG);
         self::assertSame(2, $memo->get('a', $compute));
 
         // The limit drops every entry.

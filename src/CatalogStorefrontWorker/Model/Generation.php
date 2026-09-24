@@ -20,8 +20,6 @@ use Magento\Framework\ObjectManager\ResetAfterRequestInterface;
 class Generation implements ResetAfterRequestInterface
 {
     public const CONFIG = 'config';
-    public const TAX = 'tax';
-    public const CURRENCY = 'currency';
 
     private const KEY = 'GC_CATALOG_STOREFRONT_GENERATION_';
 
