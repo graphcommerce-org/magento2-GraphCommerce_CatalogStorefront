@@ -34,6 +34,18 @@
                 type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\PriceBoxUncached"/>
     </type>
 
+    <!-- The special price map of a document listing comes from the documents and the child price ranges. -->
+    <type name="Magento\Catalog\Pricing\Price\SpecialPriceBulkResolverInterface">
+        <plugin name="graphcommerce_catalog_storefront_product_special_price_map"
+                type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\SpecialPriceMapFromDocuments"/>
+    </type>
+
+    <!-- The product URL rewrites of a document listing come from the documents. -->
+    <type name="Magento\UrlRewrite\Model\UrlFinderInterface">
+        <plugin name="graphcommerce_catalog_storefront_product_url_rewrites"
+                type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\UrlRewritesFromDocuments" sortOrder="-100"/>
+    </type>
+
     <!-- A request that names its own path must not land in the ordinary page's cache slot. -->
     <type name="Magento\Framework\App\PageCache\Identifier">
         <plugin name="graphcommerce_catalog_storefront_product_listing_page_cache_identifier"

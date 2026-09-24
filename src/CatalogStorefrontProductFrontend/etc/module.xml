@@ -5,6 +5,7 @@
             <module name="GraphCommerce_CatalogStorefront"/>
             <module name="Magento_Catalog"/>
             <module name="Magento_Customer"/>
+            <module name="Magento_UrlRewrite"/>
         </sequence>
     </module>
 </config>

@@ -24,6 +24,10 @@ class ChildPriceRanges
                 'minFinal' => ['min' => ['field' => 'priceIndex.final']],
                 'maxRegular' => ['max' => ['field' => 'priceIndex.regular']],
                 'maxFinal' => ['max' => ['field' => 'priceIndex.final']],
+                'discounted' => ['filter' => ['script' => ['script' => [
+                    'source' => "doc['priceIndex.final'].value < doc['priceIndex.regular'].value",
+                    'lang' => 'painless',
+                ]]]],
             ],
         ]]];
         $prices = ['prices' => $group, 'taxClasses' => [
@@ -79,6 +83,7 @@ class ChildPriceRanges
                     (float)$stats['maxRegular']['value'],
                     (float)$stats['maxFinal']['value'],
                     $byTaxClass,
+                    (int)($stats['discounted']['doc_count'] ?? 0) > 0,
                 ];
             }
         }

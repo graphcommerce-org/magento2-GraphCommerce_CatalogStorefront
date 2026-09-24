@@ -14,7 +14,8 @@ under Catalog > Catalog > Catalog Storefront Document Store:
   columns. The attribute load is what the documents replace. The same read carries the child
   price ranges of the page's composite products for the customer group, and
   [`Model/Read/ListingDocuments`](Model/Read/ListingDocuments.php) keeps the documents and the
-  ranges for the cards.
+  ranges for the cards. The cards' URL rewrites and the special price map of the price boxes
+  come from them, so the list template runs no query.
 - [`Plugin/Detail/ProductDocument`](Plugin/Detail/ProductDocument.php) builds the product of
   a `catalog_product_view` request from its document instead of loading it, so a
   configurable builds its children, its options and its price without a query. The cart,
