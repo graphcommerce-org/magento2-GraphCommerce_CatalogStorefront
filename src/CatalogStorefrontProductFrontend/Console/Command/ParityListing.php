@@ -32,12 +32,16 @@ class ParityListing extends Command
 
     /**
      * What changes on every render and says nothing about the page: the uniqid suffix a
-     * theme gives its element ids, and the timestamp Magento stamps on each private
-     * content section.
+     * theme gives its element ids, the random id of a link element and of a secure script
+     * variable, and the timestamps Magento stamps on each private content section and
+     * on the checkout config.
      */
     private const PER_RENDER = [
         '/_[0-9a-f]{13}\b/' => '_UID',
+        '/="id[A-Za-z0-9]{8}"/' => '="idRANDOM"',
+        '/\belem[A-Za-z0-9]{8}\b/' => 'elemRANDOM',
         '/"data_id":\d+/' => '"data_id":TIME',
+        '/"timestamp":\d+/' => '"timestamp":TIME',
     ];
 
     /**
