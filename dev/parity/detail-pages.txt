@@ -8,18 +8,18 @@
 
 # Configurable: variants, super attributes and the lowest price, the seams the
 # configurable module serves.
-/women/tops-women/breathe-easy-tank
+/women/tops-women/breathe-easy-tank.html
 
 # A second configurable, so a defect in one product's document is not read as a
 # defect in the type.
-/women/tops-women/antonia-racer-tank
+/women/tops-women/antonia-racer-tank.html
 
 # A third, with its own option set.
-/women/tops-women/maya-tunic
+/women/tops-women/maya-tunic.html
 
 # Simple: the detail path with none of the configurable work.
-/push-it-messenger-bag
+/push-it-messenger-bag.html
 
 # Grouped and bundle: their children come from link collections the package does not flag.
-/set-of-sprite-yoga-straps
-/sprite-yoga-companion-kit
+/set-of-sprite-yoga-straps.html
+/sprite-yoga-companion-kit.html

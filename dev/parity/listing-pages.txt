@@ -6,13 +6,13 @@
 # exercised by browsing.
 
 # Configurable-heavy: the page the configurable seams were built for.
-/women/tops-women
+/women/tops-women.html
 
 # The same page deeper, so a per-product defect shows up where it is loudest.
-/women/tops-women?product_list_limit=36
+/women/tops-women.html?product_list_limit=36
 
 # Simple products only: the listing path with none of the configurable work.
-/gear/fitness-equipment
+/gear/fitness-equipment.html
 
 # The search layer, which shares the seam but not the category code path.
 /catalogsearch/result/?q=shirt
