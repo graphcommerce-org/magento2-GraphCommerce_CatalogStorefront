@@ -1,5 +1,5 @@
 {
-  products(filter: { sku: { in: [{{skus:any:links:2}}] } }) {
+  products(filter: { sku: { eq: "{{sku:any:links}}" } }) {
     items { sku product_links { link_type linked_product_sku linked_product_type position sku } }
   }
 }
