@@ -24,8 +24,9 @@ use Magento\Store\Model\StoreManagerInterface;
 class FilterableAttributesFromDocuments implements ResetAfterRequestInterface
 {
     private const ENTITY = 'attribute';
+    private const PAGE = 500;
 
-    /** @var array<string, array<int|string, array>> the attribute documents read per store view code */
+    /** @var array<string, array<int|string, array>> the documents read per store view code and layer */
     private array $documents = [];
 
     public function __construct(
@@ -47,17 +48,22 @@ class FilterableAttributesFromDocuments implements ResetAfterRequestInterface
             return $proceed();
         }
         $storeViewCode = (string)$store->getCode();
-        $this->documents[$storeViewCode] ??= $this->storage->all(self::ENTITY, $storeViewCode);
-        if ($this->documents[$storeViewCode] === []) {
+        $search = $subject instanceof SearchList;
+        $key = $storeViewCode . ($search ? ':search' : ':category');
+        $this->documents[$key] ??= $this->storage->find(
+            self::ENTITY,
+            $storeViewCode,
+            $search ? ['filterableInSearch' => ['true'], 'visible' => ['true']] : ['filterableMode' => [1, 2]],
+            [],
+            0,
+            self::PAGE
+        )['documents'];
+        if ($this->documents[$key] === [] && $this->storage->count(self::ENTITY, $storeViewCode) === 0) {
             return $proceed();
         }
-        $search = $subject instanceof SearchList;
         $listed = array_filter(
-            $this->documents[$storeViewCode],
+            $this->documents[$key],
             static fn (array $document) => ($document['attributeType'] ?? Product::ENTITY) === Product::ENTITY
-                && ($search
-                    ? !empty($document['filterableInSearch']) && !empty($document['visible'])
-                    : (int)($document['filterableMode'] ?? 0) > 0)
         );
         usort($listed, static fn (array $a, array $b) =>
             [(int)($a['position'] ?? 0), (int)($a['attributeId'] ?? 0)] <=> [(int)($b['position'] ?? 0), (int)($b['attributeId'] ?? 0)]);

@@ -32,11 +32,15 @@ class FilterableAttributesFromDocumentsTest extends TestCase
         $this->coreAsked = false;
 
         $storage = $this->createMock(MetadataDocumentStorageInterface::class);
-        $storage->method('all')->willReturnCallback(function () use ($documents) {
+        $storage->method('find')->willReturnCallback(function (string $entity, string $store, array $filter) use ($documents) {
             $this->reads++;
+            $found = array_filter($documents, static fn (array $document) => isset($filter['filterableMode'])
+                ? in_array((int)$document['filterableMode'], $filter['filterableMode'], true)
+                : $document['filterableInSearch'] && $document['visible']);
 
-            return $documents;
+            return ['documents' => $found, 'total' => count($found)];
         });
+        $storage->method('count')->willReturn(count($documents));
 
         $eavConfig = $this->createMock(EavConfig::class);
         $eavConfig->method('getAttribute')->willReturnCallback(function (string $entity, string $code) use ($known) {
@@ -107,14 +111,15 @@ class FilterableAttributesFromDocumentsTest extends TestCase
         $this->assertSame(['color' => 'Kleur'], $this->listed);
     }
 
-    public function testTheDocumentsAreReadOnceForBothLayers(): void
+    public function testEachLayerReadsItsDocumentsOnce(): void
     {
         $plugin = $this->plugin($this->documents(), ['color' => 93, 'size' => 141]);
 
         $plugin->aroundGetList($this->createMock(CategoryList::class), $this->proceed());
+        $plugin->aroundGetList($this->createMock(CategoryList::class), $this->proceed());
         $plugin->aroundGetList($this->createMock(SearchList::class), $this->proceed());
 
-        $this->assertSame(1, $this->reads);
+        $this->assertSame(2, $this->reads);
     }
 
     public function testAnAttributeTheEavConfigDoesNotKnowSendsTheListToCore(): void
