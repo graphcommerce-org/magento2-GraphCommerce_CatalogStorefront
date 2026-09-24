@@ -16,9 +16,10 @@ use PHPUnit\Framework\TestCase;
 class BundlePriceRangeTest extends TestCase
 {
     /**
-     * A display price that adds 10% tax to a product of tax class 2 and none otherwise.
+     * A display price that adds 10% tax to a product of tax class 2 and none otherwise;
+     * with catalog prices including tax the amount keeps the base and carries its tax part.
      */
-    private function range(float $rate = 1.0): BundlePriceRange
+    private function range(float $rate = 1.0, bool $priceIncludesTax = false): BundlePriceRange
     {
         $priceCurrency = $this->createMock(PriceCurrencyInterface::class);
         $priceCurrency->method('convert')->willReturnCallback(static fn(float $amount): float => $amount * $rate);
@@ -29,7 +30,12 @@ class BundlePriceRangeTest extends TestCase
 
             return $copy;
         });
-        $display->method('amount')->willReturnCallback(static function (float $base, bool $discounted, Product $product) use ($rate): Amount {
+        $display->method('amount')->willReturnCallback(static function (float $base, bool $discounted, Product $product) use ($rate, $priceIncludesTax): Amount {
+            if ($priceIncludesTax) {
+                $tax = (int)$product->getData('tax_class_id') === 2 ? round($base - $base / 1.1, 2) : 0.0;
+
+                return new Amount(round($base * $rate, 2), $tax);
+            }
             $tax = (int)$product->getData('tax_class_id') === 2 ? round($base * 0.1, 2) : 0.0;
 
             return new Amount(round(($base + $tax) * $rate, 2), $tax);
@@ -91,6 +97,24 @@ class BundlePriceRangeTest extends TestCase
         // with its own class) plus every checkbox selection.
         self::assertSame([8.0, 8.0, 11.0 + 5.0 + 6.0, 9.9 + 5.0 + 3.0], $this->values($range));
         self::assertSame(1.0, $range[2]->tax);
+    }
+
+    public function testADynamicBundleTaxIsTheTaxedAmountMinusTheSelectionValue(): void
+    {
+        $document = [
+            'stock' => ['isSalable' => true],
+            'prices' => [['group' => '0', 'regular' => 0.0, 'type' => 'BUNDLE_DYNAMIC']],
+            'optionsV2' => [
+                ['type' => 'bundle', 'required' => true, 'renderType' => 'radio', 'values' => [['sku' => 'a', 'qty' => 1]]],
+            ],
+        ];
+        $range = $this->range(1.0, true)->range($this->product(1, 2), $document, $this->context(['bundle' => [1 => [
+            'a' => $this->selection('a', 11.0, 11.0, true, 2),
+        ]]]), true);
+
+        // The taxed amount equals the selection value, as core keeps a price that includes tax: no tax adjustment.
+        self::assertSame([11.0, 11.0, 11.0, 11.0], $this->values($range));
+        self::assertSame(0.0, $range[0]->tax);
     }
 
     public function testFixedBundleAppliesPercentSelectionsAndTheSpecialPricePercent(): void
