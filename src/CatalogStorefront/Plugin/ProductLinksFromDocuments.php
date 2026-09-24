@@ -15,13 +15,13 @@ use GraphCommerce\CatalogStorefront\Model\Strict;
  * Answers the product links service contract, which the product_links field
  * resolves through, from the links slice of the documents: related, upsell
  * and crosssell links, and a grouped product's associated products from its
- * option slice, in link type order and then by linked product id, as core's
- * link collections come back. The linked products' types come from their
- * documents, fetched by sku in one request.
+ * option slice, in the order of core's link type provider and then by linked
+ * product id, as core's link map comes back. The linked products' types come
+ * from their documents, fetched by sku in one request.
  */
 class ProductLinksFromDocuments
 {
-    private const LINK_TYPES = ['related', 'upsell', 'crosssell', 'associated'];
+    private const LINK_TYPES = ['related', 'crosssell', 'upsell', 'associated'];
 
     public function __construct(
         private readonly ProductDocumentStorageInterface $storage,
