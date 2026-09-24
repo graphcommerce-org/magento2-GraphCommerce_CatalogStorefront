@@ -12,7 +12,7 @@ on:
 jobs:
   # The latest Mage-OS release with its service containers, from the graycore actions.
   matrix:
-    runs-on: ubuntu-latest
+    runs-on: ubicloud-standard-8
     outputs:
       matrix: ${{ steps.supported-version.outputs.matrix }}
     steps:
@@ -32,7 +32,7 @@ jobs:
     needs: matrix
     strategy:
       matrix: ${{ fromJSON(needs.matrix.outputs.matrix) }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ubicloud-standard-8
     steps:
       - uses: actions/checkout@v7
       - uses: graycoreio/github-actions-magento2/setup-magento@v8.10.0
@@ -63,7 +63,7 @@ jobs:
   # The Admin JavaScript components, on the Node test runner of the runner image. They read the
   # source files and need no Magento installation.
   admin-js:
-    runs-on: ubuntu-latest
+    runs-on: ubicloud-standard-8
     steps:
       - uses: actions/checkout@v7
       - name: Admin component tests
@@ -92,7 +92,7 @@ jobs:
             set: fuzz
         magento: ${{ fromJSON(needs.matrix.outputs.matrix).include }}
     name: parity (${{ matrix.prices.name }})
-    runs-on: ${{ matrix.magento.os }}
+    runs-on: ubicloud-standard-8
     services: ${{ matrix.magento.services }}
     steps:
       - uses: actions/checkout@v7
