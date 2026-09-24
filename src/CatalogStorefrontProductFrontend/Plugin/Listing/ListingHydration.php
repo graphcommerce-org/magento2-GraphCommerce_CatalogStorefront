@@ -5,11 +5,13 @@ namespace GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing;
 
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
 use GraphCommerce\CatalogStorefrontApi\Storage\ProductDocumentStorageInterface;
+use GraphCommerce\CatalogStorefront\Model\ProductPrice;
 use GraphCommerce\CatalogStorefrontProductFrontend\Model\Mode;
 use GraphCommerce\CatalogStorefrontProductFrontend\Model\Read\ListingDocuments;
 use Magento\Catalog\Model\Product;
 use Magento\Catalog\Model\ResourceModel\Product\Collection;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
+use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Store\Model\StoreManagerInterface;
 use Psr\Log\LoggerInterface;
 
@@ -35,6 +37,8 @@ class ListingHydration
         private readonly Mode $mode,
         private readonly StoreManagerInterface $storeManager,
         private readonly ListingDocuments $page,
+        private readonly ProductPrice $productPrice,
+        private readonly CustomerSession $customerSession,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -69,7 +73,8 @@ class ListingHydration
             }
 
             $store = $this->storeManager->getStore($storeId);
-            [$documents] = $this->storage->listing((string)$store->getCode(), array_keys($rows), null);
+            $groupKey = $this->productPrice->groupKey((int)$this->customerSession->getCustomerGroupId());
+            [$documents, $priceData] = $this->storage->listing((string)$store->getCode(), array_keys($rows), $groupKey);
             $models = $this->products->build($store, $documents);
         } catch (\Throwable $e) {
             $this->logger->warning(
@@ -98,7 +103,7 @@ class ListingHydration
         // What a card needs beyond its own document, its children above all, is fetched for the
         // whole page from here. A page renders as many rows of cards as it likes, so each adds
         // what it holds rather than replacing what another row put there.
-        $this->page->add((string)$store->getCode(), $documents);
+        $this->page->add((string)$store->getCode(), $documents, $priceData);
 
         foreach ($rows as $id => $row) {
             $model = $models[$id];

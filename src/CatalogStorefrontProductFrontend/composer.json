@@ -8,6 +8,7 @@
         "magento/framework": "*",
         "magento/module-catalog": "*",
         "magento/module-configurable-product": "*",
+        "magento/module-customer": "*",
         "magento/module-store": "*",
         "graphcommerce/module-catalog-storefront": "self.version",
         "graphcommerce/module-catalog-storefront-api": "self.version"

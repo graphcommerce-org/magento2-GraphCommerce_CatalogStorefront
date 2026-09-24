@@ -52,4 +52,15 @@ class ListingDocumentsTest extends TestCase
 
         $this->assertSame([], $listing->documents('default'));
     }
+    public function testPriceDataIsKeptPerStoreViewAndMergedPerKind(): void
+    {
+        $listing = new ListingDocuments();
+        $listing->add('default', [], ['configurable' => [1 => ['salable' => null]]]);
+        $listing->add('default', [], ['configurable' => [2 => ['salable' => null]], 'grouped' => []]);
+        $listing->add('other', [], ['configurable' => [3 => ['salable' => null]]]);
+
+        $this->assertSame([1, 2], array_keys($listing->priceData('default')['configurable']));
+        $this->assertSame([3], array_keys($listing->priceData('other')['configurable']));
+        $this->assertSame([], $listing->priceData('none'));
+    }
 }
