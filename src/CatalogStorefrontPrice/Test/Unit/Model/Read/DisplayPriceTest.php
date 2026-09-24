@@ -5,7 +5,7 @@ namespace GraphCommerce\CatalogStorefrontPrice\Test\Unit\Model\Read;
 
 use GraphCommerce\CatalogStorefrontPrice\Model\Read\DisplayPrice;
 use GraphCommerce\CatalogStorefrontPrice\Model\Read\FixedProductTax;
-use Magento\Catalog\Helper\Data as CatalogHelper;
+use GraphCommerce\CatalogStorefrontPrice\Model\Read\TaxPrice;
 use Magento\Catalog\Model\Product;
 use Magento\CatalogInventory\Api\StockConfigurationInterface;
 use Magento\Framework\Pricing\PriceCurrencyInterface;
@@ -26,10 +26,10 @@ class DisplayPriceTest extends TestCase
         $taxHelper->method('priceIncludesTax')->willReturn($priceIncludesTax);
         $taxHelper->method('displayPriceIncludingTax')->willReturn($displayIncludingTax);
         $taxHelper->method('displayBothPrices')->willReturn(false);
-        $catalogHelper = $this->createMock(CatalogHelper::class);
+        $taxPrice = $this->createMock(TaxPrice::class);
         // A 21% rate: including tax multiplies, excluding tax divides.
-        $catalogHelper->method('getTaxPrice')->willReturnCallback(
-            static fn($product, $price, $includingTax) => $includingTax ? $price * 1.21 : $price / 1.21
+        $taxPrice->method('of')->willReturnCallback(
+            static fn(float $price, bool $includingTax) => $includingTax ? $price * 1.21 : $price / 1.21
         );
 
         $fixedProductTax = $this->createMock(FixedProductTax::class);
@@ -38,7 +38,7 @@ class DisplayPriceTest extends TestCase
         return new DisplayPrice(
             $priceCurrency,
             $taxHelper,
-            $catalogHelper,
+            $taxPrice,
             $this->createMock(StockConfigurationInterface::class),
             $fixedProductTax
         );

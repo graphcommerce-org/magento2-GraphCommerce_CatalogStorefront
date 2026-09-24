@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontPrice\Model\Read;
 
 use GraphCommerce\CatalogStorefrontApi\Read\Amount;
-use Magento\Catalog\Helper\Data as CatalogHelper;
 use Magento\Catalog\Model\Product;
 use Magento\CatalogInventory\Api\StockConfigurationInterface;
 use Magento\Framework\Pricing\PriceCurrencyInterface;
@@ -17,8 +16,8 @@ use Magento\Tax\Helper\Data as TaxHelper;
  * display currency the way the price classes convert (the regular price
  * unrounded, a discounted price rounded), then taxed the way the tax
  * adjustment taxes (the price including tax whenever catalog prices include
- * tax or the display does; core's tax service answers for the request's
- * customer and destination with the product's tax class), then raised by
+ * tax or the display does; [`TaxPrice`](TaxPrice.php) answers for the
+ * request's customer and destination with the product's tax class), then raised by
  * the product's fixed product taxes the way the weee adjustments raise it.
  */
 class DisplayPrice
@@ -26,7 +25,7 @@ class DisplayPrice
     public function __construct(
         private readonly PriceCurrencyInterface $priceCurrency,
         private readonly TaxHelper $taxHelper,
-        private readonly CatalogHelper $catalogHelper,
+        private readonly TaxPrice $taxPrice,
         private readonly StockConfigurationInterface $stockConfiguration,
         private readonly FixedProductTax $fixedProductTax,
     ) {
@@ -101,6 +100,6 @@ class DisplayPrice
 
     private function taxPrice(float $amount, bool $includingTax, Product $product, StoreInterface $store): float
     {
-        return (float)$this->catalogHelper->getTaxPrice($product, $amount, $includingTax, null, null, null, $store, null, false);
+        return $this->taxPrice->of($amount, $includingTax, $product, $store);
     }
 }
