@@ -17,8 +17,9 @@ use Magento\Store\Model\StoreManagerInterface;
  * The filterable attributes of the layered navigation from the attribute documents: the
  * category layer lists the attributes with a filterable mode, the search layer the ones
  * filterable in search and visible, both by position. The attribute models come from the
- * EAV config, with the store label of the document. A store view without attribute
- * documents, or an attribute the EAV config does not know, takes core's select.
+ * EAV config, with the store label of the document. A layer that lists no attribute is an
+ * empty list. A store view without attribute documents, or an attribute the EAV config does
+ * not know, takes core's select.
  */
 class FilterableAttributesFromDocuments implements ResetAfterRequestInterface
 {
@@ -47,6 +48,9 @@ class FilterableAttributesFromDocuments implements ResetAfterRequestInterface
         }
         $storeViewCode = (string)$store->getCode();
         $this->documents[$storeViewCode] ??= $this->storage->all(self::ENTITY, $storeViewCode);
+        if ($this->documents[$storeViewCode] === []) {
+            return $proceed();
+        }
         $search = $subject instanceof SearchList;
         $listed = array_filter(
             $this->documents[$storeViewCode],
@@ -55,9 +59,6 @@ class FilterableAttributesFromDocuments implements ResetAfterRequestInterface
                     ? !empty($document['filterableInSearch']) && !empty($document['visible'])
                     : (int)($document['filterableMode'] ?? 0) > 0)
         );
-        if ($listed === []) {
-            return $proceed();
-        }
         usort($listed, static fn (array $a, array $b) =>
             [(int)($a['position'] ?? 0), (int)($a['attributeId'] ?? 0)] <=> [(int)($b['position'] ?? 0), (int)($b['attributeId'] ?? 0)]);
 

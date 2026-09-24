@@ -124,6 +124,16 @@ class FilterableAttributesFromDocumentsTest extends TestCase
         $this->assertSame('core', $plugin->aroundGetList($this->createMock(CategoryList::class), $this->proceed()));
     }
 
+    public function testALayerWithoutAFilterableAttributeIsAnEmptyList(): void
+    {
+        $plugin = $this->plugin(['cost' => $this->documents()['cost']], ['cost' => 81]);
+
+        $plugin->aroundGetList($this->createMock(SearchList::class), $this->proceed());
+
+        $this->assertSame([], $this->listed);
+        $this->assertFalse($this->coreAsked);
+    }
+
     public function testAStoreViewWithoutAttributeDocumentsAsksCore(): void
     {
         $plugin = $this->plugin([], []);
