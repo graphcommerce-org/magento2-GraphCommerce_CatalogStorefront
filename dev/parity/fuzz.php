@@ -37,7 +37,9 @@ $table = [
     'catalog/layered_navigation/display_category' => ['1', '0'],
     'catalog/layered_navigation/display_product_count' => ['1', '0'],
     'catalog/search/min_query_length' => ['3', '1'],
-    'catalog/frontend/flat_catalog_product' => ['0', '1'],
+    // The flat product catalog stays off: core's bundle plugin on isPossibleBuyFromList exports
+    // the flat collection to an array, and the flat resource has no getLinkField(), so a listing
+    // with a bundle answers 500 on both paths.
     'catalog/frontend/flat_catalog_category' => ['0', '1'],
     'sales/msrp/enabled' => ['0', '1'],
     'customer/account_share/scope' => ['1', '0'],
