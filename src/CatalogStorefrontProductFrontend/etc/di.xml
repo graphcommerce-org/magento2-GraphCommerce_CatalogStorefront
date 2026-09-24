@@ -28,6 +28,12 @@
                 type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Detail\ProductDocument"/>
     </type>
 
+    <!-- The price box of a document product renders without the block cache. -->
+    <type name="Magento\Framework\Pricing\Render\RendererPool">
+        <plugin name="graphcommerce_catalog_storefront_product_price_box_uncached"
+                type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\PriceBoxUncached"/>
+    </type>
+
     <!-- A request that names its own path must not land in the ordinary page's cache slot. -->
     <type name="Magento\Framework\App\PageCache\Identifier">
         <plugin name="graphcommerce_catalog_storefront_product_listing_page_cache_identifier"

@@ -8,6 +8,12 @@
                 type="GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Plugin\Listing\ConfigurableAttributesFromDocument"/>
     </type>
 
+    <!-- The swatch renderer of a document product renders without the block cache. -->
+    <type name="Magento\Swatches\Block\Product\Renderer\Configurable">
+        <plugin name="graphcommerce_catalog_storefront_swatch_renderer_uncached"
+                type="GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Plugin\Listing\SwatchRendererUncached"/>
+    </type>
+
     <!-- Wraps core's provider rather than replacing it: anything it cannot serve goes there. -->
     <preference for="Magento\ConfigurableProduct\Pricing\Price\LowestPriceOptionsProviderInterface"
                 type="GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Model\Read\DocumentLowestPriceOptionsProvider"/>

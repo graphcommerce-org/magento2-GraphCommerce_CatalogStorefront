@@ -11,7 +11,10 @@ GraphCommerce_CatalogStorefrontProductFrontend.
 - `getConfigurableAttributes()` builds the super attribute models from
   `configurableOptions`. The swatch block asks for them before the block cache, so every
   render pays this one.
-- The lowest price options provider picks the cheapest child by final price and by regular
-  price from `priceIndex`, and hands the rest to core's provider.
+- The lowest price options provider builds a listing card's cheapest child per tax class from
+  the page's child price ranges, so the card prices without its variant documents. A product
+  detail page, a store with fixed product taxes and a product without a range pick the
+  cheapest child by final price and by regular price from `priceIndex`, and hand the rest to
+  core's provider.
 
 Each seam hands a product without a document to core.
