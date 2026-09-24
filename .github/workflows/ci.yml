@@ -73,7 +73,8 @@ jobs:
 
   # The parity gate: a Mage-OS install with sample data and OpenSearch, the feeds exported into the
   # document store, every query of dev/parity/queries on both paths, in the four price setups,
-  # as a guest, as a signed-in customer and on a second website's store view. A query states the
+  # as a guest, as a signed-in customer and on a second website's store view, then the rendered
+  # listing and detail pages of dev/parity on both paths. A query states the
   # headers its run must send, so the cart query runs on the guest runs and the wish list and
   # order queries on the signed-in one.
   parity:
@@ -221,6 +222,12 @@ jobs:
         working-directory: ${{ steps.magento.outputs.path }}
         run: |
           bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql --header "Store: second" --dump=parity-dump/second
+      - name: Rendered listing parity gate
+        working-directory: ${{ steps.magento.outputs.path }}
+        run: bin/magento catalog-storefront:parity:listing http://127.0.0.1:8080 --dump=parity-dump/listing
+      - name: Rendered detail parity gate
+        working-directory: ${{ steps.magento.outputs.path }}
+        run: bin/magento catalog-storefront:parity:detail http://127.0.0.1:8080 --dump=parity-dump/detail
       - name: Freshness gate
         working-directory: ${{ steps.magento.outputs.path }}
         run: php ${{ github.workspace }}/dev/parity/freshness.php
