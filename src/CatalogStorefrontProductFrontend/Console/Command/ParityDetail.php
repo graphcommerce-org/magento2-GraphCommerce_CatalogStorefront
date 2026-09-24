@@ -6,8 +6,8 @@ namespace GraphCommerce\CatalogStorefrontProductFrontend\Console\Command;
 use GraphCommerce\CatalogStorefront\Model\Config;
 use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
 use GraphCommerce\CatalogStorefrontProductFrontend\Model\Mode;
-use Magento\Catalog\Model\Product\Url as ProductUrl;
 use Magento\CatalogUrlRewrite\Model\CategoryUrlPathGenerator;
+use Magento\CatalogUrlRewrite\Model\ProductUrlPathGenerator;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Store\Model\ScopeInterface;
 use Symfony\Component\Console\Command\Command;
@@ -289,7 +289,7 @@ class ParityDetail extends Command
     {
         return [
             '{category_suffix}' => (string)$this->scopeConfig->getValue(CategoryUrlPathGenerator::XML_PATH_CATEGORY_URL_SUFFIX, ScopeInterface::SCOPE_STORE),
-            '{product_suffix}' => (string)$this->scopeConfig->getValue(ProductUrl::XML_PATH_PRODUCT_URL_SUFFIX, ScopeInterface::SCOPE_STORE),
+            '{product_suffix}' => (string)$this->scopeConfig->getValue(ProductUrlPathGenerator::XML_PATH_PRODUCT_URL_SUFFIX, ScopeInterface::SCOPE_STORE),
         ];
     }
 
