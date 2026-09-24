@@ -17,6 +17,9 @@ and `opensearch-project/opensearch-php`.
 - A read by id is a search with an ids query. A read of more ids than the result window of
   the engine is one multi-search with a search per window.
 - `catalog/storefront_documents/index_prefix` names the first part of every index.
+- `catalog/storefront_documents/read_compression` makes reads travel gzipped, for a slow link
+  to the engine. Plain by default: on a cluster network the engine's compression of 200
+  documents costs more CPU time than the transfer saves.
 - With `ext-simdjson_plus` installed, the client decodes the responses about twice as fast.
 
 Another search engine implements the two storage interfaces of

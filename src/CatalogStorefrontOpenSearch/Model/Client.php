@@ -18,9 +18,10 @@ use OpenSearch\Common\Exceptions\Missing404Exception;
 class Client
 {
     private const INDEX_PREFIX = 'catalog/storefront_documents/index_prefix';
+    private const READ_COMPRESSION = 'catalog/storefront_documents/read_compression';
 
-    // Read responses travel gzipped: the handler sends Accept-Encoding only next to decode_content.
-    private const READ = ['client' => ['decode_content' => true, 'headers' => ['Accept-Encoding' => ['gzip']]]];
+    /** @var array|null the client options of a read, once per request */
+    private ?array $read = null;
 
     // Per list key: the stored ids minus the removed ones, plus the added ones once, compared as numbers.
     private const LIST_SCRIPT = <<<'PAINLESS'
@@ -60,6 +61,18 @@ class Client
     public function indexName(string $entity, string $storeViewCode): string
     {
         return $this->scopeConfig->getValue(self::INDEX_PREFIX) . '_' . $entity . '_' . $storeViewCode;
+    }
+
+    /**
+     * Read responses travel plain on the cluster network; with read compression on they
+     * travel gzipped, which spends the engine's CPU to save bandwidth on a slow link. The
+     * handler sends Accept-Encoding only next to decode_content.
+     */
+    private function read(): array
+    {
+        return $this->read ??= $this->scopeConfig->isSetFlag(self::READ_COMPRESSION)
+            ? ['client' => ['decode_content' => true, 'headers' => ['Accept-Encoding' => ['gzip']]]]
+            : [];
     }
 
     /**
@@ -127,7 +140,7 @@ class Client
                 'index' => $index,
                 'body' => ['ids' => array_values(array_map('strval', $ids))],
                 '_source' => $fields ?: true,
-            ] + self::READ);
+            ] + $this->read());
         } catch (Missing404Exception) {
             return [];
         }
@@ -144,7 +157,7 @@ class Client
     public function count(string $index): int
     {
         try {
-            return (int)($this->client()->count(['index' => $index] + self::READ)['count'] ?? 0);
+            return (int)($this->client()->count(['index' => $index] + $this->read())['count'] ?? 0);
         } catch (Missing404Exception) {
             return 0;
         }
@@ -153,7 +166,7 @@ class Client
     public function search(string $index, array $body): array
     {
         try {
-            return $this->client()->search(['index' => $index, 'body' => $body] + self::READ);
+            return $this->client()->search(['index' => $index, 'body' => $body] + $this->read());
         } catch (Missing404Exception) {
             return [];
         }
@@ -172,7 +185,7 @@ class Client
             $body[] = ['index' => $index];
             $body[] = $search;
         }
-        $responses = $this->client()->msearch(['body' => $body] + self::READ)['responses'] ?? [];
+        $responses = $this->client()->msearch(['body' => $body] + $this->read())['responses'] ?? [];
 
         return array_map(static function (array $response): array {
             if (!isset($response['error'])) {
