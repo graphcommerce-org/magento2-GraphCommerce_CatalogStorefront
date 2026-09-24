@@ -63,7 +63,8 @@
     "suggest": {
         "ext-simdjson_plus": "GraphCommerce_CatalogStorefrontOpenSearch decodes document store responses about twice as fast",
         "magento/module-catalog-graph-ql": "GraphCommerce_CatalogStorefrontGraphQl serves catalog GraphQL from documents",
-        "mage-os/module-worker-mode": "GraphCommerce_CatalogStorefrontWorker keeps the process memos of a FrankenPHP worker",
+        "mage-os/module-worker-mode": "GraphCommerce_CatalogStorefrontWorker keeps the built objects of a FrankenPHP worker",
+        "graphcommerce/magento-fast-boot": "The node-local data entries: tax rates, customer groups, currency rates, the store scopes and the guest tax factor",
         "magento/module-grouped-product-graph-ql": "GraphCommerce_CatalogStorefrontGroupedProduct serves grouped items and the grouped price range",
         "magento/module-quote-graph-ql": "GraphCommerce_CatalogStorefrontQuoteGraphQl serves the display fields of a cart item product",
         "magento/module-wishlist-graph-ql": "GraphCommerce_CatalogStorefrontWishlistGraphQl serves a wish list item product",

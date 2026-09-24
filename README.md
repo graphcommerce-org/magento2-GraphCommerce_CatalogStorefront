@@ -493,7 +493,7 @@ the base module and the GraphQl module.
 | [`...SalesGraphQl`](src/CatalogStorefrontSalesGraphQl) | Order item products, one document request per order |
 | [`...ProductFrontend`](src/CatalogStorefrontProductFrontend) | Rendered listing and product detail pages from documents, and their two parity commands |
 | [`...Search`](src/CatalogStorefrontSearch) | Cheaper core fulltext listings, each behind a setting. Runs without the document store |
-| [`...Worker`](src/CatalogStorefrontWorker) | What a FrankenPHP worker keeps between requests. Costs a cache read per request under php-fpm |
+| [`...Worker`](src/CatalogStorefrontWorker) | The built objects a FrankenPHP worker keeps between requests. Costs a cache read per request under php-fpm |
 | [`...Elasticsuite`](src/CatalogStorefrontElasticsuite) | The document store on the cluster Smile ElasticSuite is configured with |
 | [`...Explorer`](src/CatalogStorefrontExplorer) | The path switcher in the GraphCommerce_GraphiQLAdminHtml API explorer |
 | [`...Adminhtml`](src/CatalogStorefrontAdminhtml) | Catalog > Catalog Storefront: the store views, customer group price keys and feed state, read-only |
