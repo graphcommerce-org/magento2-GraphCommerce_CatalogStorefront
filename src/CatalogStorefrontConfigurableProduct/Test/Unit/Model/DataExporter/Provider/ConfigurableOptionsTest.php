@@ -99,7 +99,7 @@ class ConfigurableOptionsTest extends TestCase
                 'code' => 'size',
                 'label' => 'Size',
                 'position' => 1,
-                'useDefault' => false,
+                'useDefault' => null,
                 'values' => [['index' => 5, 'label' => 'S', 'swatch' => ['type' => 0, 'value' => 'S']]],
             ],
         ], $this->options());
@@ -110,6 +110,7 @@ class ConfigurableOptionsTest extends TestCase
         $options = (new Read())->attributes(['productId' => 494103, 'configurableOptions' => $this->options()]);
 
         $this->assertCount(2, $options);
+        $this->assertNull($options[1]['use_default'], 'a super attribute without a label row answers null, as core does');
         $this->assertSame([
             'id' => 400,
             'use_default' => true,

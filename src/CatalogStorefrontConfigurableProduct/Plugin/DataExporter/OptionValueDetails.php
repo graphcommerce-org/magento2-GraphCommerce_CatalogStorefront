@@ -66,7 +66,8 @@ class OptionValueDetails
         foreach ($superAttributeRows as $superAttribute) {
             $superAttributes[(int)$superAttribute['product_id']][(int)$superAttribute['attribute_id']] = [
                 'superAttributeId' => (int)$superAttribute['product_super_attribute_id'],
-                'useDefault' => (bool)$superAttribute['use_default'],
+                // Without a label row core answers null, so the document holds no flag.
+                'useDefault' => $superAttribute['use_default'] === null ? null : (bool)$superAttribute['use_default'],
             ];
         }
         foreach ($output as $key => $row) {

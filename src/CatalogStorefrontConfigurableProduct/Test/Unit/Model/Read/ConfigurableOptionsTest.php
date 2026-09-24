@@ -53,6 +53,14 @@ class ConfigurableOptionsTest extends TestCase
         $this->assertTrue($rows[0]['use_default']);
     }
 
+    public function testAnOptionWithoutTheFlagAnswersNullForUseDefault(): void
+    {
+        $document = $this->document();
+        unset($document['configurableOptions'][0]['useDefault']);
+
+        $this->assertNull($this->options->attributes($document)[0]['use_default']);
+    }
+
     public function testAValueCarriesBothLabels(): void
     {
         // The admin label is the default and the store label; the store view label is its own.

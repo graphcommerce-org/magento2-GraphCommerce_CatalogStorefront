@@ -47,7 +47,7 @@ class ConfigurableOptions
             }
             $options[] = [
                 'id' => $option['id'] ?? null,
-                'use_default' => (bool)($option['useDefault'] ?? false),
+                'use_default' => isset($option['useDefault']) ? (bool)$option['useDefault'] : null,
                 'attribute_id' => (string)$attributeId,
                 'attribute_code' => $option['code'] ?? null,
                 'label' => $option['label'] ?? null,
