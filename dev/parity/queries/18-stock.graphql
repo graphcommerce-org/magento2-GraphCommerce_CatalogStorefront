@@ -1,5 +1,5 @@
 {
-  products(filter: { sku: { in: ["24-WG01", "24-WG02", "24-WG080", "24-WG085_Group", "WJ02", "GC-BUNDLE-FIXED"] } }) {
+  products(filter: { sku: { in: [{{skus:any:6}}] } }) {
     items {
       sku __typename stock_status only_x_left_in_stock quantity min_sale_qty max_sale_qty
       categories { uid id name url_key url_path level path position }

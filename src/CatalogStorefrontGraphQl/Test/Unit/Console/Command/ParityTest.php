@@ -6,6 +6,7 @@ namespace GraphCommerce\CatalogStorefrontGraphQl\Test\Unit\Console\Command;
 use GraphCommerce\CatalogStorefront\Model\Config;
 use GraphCommerce\CatalogStorefront\Model\Mode;
 use GraphCommerce\CatalogStorefrontGraphQl\Console\Command\Parity;
+use GraphCommerce\CatalogStorefrontGraphQl\Model\Parity\Picks;
 use Magento\Eav\Model\Config as EavConfig;
 use Magento\Framework\GraphQl\Query\Uid;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -153,6 +154,70 @@ class ParityTest extends TestCase
         self::assertStringContainsString('SKIP  03-guest: the run sends the Authorization header', $tester->getDisplay());
     }
 
+    public function testPlaceholdersAreFilledFromTheCatalog(): void
+    {
+        unlink($this->directory . '/01-product.graphql');
+        file_put_contents($this->directory . '/02-list.graphql', '{ products(filter: { sku: { in: [{{skus:any:2}}] }, search: "{{search_term}}") { items { sku } } }');
+        file_put_contents($this->directory . '/03-page.graphql', '{ products(filter: { url_key: { eq: "{{url_key:configurable}}" } }) { items { ... on ConfigurableProduct { configurable_product_options_selection(configurableOptionValueUids: ["{{option_uid:configurable}}"]) { variant { sku } } } } } }');
+        file_put_contents($this->directory . '/04-category.graphql', '{ products(filter: { category_id: { eq: "{{category_id:any}}" } }) { items { sku } } categories(filters: { url_path: { eq: "{{category_url_path:any:children}}" } }) { items { uid } } }');
+
+        $command = $this->command();
+        $tester = new CommandTester($command);
+        self::assertSame(0, $tester->execute($this->input() + ['--warm' => '0']));
+        self::assertStringContainsString('3 of 3 queries identical, 0 skipped', $tester->getDisplay());
+        self::assertStringContainsString('sku: { in: ["SIMPLE-1", "CONF-1"] }, search: "shirt"', $command->queries[0]);
+        self::assertStringContainsString('url_key: { eq: "conf-1" }', $command->queries[2]);
+        self::assertStringContainsString('configurableOptionValueUids: ["Y29uZmlndXJhYmxlLzkzLzUy"]', $command->queries[2]);
+        self::assertStringContainsString('category_id: { eq: "7" }', $command->queries[4]);
+        self::assertStringContainsString('url_path: { eq: "shirts" }', $command->queries[4]);
+    }
+
+    public function testAQueryTheCatalogCannotFillIsSkippedWithTheReason(): void
+    {
+        file_put_contents($this->directory . '/02-bundle.graphql', '{ products(filter: { sku: { eq: "{{sku:bundle}}" } }) { items { sku } } }');
+        file_put_contents($this->directory . '/03-reviews.graphql', '{ products(filter: { category_id: { eq: "{{category_id:any:reviewed}}" } }) { items { sku } } }');
+        file_put_contents($this->directory . '/04-unknown.graphql', '{ products(filter: { sku: { eq: "{{colour}}" } }) { items { sku } } }');
+
+        $command = $this->command();
+        $tester = new CommandTester($command);
+        self::assertSame(0, $tester->execute($this->input() + ['--warm' => '0', '--report' => $this->directory . '/report.json']));
+        self::assertStringContainsString('SKIP  02-bundle: the catalog has no bundle for {{sku:bundle}}', $tester->getDisplay());
+        self::assertStringContainsString('SKIP  03-reviews: the catalog has no any reviewed for {{category_id:any:reviewed}}', $tester->getDisplay());
+        self::assertStringContainsString('SKIP  04-unknown: unknown placeholder {{colour}}', $tester->getDisplay());
+        self::assertStringContainsString('1 of 1 queries identical, 3 skipped', $tester->getDisplay());
+        self::assertSame(3, json_decode((string)file_get_contents($this->directory . '/report.json'), true)['skipped']);
+    }
+
+    public function testAQueryIsSkippedWhereTheSchemaLacksTheFieldItRequires(): void
+    {
+        file_put_contents($this->directory . '/02-custom.graphql', "# @requires-field ProductInterface.activity\n{ products { items { sku activity } } }");
+        file_put_contents($this->directory . '/03-core.graphql', "# @requires-field ProductInterface.name\n{ products { items { sku name } } }");
+
+        $command = $this->command();
+        $tester = new CommandTester($command);
+        self::assertSame(0, $tester->execute($this->input() + ['--warm' => '0']));
+        self::assertStringContainsString('SKIP  02-custom: the schema has no ProductInterface.activity', $tester->getDisplay());
+        self::assertStringContainsString('PASS  03-core', $tester->getDisplay());
+        self::assertSame(1, count(array_filter($command->queries, static fn(string $query) => str_starts_with($query, '{ __type('))));
+    }
+
+    public function testTheGuestCartIsCreatedOnceOnTheReferenceEndpoint(): void
+    {
+        file_put_contents($this->directory . '/02-cart.graphql', '{ cart(cart_id: "{{cart_id}}") { id } }');
+        file_put_contents($this->directory . '/03-cart-again.graphql', '{ cart(cart_id: "{{cart_id}}") { total_quantity } }');
+
+        $command = $this->command();
+        $tester = new CommandTester($command);
+        self::assertSame(0, $tester->execute($this->input() + ['--warm' => '0', '--candidate-endpoint' => 'https://candidate.example/graphql']));
+        self::assertStringContainsString('3 of 3 queries identical', $tester->getDisplay());
+        $mutations = array_values(array_filter($command->queries, static fn(string $query) => str_starts_with($query, 'mutation')));
+        self::assertSame('mutation { createEmptyCart }', $mutations[0]);
+        self::assertSame('mutation { addProductsToCart(cartId: "guestcart000", cartItems: [{ sku: "SIMPLE-1", quantity: 2 }]) { user_errors { message } } }', $mutations[1]);
+        self::assertCount(2, $mutations);
+        self::assertSame(['https://reference.example/graphql', Mode::CORE], $command->requests[2]);
+        self::assertStringContainsString('cart(cart_id: "guestcart000")', $command->queries[4]);
+    }
+
     #[DataProvider('badTransportResponses')]
     public function testTransportAndMalformedJsonAreErrors(string|false $body, int $status): void
     {
@@ -294,6 +359,26 @@ class ParityTest extends TestCase
         yield 'one request count' => [[['requests' => 10, 'rss' => 100], ['requests' => 10, 'rss' => 200]], null];
     }
 
+    /**
+     * A catalog of one simple and one configurable product in one category, and nothing else.
+     */
+    private function picks(): Picks
+    {
+        $picks = $this->createStub(Picks::class);
+        $picks->method('skus')->willReturnCallback(static fn(string $kind, int $count): array => match ($kind) {
+            'simple', 'any' => array_slice(['SIMPLE-1', 'CONF-1'], 0, $count),
+            'configurable' => ['CONF-1'],
+            default => [],
+        });
+        $picks->method('urlKey')->willReturnCallback(static fn(string $kind): ?string => $kind === 'configurable' ? 'conf-1' : null);
+        $picks->method('categoryId')->willReturnCallback(static fn(string $kind): ?int => str_contains($kind, 'reviewed') ? null : 7);
+        $picks->method('categoryUrlPath')->willReturn('shirts');
+        $picks->method('optionUid')->willReturn('Y29uZmlndXJhYmxlLzkzLzUy');
+        $picks->method('searchTerm')->willReturn('shirt');
+
+        return $picks;
+    }
+
     private function input(): array
     {
         return ['endpoint' => 'https://reference.example/graphql', '--queries' => $this->directory];
@@ -304,8 +389,9 @@ class ParityTest extends TestCase
         $config = $this->createStub(Config::class);
         $config->method('key')->willReturn('diagnostic-key');
 
-        return new class($config, $this->createStub(EavConfig::class), $this->createStub(Uid::class)) extends Parity {
+        return new class($config, $this->createStub(EavConfig::class), $this->createStub(Uid::class), $this->picks()) extends Parity {
             public array $requests = [];
+            public array $queries = [];
             public array $headers = [];
             public ?array $core = null;
             public ?array $candidate = null;
@@ -316,7 +402,17 @@ class ParityTest extends TestCase
             protected function request(string $endpoint, string $query, string $mode, string $key, array $headers): array
             {
                 $this->requests[] = [$endpoint, $mode];
+                $this->queries[] = $query;
                 $this->headers[] = $headers;
+                if (str_starts_with($query, '{ __type(')) {
+                    return ['data' => ['__type' => ['fields' => [['name' => 'sku'], ['name' => 'name']]]]];
+                }
+                if (str_starts_with($query, 'mutation { createEmptyCart }')) {
+                    return ['data' => ['createEmptyCart' => 'guestcart000']];
+                }
+                if (str_starts_with($query, 'mutation { addProductsToCart(')) {
+                    return ['data' => ['addProductsToCart' => ['user_errors' => []]]];
+                }
                 $failing = $this->failFrom !== null && count($this->requests) >= $this->failFrom;
 
                 return ($mode === Mode::CORE ? $this->core : $this->candidate) ?? [

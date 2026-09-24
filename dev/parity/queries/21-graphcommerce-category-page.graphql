@@ -1,5 +1,5 @@
 query CategoryPage {
-  categories(filters: { url_path: { eq: "gear/bags" } }) {
+  categories(filters: { url_path: { eq: "{{category_url_path:any}}" } }) {
     items {
       uid
       default_sort_by

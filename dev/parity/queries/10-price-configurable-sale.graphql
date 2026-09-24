@@ -1,5 +1,5 @@
 {
-  products(filter: { category_id: { eq: "27" } }, pageSize: 100) {
+  products(filter: { category_id: { eq: "{{category_id:configurable:special-price}}" } }, pageSize: 100) {
     items {
       sku __typename stock_status
       price_range {

@@ -1,5 +1,5 @@
 {
-  products(search: "jacket", pageSize: 24) {
+  products(search: "{{search_term}}", pageSize: 24) {
     total_count
     items {
       uid sku name url_key stock_status

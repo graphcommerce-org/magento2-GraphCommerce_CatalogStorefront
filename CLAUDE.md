@@ -321,12 +321,21 @@ registers all modules through composer autoload.
   for every field a new plugin serves. A poison test (edit a document in
   OpenSearch, see the change in the response) proves a field is live; the gate
   alone cannot. Product `sku` filters accept only `eq` and `in`; the gate fails
-  a query that errors on either path. A query file sends its own request
-  headers through `# @header Name: value` lines, and states what a run must
-  send or must not send for it through `# @requires Authorization` and
-  `# @requires !Authorization`; a query whose requirement the run does not meet
-  is skipped, which is how the signed-in queries and the guest cart query share
-  one directory.
+  a query that errors on either path. A query file names its products and
+  categories through placeholders (`{{sku:configurable}}`, `{{skus:any:6}}`,
+  `{{url_key:configurable}}`, `{{category_id:simple:special-price}}`,
+  `{{category_url_path:any}}`, `{{option_uid:configurable}}`,
+  `{{search_term}}`, `{{cart_id}}`), which
+  `CatalogStorefrontGraphQl/Model/Parity/Picks` fills from the catalog of the
+  installation, so the set runs on any catalog and a query the catalog cannot
+  fill is skipped with the reason; `{{cart_id}}` is a guest cart the run
+  creates on the reference endpoint. It sends its own request headers through
+  `# @header Name: value` lines, and states what a run must send or must not
+  send for it through `# @requires Authorization` and
+  `# @requires !Authorization`, and what the schema must hold through
+  `# @requires-field ProductInterface.activity`; a query whose requirement the
+  run does not meet is skipped, which is how the signed-in queries and the
+  guest cart query share one directory.
 - Every fallback to core in a document plugin goes through `Model/Strict`:
   `fallback(self::class, reason)` where the document cannot answer,
   `exception(self::class, $e)` where the plugin failed (it logs a warning).
@@ -638,12 +647,11 @@ image URLs come from the feed row (`Model/DataExporter/Provider/ImageUrls`).
   read the store list from the config cache, and a reindex before the flush
   builds one store view; the dev shop has it): the
   demo catalog has only a dynamic bundle with required radio options. The
-  cart, wish list and order queries need their own state, which three
-  idempotent fixtures create: `php dev/parity/fixtures/guest-cart.php` prints
-  the fixed masked id the cart query names, and
-  `php dev/parity/fixtures/customer-wishlist.php <email>` and
+  wish list and order queries need their own state, which two idempotent
+  fixtures create: `php dev/parity/fixtures/customer-wishlist.php <email>` and
   `customer-order.php <email>` fill the wish list and place one order for the
-  gate's customer (the signed-in run's token). A soak run takes a token per
+  gate's customer (the signed-in run's token); the cart query names the guest
+  cart the run creates. A soak run takes a token per
   customer group: `php dev/parity/fixtures/soak-customers.php` gives every
   group a customer, each in another tax region, and prints the emails. The
   harness fails a query that returns no product on either path, because a

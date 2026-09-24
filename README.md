@@ -112,6 +112,16 @@ which an install without Adobe keys adds as composer `path` repositories, as
     bin/magento catalog-storefront:parity https://shop.example/graphql
     ```
 
+    The queries name their products and categories through placeholders, which
+    [`Model/Parity/Picks`](src/CatalogStorefrontGraphQl/Model/Parity/Picks.php) fills from
+    the catalog: `{{sku:configurable}}`, `{{skus:any:6}}`, `{{url_key:configurable}}`,
+    `{{category_id:simple:special-price}}`, `{{category_url_path:any:children}}`,
+    `{{option_uid:configurable}}`, `{{search_term}}` and `{{cart_id}}`. A kind is a product
+    type or `any`, with a trait: `special-price`, `tier-price`, `reviewed`, `links`, `fixed`
+    or `fpt`. A query the catalog cannot fill is skipped with the reason, as is a query
+    whose `# @requires-field ProductInterface.activity` the schema does not hold. Add your
+    own queries to a directory and run them with `--queries`.
+
 ## Why a read model
 
 ### What core pays for, per request

@@ -1,8 +1,8 @@
 # @requires !Authorization
 # @requires !Store
-# The guest cart of dev/parity/fixtures/guest-cart.php, a simple and a bundle
-# item. The item prices and the quantity come from the quote on both paths;
-# the product fields come from the document. Core refuses a guest cart to a
+# A guest cart the run creates with two of the first simple product. The item
+# prices and the quantity come from the quote on both paths; the product fields
+# come from the document. Core refuses a guest cart to a
 # signed-in customer and a cart of another website's store view, so a run with
 # a token or a store skips it.
 fragment CartItemProduct on ProductInterface {
@@ -27,7 +27,7 @@ fragment CartItemProduct on ProductInterface {
   }
 }
 query GuestCart {
-  cart(cart_id: "paritygateguestcart000000000000a") {
+  cart(cart_id: "{{cart_id}}") {
     id
     total_quantity
     items {
