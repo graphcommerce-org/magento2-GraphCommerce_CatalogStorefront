@@ -17,13 +17,9 @@
 # A third, with its own option set.
 /women/tops-women/maya-tunic
 
-# TODO, and the gate is weaker until they are here:
-#
-#  - a simple product, which takes the detail path with none of the configurable
-#    work and is the cheapest place for a missing data key to show up
-#  - a product with custom options, which the detail plugin sends to the database
-#    whole (a document with optionsV2 entries is never served), so it proves the
-#    fall-through renders identically rather than proving the document path does
-#  - a grouped product, whose children come from a link collection this package
-#    deliberately does not flag
-#  - a bundle, for the same reason
+# Simple: the detail path with none of the configurable work.
+/push-it-messenger-bag
+
+# Grouped and bundle: their children come from link collections the package does not flag.
+/set-of-sprite-yoga-straps
+/sprite-yoga-companion-kit
