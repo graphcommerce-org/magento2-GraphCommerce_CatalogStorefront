@@ -52,6 +52,12 @@
                 type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\FilterableAttributesFromDocuments"/>
     </type>
 
+    <!-- The tax of a document product's amount from the request's rate, as the GraphQL path prices it. -->
+    <type name="Magento\Catalog\Helper\Data">
+        <plugin name="graphcommerce_catalog_storefront_product_tax_price"
+                type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\TaxPriceFromRate"/>
+    </type>
+
     <!-- A request that names its own path must not land in the ordinary page's cache slot. -->
     <type name="Magento\Framework\App\PageCache\Identifier">
         <plugin name="graphcommerce_catalog_storefront_product_listing_page_cache_identifier"

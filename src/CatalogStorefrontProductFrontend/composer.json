@@ -14,7 +14,8 @@
         "magento/module-catalog-inventory": "*",
         "magento/module-eav": "*",
         "graphcommerce/module-catalog-storefront": "self.version",
-        "graphcommerce/module-catalog-storefront-api": "self.version"
+        "graphcommerce/module-catalog-storefront-api": "self.version",
+        "graphcommerce/module-catalog-storefront-price": "self.version"
     },
     "autoload": {
         "files": [
