@@ -46,6 +46,12 @@
                 type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\UrlRewritesFromDocuments" sortOrder="-100"/>
     </type>
 
+    <!-- The filterable attributes of the layered navigation come from the attribute documents. -->
+    <type name="Magento\Catalog\Model\Layer\FilterableAttributeListInterface">
+        <plugin name="graphcommerce_catalog_storefront_filterable_attributes"
+                type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\FilterableAttributesFromDocuments"/>
+    </type>
+
     <!-- A request that names its own path must not land in the ordinary page's cache slot. -->
     <type name="Magento\Framework\App\PageCache\Identifier">
         <plugin name="graphcommerce_catalog_storefront_product_listing_page_cache_identifier"

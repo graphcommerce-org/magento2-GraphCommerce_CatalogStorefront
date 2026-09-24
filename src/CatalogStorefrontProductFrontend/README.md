@@ -16,6 +16,9 @@ under Catalog > Catalog > Catalog Storefront Document Store:
   [`Model/Read/ListingDocuments`](Model/Read/ListingDocuments.php) keeps the documents and the
   ranges for the cards. The cards' URL rewrites and the special price map of the price boxes
   come from them, so the list template runs no query.
+- [`Plugin/Listing/FilterableAttributesFromDocuments`](Plugin/Listing/FilterableAttributesFromDocuments.php)
+  lists the filterable attributes of the layered navigation from the attribute documents, with
+  the attribute models of the EAV config.
 - [`Plugin/Detail/ProductDocument`](Plugin/Detail/ProductDocument.php) builds the product of
   a `catalog_product_view` request from its document instead of loading it, so a
   configurable builds its children, its options and its price without a query. The cart,

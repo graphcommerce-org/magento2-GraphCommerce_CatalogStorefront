@@ -12,6 +12,7 @@
         "magento/module-store": "*",
         "magento/module-url-rewrite": "*",
         "magento/module-catalog-inventory": "*",
+        "magento/module-eav": "*",
         "graphcommerce/module-catalog-storefront": "self.version",
         "graphcommerce/module-catalog-storefront-api": "self.version"
     },
