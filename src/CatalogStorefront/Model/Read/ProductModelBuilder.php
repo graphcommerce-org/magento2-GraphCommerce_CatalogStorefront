@@ -62,9 +62,9 @@ class ProductModelBuilder
             'weight' => $document['weight'] ?? null,
             'created_at' => $document['createdAt'] ?? null,
             'updated_at' => $document['updatedAt'] ?? null,
-            'image' => $this->mediaFile($document['image']['url'] ?? null),
-            'small_image' => $this->mediaFile($document['smallImage']['url'] ?? null),
-            'thumbnail' => $this->mediaFile($document['thumbnail']['url'] ?? null),
+            'image' => $document['image'] ?? 'no_selection',
+            'small_image' => $document['smallImage'] ?? 'no_selection',
+            'thumbnail' => $document['thumbnail'] ?? 'no_selection',
             'media_gallery' => $this->mediaGallery($document['media_gallery'] ?? []),
             'quantity_and_stock_status' => [
                 'is_in_stock' => (bool)($document['stock']['isSalable'] ?? $document['inStock'] ?? false),
@@ -97,16 +97,13 @@ class ProductModelBuilder
             $data['price'] = $fallbackRow['regular'];
         }
 
-        if (!empty($document['categoryData'])) {
-            $data['category_ids'] = array_values(array_filter(array_map(
-                static fn(array $category) => isset($category['categoryId']) ? (string)$category['categoryId'] : null,
-                $document['categoryData']
-            )));
+        if (!empty($document['categoryIds'])) {
+            $data['category_ids'] = array_map('strval', $document['categoryIds']);
         }
 
-        foreach ((array)($document['customAttributes'] ?? []) as $attribute) {
-            if (isset($attribute['attributeCode']) && !in_array($attribute['attributeCode'], self::NOT_MODEL_VALUES, true)) {
-                $data[$attribute['attributeCode']] = $attribute['value'] ?? null;
+        foreach ((array)($document['customAttributes'] ?? []) as $code => $value) {
+            if (!in_array($code, self::NOT_MODEL_VALUES, true)) {
+                $data[$code] = $value;
             }
         }
 
@@ -138,16 +135,6 @@ class ProductModelBuilder
         return $this->visibilityMap[$label] ?? Visibility::VISIBILITY_NOT_VISIBLE;
     }
 
-    private function mediaFile(?string $url): string
-    {
-        if ($url === null) {
-            return 'no_selection';
-        }
-        $position = strpos($url, '/catalog/product');
-
-        return $position === false ? $url : substr($url, $position + strlen('/catalog/product'));
-    }
-
     /**
      * The entries in position order, as the gallery read handler lists them.
      */
@@ -158,7 +145,7 @@ class ProductModelBuilder
         foreach ($entries as $index => $entry) {
             $images[] = [
                 'value_id' => $index + 1,
-                'file' => $this->mediaFile($entry['url'] ?? null),
+                'file' => $entry['file'] ?? 'no_selection',
                 'label' => $entry['label'] ?? '',
                 'position' => $entry['sort_order'] ?? $index + 1,
                 'types' => (array)($entry['types'] ?? []),

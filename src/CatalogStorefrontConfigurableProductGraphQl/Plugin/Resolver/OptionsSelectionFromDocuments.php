@@ -69,10 +69,7 @@ class OptionsSelectionFromDocuments
             $index = [];
             $byValue = [];
             foreach ($variants as $variantId => $variant) {
-                $values = [];
-                foreach ((array)($variant['customAttributes'] ?? []) as $attribute) {
-                    $values[$attribute['attributeCode']] = $attribute['value'] ?? null;
-                }
+                $values = (array)($variant['customAttributes'] ?? []);
                 foreach ($options as $option) {
                     $attributeValue = $values[$option['attribute_code']] ?? null;
                     if ($attributeValue !== null) {

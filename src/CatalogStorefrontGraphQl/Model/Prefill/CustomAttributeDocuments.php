@@ -27,9 +27,7 @@ class CustomAttributeDocuments implements PrefillerInterface
         }
         $codes = [];
         foreach ($documents as $document) {
-            foreach ((array)($document['customAttributes'] ?? []) as $entry) {
-                $codes[$entry['attributeCode']] = true;
-            }
+            $codes += array_fill_keys(array_keys((array)($document['customAttributes'] ?? [])), true);
         }
         if ($codes) {
             $this->attributeDocuments->byCodes($request->store->getCode(), array_keys($codes));

@@ -110,10 +110,28 @@ class ProductModelBuilderTest extends TestCase
         $this->assertSame('1', $this->data['price_type']);
     }
 
-    public function testCategoryIdsComeFromTheCategoryData(): void
+    public function testCategoryIdsAreTheDocumentsCategoryIdsAsStrings(): void
     {
-        $this->build(['categoryData' => [['categoryId' => 24], ['categoryId' => 25]]]);
+        $this->build(['categoryIds' => [24, 25]]);
 
         $this->assertSame(['24', '25'], $this->data['category_ids']);
+    }
+
+    public function testAnAttributeValueComesFromTheCustomAttributeMap(): void
+    {
+        $this->build(['customAttributes' => ['color' => '51', 'tier_price' => 'a:0:{}']]);
+
+        $this->assertSame('51', $this->data['color']);
+        // Core holds the loaded tier price rows under this attribute, not the feed's string form.
+        $this->assertArrayNotHasKey('tier_price', $this->data);
+    }
+
+    public function testAnImageTypeIsTheMediaFileTheDocumentHolds(): void
+    {
+        $this->build(['image' => '/w/t/wt09.jpg', 'media_gallery' => [['file' => '/w/t/wt09.jpg', 'sort_order' => 1]]]);
+
+        $this->assertSame('/w/t/wt09.jpg', $this->data['image']);
+        $this->assertSame('no_selection', $this->data['thumbnail']);
+        $this->assertSame('/w/t/wt09.jpg', $this->data['media_gallery']['images'][0]['file']);
     }
 }
