@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- Frontend only: the admin, an indexer and a cron job load categories from the database. -->
+    <type name="Magento\Catalog\Model\ResourceModel\Category">
+        <plugin name="graphcommerce_catalog_storefront_category_from_documents"
+                type="GraphCommerce\CatalogStorefrontCategoryFrontend\Plugin\ResourceFromDocuments"/>
+    </type>
+    <type name="Magento\UrlRewrite\Model\CompositeUrlFinder">
+        <plugin name="graphcommerce_catalog_storefront_category_route"
+                type="GraphCommerce\CatalogStorefrontCategoryFrontend\Plugin\RouteFromDocument" sortOrder="-100"/>
+    </type>
+    <type name="Magento\Catalog\Model\Category">
+        <plugin name="graphcommerce_catalog_storefront_category_has_children"
+                type="GraphCommerce\CatalogStorefrontCategoryFrontend\Plugin\HasChildrenFromDocuments"/>
+    </type>
+</config>

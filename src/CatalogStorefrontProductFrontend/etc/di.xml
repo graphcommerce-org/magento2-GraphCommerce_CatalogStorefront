@@ -34,6 +34,36 @@
                 type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\PriceBoxUncached"/>
     </type>
 
+    <!-- The special price map of a document listing comes from the documents and the child price ranges. -->
+    <type name="Magento\Catalog\Pricing\Price\SpecialPriceBulkResolverInterface">
+        <plugin name="graphcommerce_catalog_storefront_product_special_price_map"
+                type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\SpecialPriceMapFromDocuments"/>
+    </type>
+
+    <!-- The product URL rewrites of a document listing come from the documents. -->
+    <type name="Magento\UrlRewrite\Model\UrlFinderInterface">
+        <plugin name="graphcommerce_catalog_storefront_product_url_rewrites"
+                type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\UrlRewritesFromDocuments" sortOrder="-100"/>
+    </type>
+
+    <!-- The filterable attributes of the layered navigation come from the attribute documents. -->
+    <type name="Magento\Catalog\Model\Layer\FilterableAttributeListInterface">
+        <plugin name="graphcommerce_catalog_storefront_filterable_attributes"
+                type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\FilterableAttributesFromDocuments"/>
+    </type>
+
+    <!-- The tax of a document product's amount from the request's rate, as the GraphQL path prices it. -->
+    <type name="Magento\Catalog\Helper\Data">
+        <plugin name="graphcommerce_catalog_storefront_product_tax_price"
+                type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\TaxPriceFromRate"/>
+    </type>
+
+    <!-- The URL of a document product is its base URL and request path. -->
+    <type name="Magento\Catalog\Model\Product\Url">
+        <plugin name="graphcommerce_catalog_storefront_product_url"
+                type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing\ProductUrlFromRequestPath"/>
+    </type>
+
     <!-- A request that names its own path must not land in the ordinary page's cache slot. -->
     <type name="Magento\Framework\App\PageCache\Identifier">
         <plugin name="graphcommerce_catalog_storefront_product_listing_page_cache_identifier"

@@ -222,12 +222,20 @@ jobs:
         working-directory: ${{ steps.magento.outputs.path }}
         run: |
           bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql --header "Store: second" --dump=parity-dump/second
+      # The store redirects a request to its base URL host, so the gates send that host. The gates
+      # compare fresh renders: core's swatch renderer is a cached block whose key ignores the search
+      # query, so a card cached by a category page answers the search page with stale markup.
       - name: Rendered listing parity gate
         working-directory: ${{ steps.magento.outputs.path }}
-        run: bin/magento catalog-storefront:parity:listing http://127.0.0.1:8080 --dump=parity-dump/listing
+        run: |
+          bin/magento cache:disable block_html
+          HOST=$(bin/magento config:show web/unsecure/base_url | sed -E 's#^https?://([^/:]+).*#\1#')
+          bin/magento catalog-storefront:parity:listing http://127.0.0.1:8080 --host "$HOST" --dump=parity-dump/listing
       - name: Rendered detail parity gate
         working-directory: ${{ steps.magento.outputs.path }}
-        run: bin/magento catalog-storefront:parity:detail http://127.0.0.1:8080 --dump=parity-dump/detail
+        run: |
+          HOST=$(bin/magento config:show web/unsecure/base_url | sed -E 's#^https?://([^/:]+).*#\1#')
+          bin/magento catalog-storefront:parity:detail http://127.0.0.1:8080 --host "$HOST" --dump=parity-dump/detail
       - name: Freshness gate
         working-directory: ${{ steps.magento.outputs.path }}
         run: php ${{ github.workspace }}/dev/parity/freshness.php
