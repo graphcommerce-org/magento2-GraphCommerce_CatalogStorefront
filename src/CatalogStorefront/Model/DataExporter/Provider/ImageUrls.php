@@ -4,17 +4,13 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefront\Model\DataExporter\Provider;
 
 use Magento\Catalog\Model\Product\ImageFactory;
+use Magento\CatalogDataExporter\Model\Provider\Product\MediaGallery;
 use Magento\Framework\App\Area;
 use Magento\Framework\UrlInterface;
 use Magento\Store\Model\App\Emulation;
 use Magento\Store\Model\StoreManagerInterface;
 
-/**
- * Exports the image URL per image type as core's media gallery URL resolver
- * builds it, under the store view's environment: the media base URL left off,
- * a placeholder marked as such. A changed media configuration reaches the
- * documents with the next export of the products feed.
- */
+/** Exports media paths for product image roles and gallery entries. */
 class ImageUrls
 {
     private const IMAGE_TYPES = ['image' => 'image', 'small_image' => 'smallImage', 'thumbnail' => 'thumbnail'];
@@ -43,8 +39,6 @@ class ImageUrls
                 foreach ($rows as $row) {
                     $imageUrls = [];
                     foreach (self::IMAGE_TYPES as $type => $key) {
-                        // The media path travels without the store's media base URL, so a hostname change needs no
-                        // export; a placeholder is resolved on read, its URL carries the static content version.
                         $url = $this->imageUrl($storeViewCode, $type, $this->mediaFile($row[$key]['url'] ?? null));
                         $imageUrls[$type] = $url === null
                             ? ['placeholder' => true]
@@ -62,6 +56,33 @@ class ImageUrls
         }
 
         return $output;
+    }
+
+    public function afterGet(MediaGallery $subject, array $rows): array
+    {
+        $rowsByStore = [];
+        foreach ($rows as $key => $row) {
+            if (isset($row['media_gallery'])) {
+                $rowsByStore[$row['storeViewCode']][$key] = $row;
+            }
+        }
+        foreach ($rowsByStore as $storeViewCode => $storeRows) {
+            $store = $this->storeManager->getStore($storeViewCode);
+            $this->emulation->startEnvironmentEmulation((int)$store->getId(), Area::AREA_FRONTEND, true);
+            try {
+                $mediaBaseUrl = $store->getBaseUrl(UrlInterface::URL_TYPE_MEDIA);
+                foreach ($storeRows as $key => $row) {
+                    $url = $this->imageUrl($storeViewCode, 'image', $this->mediaFile($row['media_gallery']['url'] ?? null));
+                    $rows[$key]['media_gallery']['imageUrl'] = $url === null
+                        ? ['placeholder' => true]
+                        : ['mediaPath' => substr($url, strlen($mediaBaseUrl))];
+                }
+            } finally {
+                $this->emulation->stopEnvironmentEmulation();
+            }
+        }
+
+        return $rows;
     }
 
     /**

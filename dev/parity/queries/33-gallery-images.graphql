@@ -1,0 +1,17 @@
+{
+  products(filter: { sku: { in: [{{skus:any:200}}] } }, pageSize: 200) {
+    items {
+      sku
+      image { url label }
+      small_image { url label }
+      thumbnail { url label }
+      media_gallery {
+        __typename
+        url
+        label
+        position
+        disabled
+      }
+    }
+  }
+}

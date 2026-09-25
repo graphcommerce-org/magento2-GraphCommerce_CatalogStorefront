@@ -30,6 +30,9 @@
             <using field="storeViewCode"/>
         </field>
     </record>
+    <record name="MediaItem">
+        <field name="imageUrl" type="ProductImageUrl"/>
+    </record>
     <record name="ProductImageUrl" skipNull="true">
         <field name="mediaPath" type="String"/>
         <field name="placeholder" type="Boolean"/>

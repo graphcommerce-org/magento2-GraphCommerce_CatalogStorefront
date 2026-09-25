@@ -3,6 +3,10 @@
     <preference for="Magento\DataExporter\Model\ExportFeedInterface" type="GraphCommerce\CatalogStorefront\Model\Document\Delivery"/>
     <preference for="GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface" type="GraphCommerce\CatalogStorefront\Model\Read\ProductDocuments"/>
 
+    <type name="Magento\CatalogDataExporter\Model\Provider\Product\MediaGallery">
+        <plugin name="graphcommerce_catalog_storefront_gallery_image_urls" type="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\ImageUrls"/>
+    </type>
+
     <type name="Magento\Framework\Console\CommandListInterface">
         <arguments>
             <argument name="commands" xsi:type="array">
