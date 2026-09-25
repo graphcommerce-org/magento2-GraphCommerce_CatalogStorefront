@@ -199,6 +199,7 @@ jobs:
         working-directory: ${{ steps.magento.outputs.path }}
         run: |
           bin/magento config:set catalog/storefront_documents/index_enabled 1
+          bin/magento config:set catalog/storefront_documents/serve_graphql 1
           bin/magento config:set catalog/storefront_documents/key parity-gate
           bin/magento config:set currency/options/allow USD,EUR
           mysql --host 127.0.0.1 --port ${{ job.services.mysql.ports['3306'] }} -u root -prootpassword magento_integration_tests -e "INSERT INTO directory_currency_rate (currency_from, currency_to, rate) VALUES ('USD', 'EUR', 0.85) ON DUPLICATE KEY UPDATE rate = 0.85"
@@ -210,6 +211,9 @@ jobs:
           bin/magento indexer:reindex
           # The install's own reindex exported the feeds with the host-less modules still on; the rebuild exports them again.
           bin/magento catalog-storefront:rebuild
+      - name: HTTP cache gate
+        working-directory: ${{ steps.magento.outputs.path }}
+        run: php ${{ github.workspace }}/dev/parity/http-cache.php http://127.0.0.1:8080/graphql
       - name: Parity gate
         working-directory: ${{ steps.magento.outputs.path }}
         run: bin/magento catalog-storefront:parity http://127.0.0.1:8080/graphql --dump=parity-dump/guest
