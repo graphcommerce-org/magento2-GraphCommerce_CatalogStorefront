@@ -103,6 +103,7 @@ class Products implements FeedWriterInterface
                             'label' => $entry['label'] ?? null,
                             'types' => (array)($entry['types'] ?? []),
                             'sort_order' => $entry['sort_order'] ?? null,
+                            ...array_intersect_key($entry['imageUrl'] ?? [], ['mediaPath' => true, 'placeholder' => true]),
                         ], static fn($value): bool => $value !== null && $value !== []),
                         (array)$row['media_gallery']
                     );

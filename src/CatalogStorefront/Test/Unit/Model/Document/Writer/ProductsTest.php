@@ -124,6 +124,22 @@ class ProductsTest extends TestCase
         $this->assertArrayNotHasKey('videos', $this->upserts['default'][7]);
     }
 
+    public function testGalleryImagePathsAndPlaceholdersAreStoredOnTheirEntries(): void
+    {
+        $this->write([[
+            'productId' => 7, 'storeViewCode' => 'default', 'sku' => 'A',
+            'media_gallery' => [
+                ['url' => 'https://example.com/media/catalog/product/a.jpg', 'imageUrl' => ['mediaPath' => 'catalog/product/cache/hash/a.jpg']],
+                ['url' => 'https://example.com/media/catalog/product/missing.jpg', 'imageUrl' => ['placeholder' => true]],
+            ],
+        ]]);
+
+        self::assertSame([
+            ['file' => '/a.jpg', 'mediaPath' => 'catalog/product/cache/hash/a.jpg'],
+            ['file' => '/missing.jpg', 'placeholder' => true],
+        ], $this->upserts['default'][7]['media_gallery']);
+    }
+
     public function testAUrlRewriteIsItsRequestPath(): void
     {
         $this->write([[
