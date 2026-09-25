@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefront\Test\Unit\Model\Read;
 
 use GraphCommerce\CatalogStorefront\Model\Read\CategoryData;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 class CategoryDataTest extends TestCase
@@ -36,5 +37,28 @@ class CategoryDataTest extends TestCase
     public function testTheRootsEmptyUrlPathIsNull(): void
     {
         $this->assertNull((new CategoryData())->fromDocument(['urlPath' => ''])['url_path']);
+    }
+
+    #[DataProvider('imageAttributes')]
+    public function testTheImageAttributeKeepsItsStoredPath(?string $image): void
+    {
+        $data = (new CategoryData())->fromDocument([
+            'image' => 'https://shop.example/media/',
+            'customAttributes' => $image === null ? [] : [
+                ['attributeCode' => 'image', 'value' => $image],
+            ],
+        ]);
+
+        $this->assertSame($image, $data['image'] ?? null);
+    }
+
+    public static function imageAttributes(): array
+    {
+        return [
+            'file name' => ['club.png'],
+            'media path' => ['/media/catalog/category/Clublogo/club.png'],
+            'empty image' => [''],
+            'absent image' => [null],
+        ];
     }
 }
