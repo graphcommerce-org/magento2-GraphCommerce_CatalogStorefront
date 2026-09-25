@@ -20,7 +20,6 @@ class CategoryData
         'display_mode' => 'displayMode',
         'url_key' => 'urlKey',
         'url_path' => 'urlPath',
-        'image' => 'image',
         'level' => 'level',
         'path' => 'path',
         'children' => 'children',
