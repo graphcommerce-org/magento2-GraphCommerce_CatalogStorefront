@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontGraphQl\Model;
 
+use GraphCommerce\CatalogStorefront\Model\Read\CategoryData;
 use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
 use Magento\Catalog\Model\CategoryFactory;
@@ -22,33 +23,9 @@ class CategoryDocuments
 {
     public const ENTITY = 'category';
 
-    private const FIELDS = [
-        'entity_id' => 'categoryId',
-        'parent_id' => 'parentId',
-        'name' => 'name',
-        'description' => 'description',
-        'meta_title' => 'metaTitle',
-        'meta_keywords' => 'metaKeywords',
-        'meta_description' => 'metaDescription',
-        'display_mode' => 'displayMode',
-        'url_key' => 'urlKey',
-        'url_path' => 'urlPath',
-        'image' => 'image',
-        'level' => 'level',
-        'path' => 'path',
-        'children' => 'children',
-        'position' => 'position',
-        'default_sort_by' => 'defaultSortBy',
-        'available_sort_by' => 'availableSortBy',
-        'is_anchor' => 'isAnchor',
-        'include_in_menu' => 'includeInMenu',
-        'is_active' => 'isActive',
-        'created_at' => 'createdAt',
-        'updated_at' => 'updatedAt',
-    ];
-
     public function __construct(
         private readonly MetadataDocumentStorageInterface $storage,
+        private readonly CategoryData $categoryData,
         private readonly CategoryFactory $categoryFactory,
         private readonly Hydrator $hydrator,
         private readonly Uid $uidEncoder,
@@ -73,18 +50,7 @@ class CategoryDocuments
     {
         $categories = [];
         foreach ($documents as $id => $document) {
-            $data = [];
-            foreach ((array)($document['customAttributes'] ?? []) as $attribute) {
-                if (isset($attribute['attributeCode'])) {
-                    $data[$attribute['attributeCode']] = $attribute['value'] ?? null;
-                }
-            }
-            foreach (self::FIELDS as $key => $documentKey) {
-                $data[$key] = $document[$documentKey] ?? null;
-            }
-            // The feed writes an empty url path for the tree root where the attribute is unset.
-            $data['url_path'] = $data['url_path'] === '' ? null : $data['url_path'];
-            $data['children_count'] = (string)count((array)($document['children'] ?? []));
+            $data = $this->categoryData->fromDocument($document);
             // Every requested field has a key, so the hydrator's plain data path answers all of them.
             foreach ($requestedFields as $requestedField) {
                 $data[$requestedField] ??= null;

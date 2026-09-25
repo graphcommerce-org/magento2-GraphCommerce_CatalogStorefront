@@ -17,6 +17,10 @@ class ChildPriceRangesTest extends TestCase
                 'minFinal' => ['min' => ['field' => 'priceIndex.final']],
                 'maxRegular' => ['max' => ['field' => 'priceIndex.regular']],
                 'maxFinal' => ['max' => ['field' => 'priceIndex.final']],
+                'discounted' => ['filter' => ['script' => ['script' => [
+                    'source' => "doc['priceIndex.final'].value < doc['priceIndex.regular'].value",
+                    'lang' => 'painless',
+                ]]]],
             ],
         ]]];
         $prices = ['prices' => $group, 'taxClasses' => [
@@ -50,6 +54,7 @@ class ChildPriceRangesTest extends TestCase
             'minFinal' => ['value' => $minFinal],
             'maxRegular' => ['value' => 120 + $offset],
             'maxFinal' => ['value' => 110 + $offset],
+            'discounted' => ['doc_count' => $minFinal === null ? 0 : 1],
         ];
         $response = ['aggregations' => ['parents' => ['buckets' => [[
             'key' => '7',
@@ -68,7 +73,7 @@ class ChildPriceRangesTest extends TestCase
 
         self::assertSame([
             7 => [
-                'salable' => [100.0, 90.125, 120.0, 110.0, [2 => [100.0, 90.125, 120.0, 110.0]]],
+                'salable' => [100.0, 90.125, 120.0, 110.0, [2 => [100.0, 90.125, 120.0, 110.0]], true],
                 'all' => null,
             ],
         ], (new ChildPriceRanges())->parse($response));

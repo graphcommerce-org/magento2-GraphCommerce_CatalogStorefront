@@ -14,7 +14,17 @@ under Catalog > Catalog > Catalog Storefront Document Store:
   columns. The attribute load is what the documents replace. The same read carries the child
   price ranges of the page's composite products for the customer group, and
   [`Model/Read/ListingDocuments`](Model/Read/ListingDocuments.php) keeps the documents and the
-  ranges for the cards.
+  ranges for the cards. The cards' URL rewrites and the special price map of the price boxes
+  come from them, so the list template runs no query.
+- [`Plugin/Listing/FilterableAttributesFromDocuments`](Plugin/Listing/FilterableAttributesFromDocuments.php)
+  lists the filterable attributes of the layered navigation from the attribute documents, with
+  the attribute models of the EAV config.
+- [`Plugin/Listing/TaxPriceFromRate`](Plugin/Listing/TaxPriceFromRate.php) prices a document
+  product's amount with the rate of the request through the price module's `TaxPrice`, the
+  arithmetic of the GraphQL path, instead of core's tax calculator per amount.
+- [`Plugin/Listing/ProductUrlFromRequestPath`](Plugin/Listing/ProductUrlFromRequestPath.php)
+  answers a document product's URL as the store's link base URL and the request path, without
+  a URL builder per link.
 - [`Plugin/Detail/ProductDocument`](Plugin/Detail/ProductDocument.php) builds the product of
   a `catalog_product_view` request from its document instead of loading it, so a
   configurable builds its children, its options and its price without a query. The cart,

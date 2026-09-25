@@ -1,28 +1,25 @@
 {
-    "name": "graphcommerce/module-catalog-storefront-product-frontend",
-    "description": "Serves rendered catalog pages from the catalog read model documents",
+    "name": "graphcommerce/module-catalog-storefront-category-frontend",
+    "description": "Serves the categories of rendered catalog pages from the catalog read model documents",
     "type": "magento2-module",
     "license": "MIT",
     "require": {
         "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
         "magento/framework": "*",
         "magento/module-catalog": "*",
-        "magento/module-configurable-product": "*",
-        "magento/module-customer": "*",
+        "magento/module-catalog-url-rewrite": "*",
         "magento/module-store": "*",
         "magento/module-url-rewrite": "*",
-        "magento/module-catalog-inventory": "*",
-        "magento/module-eav": "*",
         "graphcommerce/module-catalog-storefront": "self.version",
         "graphcommerce/module-catalog-storefront-api": "self.version",
-        "graphcommerce/module-catalog-storefront-price": "self.version"
+        "graphcommerce/module-catalog-storefront-product-frontend": "self.version"
     },
     "autoload": {
         "files": [
             "registration.php"
         ],
         "psr-4": {
-            "GraphCommerce\\CatalogStorefrontProductFrontend\\": ""
+            "GraphCommerce\\CatalogStorefrontCategoryFrontend\\": ""
         }
     }
 }
