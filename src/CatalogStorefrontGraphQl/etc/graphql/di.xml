@@ -17,7 +17,7 @@
         </arguments>
     </type>
     <type name="Magento\GraphQlCache\Model\CacheableQuery">
-        <plugin name="graphcommerce_catalog_storefront_keyed_query_uncacheable" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Cache\KeyedQueryUncacheable"/>
+        <plugin name="graphcommerce_catalog_storefront_query_uncacheable" type="GraphCommerce\CatalogStorefrontGraphQl\Plugin\Cache\QueryUncacheable"/>
     </type>
     <!-- The session cleanup after dispatch reads the customer from the token's claims, not from two customer loads. -->
     <type name="Magento\GraphQl\Controller\GraphQl">

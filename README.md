@@ -148,21 +148,19 @@ guest, prices excluding tax, median over the wire, no page cache, on the large p
 | 200 items of a search over 308 000 visible products | 1 549 ms | 210 ms | 519 ms | 148 ms |
 | 200 items unfiltered | 1 661 ms | 194 ms | 629 ms | 130 ms |
 
-### What a cache does with that cost
+### HTTP response caching
 
-The cost stays on the request. A cache holds the answer of a request that already paid it,
-and the next miss pays it again. The misses are the normal traffic of a catalog:
+[`QueryUncacheable`](src/CatalogStorefrontGraphQl/Plugin/Cache/QueryUncacheable.php) disables
+HTTP response caching for document-mode and keyed GraphQL requests. Their responses use
+`Cache-Control: no-store, no-cache, must-revalidate, max-age=0`. Public core responses retain
+Magento's cache policy. Clear stored HTTP responses on deployment:
 
-- A feed write purges the cache tags of the products and categories in its batch
-  (`identities` on [`Model/Document/Delivery`](src/CatalogStorefront/Model/Document/Delivery.php)),
-  so every price change, stock change and product save empties the entries of those
-  products. A catalog reindex and a cache flush empty all of them.
-- The long tail of URLs: a category page 7, a sort order, a page size and a filter
-  combination are each a cache entry of their own, and layered navigation multiplies them.
-- Customer group prices: core's GraphQL response cache id carries the customer group and
-  the customer's tax rate
-  (`Magento\CustomerGraphQl\CacheIdFactorProviders\CustomerGroupProvider` and
-  `CustomerTaxRateProvider`), so each group and each tax destination fills its own slot.
+```sh
+bin/magento cache:clean full_page
+```
+
+[`Delivery`](src/CatalogStorefront/Model/Document/Delivery.php) purges product and category
+cache tags after each feed write.
 
 ### What this package does
 
@@ -284,7 +282,7 @@ other modes run two or three more search queries per listing for the intervals.
 | Header | Value | Effect |
 | --- | --- | --- |
 | `X-Catalog-Storefront-Key` | The configured key | The request may pick its path and gets the fallback report. |
-| `X-Catalog-Storefront` | `documents` or `core` | The path of this request. It is a factor of the response cache id, of the resolver result cache keys and of the page cache id, and a keyed GraphQL request is never cacheable. |
+| `X-Catalog-Storefront` | `documents` or `core` | The path of this request. It is a factor of the response cache id, of the resolver result cache keys and of the page cache id. |
 
 ### Indices
 
