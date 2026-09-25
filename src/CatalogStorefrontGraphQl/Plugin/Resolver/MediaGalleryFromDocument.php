@@ -47,7 +47,7 @@ class MediaGalleryFromDocument
         $entries = [];
         foreach ($gallery as $index => $entry) {
             $entries[] = [
-                'file' => $this->toFile($entry['url'] ?? ''),
+                'file' => $entry['file'] ?? '',
                 'label' => $entry['label'] ?? $product->getName(),
                 'position' => $entry['sort_order'] ?? $index + 1,
                 'disabled' => false,
@@ -58,13 +58,5 @@ class MediaGalleryFromDocument
         }
 
         return $entries;
-    }
-
-    private function toFile(string $url): string
-    {
-        $marker = '/catalog/product';
-        $position = strpos($url, $marker);
-
-        return $position === false ? $url : substr($url, $position + strlen($marker));
     }
 }

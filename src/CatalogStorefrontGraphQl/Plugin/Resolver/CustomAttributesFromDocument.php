@@ -72,10 +72,10 @@ class CustomAttributesFromDocument
 
         try {
             $storeCode = $context->getExtensionAttributes()->getStore()->getCode();
-            $values = [];
-            foreach ((array)$document['customAttributes'] as $entry) {
-                $values[$entry['attributeCode']] = isset($entry['value']) ? (string)$entry['value'] : null;
-            }
+            $values = array_map(
+                static fn($value): ?string => $value === null ? null : (string)$value,
+                (array)$document['customAttributes']
+            );
             $attributes = array_filter(
                 $this->attributeDocuments->byCodes($storeCode, array_keys($values)),
                 static function (array $attribute) use ($filters): bool {

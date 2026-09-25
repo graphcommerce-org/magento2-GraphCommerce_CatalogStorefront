@@ -358,7 +358,8 @@ class RentalDays
 }
 ```
 
-The products writer stores the whole feed row, so `rentalDays` is on the document after
+The products writer stores each feed field it does not name in its own
+`NOT_STORED` list, so `rentalDays` is on the document after
 `bin/magento setup:di:compile` and `bin/magento catalog-storefront:rebuild product`. Serve
 it with a prefiller, which fills the field on the product value the executor hands to the
 child fields:

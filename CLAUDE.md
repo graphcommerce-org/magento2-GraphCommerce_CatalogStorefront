@@ -402,7 +402,12 @@ image URLs come from the feed row (`Model/DataExporter/Provider/ImageUrls`).
   `clean_cache_by_tags` event plus the app cache, as an indexer does), so the
   page, response and resolver caches hold nothing built from the replaced
   documents; together they build one document per store view
-  (products = base, prices = the feed rows under `prices` with their customer
+  (products = base: the feed row without the slices the writer's `NOT_STORED`
+  names, each remaining slice in the shape its reader takes, so no value is
+  stored twice and no reader parses at request time (`customAttributes` the raw
+  value per attribute code, an image type and a gallery entry the media file, a
+  URL rewrite the request path, `categoryData` as `categoryIds`),
+  prices = the feed rows under `prices` with their customer
   `group` id (the feed names a group by the hash of its id; the writer maps it
   back, rows of an unknown group are dropped; the feed's all-groups row comes
   with code `0`, the id of the NOT LOGGED IN group, and is keyed `all` on the
@@ -507,7 +512,7 @@ image URLs come from the feed row (`Model/DataExporter/Provider/ImageUrls`).
   items (from `optionsV2` and the child documents by `bundleChildIds` and
   `groupedChildIds`; the option list and label are pre-filled on the item,
   the product is the child's model, which the core product resolver takes as
-  is), categories (`categoryData` is what the category product index holds:
+  is), categories (`categoryIds` is what the category product index holds:
   assignments and anchor ancestors, so only the store root is left out; the
   category documents are fetched once per request for the whole page and
   hydrated through core's category hydrator, with the raw value of every
@@ -518,7 +523,7 @@ image URLs come from the feed row (`Model/DataExporter/Provider/ImageUrls`).
   queries resolve their id, uid, url key, url path and parent filters on the
   category documents, with breadcrumbs from the path and the active children
   nested to the depth the query selects, `Model/CategoryDocuments`), and custom_attributesV2
-  (`customAttributes` on the document: the raw store view value of every
+  (`customAttributes` on the document: the raw store view value per code of every
   attribute of the product's attribute set that has one, plus tier_price the
   way the load backend sets it, `Model/DataExporter/Provider/CustomAttributes`; the
   attribute documents give the visible non-static list by attribute id, the

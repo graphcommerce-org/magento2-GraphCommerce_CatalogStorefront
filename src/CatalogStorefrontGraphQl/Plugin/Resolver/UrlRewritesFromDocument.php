@@ -11,8 +11,7 @@ use Magento\UrlRewriteGraphQl\Model\Resolver\UrlRewrite;
 
 /**
  * Serves url_rewrites from the feed document, skipping the per-product url
- * finder query. The document carries absolute URLs, so the host is stripped
- * back to the request path the core resolver returns.
+ * finder query. The document carries the request path the resolver answers.
  */
 class UrlRewritesFromDocument
 {
@@ -44,7 +43,7 @@ class UrlRewritesFromDocument
         $urlRewrites = [];
         foreach ($document['urlRewrites'] ?? [] as $rewrite) {
             $urlRewrites[] = [
-                'url' => $this->toRequestPath($rewrite['url'] ?? ''),
+                'url' => $rewrite['url'] ?? '',
                 'parameters' => array_map(
                     static fn(array $parameter) => [
                         'name' => $parameter['name'] ?? '',
@@ -56,12 +55,5 @@ class UrlRewritesFromDocument
         }
 
         return $urlRewrites;
-    }
-
-    private function toRequestPath(string $url): string
-    {
-        $path = parse_url($url, PHP_URL_PATH) ?? $url;
-
-        return ltrim((string)$path, '/');
     }
 }

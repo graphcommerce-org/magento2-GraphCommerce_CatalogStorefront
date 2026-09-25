@@ -19,8 +19,8 @@ class CustomAttributeDocumentsTest extends TestCase
         $attributeDocuments->expects(self::once())->method('byCodes')->with('default', ['color', 'size', 'material']);
         $prefiller = new CustomAttributeDocuments($attributeDocuments);
         $documents = [
-            1 => ['customAttributes' => [['attributeCode' => 'color', 'value' => '5'], ['attributeCode' => 'size', 'value' => '7']]],
-            2 => ['customAttributes' => [['attributeCode' => 'size', 'value' => '8'], ['attributeCode' => 'material', 'value' => 'x']]],
+            1 => ['customAttributes' => ['color' => '5', 'size' => '7']],
+            2 => ['customAttributes' => ['size' => '8', 'material' => 'x']],
             3 => [],
         ];
 

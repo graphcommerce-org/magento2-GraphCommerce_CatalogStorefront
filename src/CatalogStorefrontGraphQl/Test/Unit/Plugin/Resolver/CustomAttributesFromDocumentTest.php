@@ -32,7 +32,7 @@ class CustomAttributesFromDocumentTest extends TestCase
     ];
 
     /**
-     * @param list<array{attributeCode: string, value?: ?string}> $customAttributes
+     * @param array<string, ?string> $customAttributes the raw value per attribute code
      * @return array<string, array> the items by attribute code
      */
     private function items(array $customAttributes): array
@@ -68,7 +68,7 @@ class CustomAttributesFromDocumentTest extends TestCase
 
     public function testANullValueSelectsTheBlankOptionOfASelectAndNothingOfAMultiselect(): void
     {
-        $items = $this->items([['attributeCode' => 'color'], ['attributeCode' => 'tags', 'value' => null]]);
+        $items = $this->items(['color' => null, 'tags' => null]);
 
         self::assertSame([['value' => '', 'label' => ' ']], $items['color']['selected_options']);
         self::assertSame([], $items['tags']['selected_options']);
@@ -76,7 +76,7 @@ class CustomAttributesFromDocumentTest extends TestCase
 
     public function testAnEmptyValueSelectsTheBlankOptionOfBoth(): void
     {
-        $items = $this->items([['attributeCode' => 'color', 'value' => ''], ['attributeCode' => 'tags', 'value' => '']]);
+        $items = $this->items(['color' => '', 'tags' => '']);
 
         self::assertSame([['value' => '', 'label' => ' ']], $items['color']['selected_options']);
         self::assertSame([['value' => '', 'label' => ' ']], $items['tags']['selected_options']);
@@ -84,7 +84,7 @@ class CustomAttributesFromDocumentTest extends TestCase
 
     public function testAValueSelectsItsOptions(): void
     {
-        $items = $this->items([['attributeCode' => 'color', 'value' => '5'], ['attributeCode' => 'tags', 'value' => '8,9']]);
+        $items = $this->items(['color' => '5', 'tags' => '8,9']);
 
         self::assertSame([['value' => '5', 'label' => 'Red']], $items['color']['selected_options']);
         self::assertSame([['value' => '8', 'label' => 'Sale']], $items['tags']['selected_options']);
@@ -93,7 +93,7 @@ class CustomAttributesFromDocumentTest extends TestCase
 
     public function testANullTextValueIsAnEmptyString(): void
     {
-        $items = $this->items([['attributeCode' => 'note'], ['attributeCode' => 'color', 'value' => '5']]);
+        $items = $this->items(['note' => null, 'color' => '5']);
 
         self::assertSame('', $items['note']['value']);
         self::assertSame('AttributeValue', $items['note'][AttributeValueTypeFromDocument::KEY]);

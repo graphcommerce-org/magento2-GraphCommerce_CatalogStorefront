@@ -58,8 +58,8 @@ class CategoriesFromDocuments implements ResetAfterRequestInterface
         $storeViewCode = $store->getCode();
         $rootId = (int)$store->getRootCategoryId();
         $ids = [];
-        foreach ((array)($document['categoryData'] ?? []) as $category) {
-            $id = (int)($category['categoryId'] ?? 0);
+        foreach ((array)($document['categoryIds'] ?? []) as $category) {
+            $id = (int)$category;
             if ($id && $id !== $rootId) {
                 $ids[$id] = $id;
                 $this->pending[$storeViewCode][$id] = true;
