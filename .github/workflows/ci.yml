@@ -141,6 +141,7 @@ jobs:
         with:
           path: ${{ steps.magento.outputs.path }}
           services: ${{ toJSON(matrix.magento.services) }}
+          extra_args: --base-url=http://127.0.0.1:8080/ --use-rewrites=1
       - name: Sample data state
         working-directory: ${{ steps.magento.outputs.path }}
         # The install carries on past a sample data module that fails and leaves its products out; a

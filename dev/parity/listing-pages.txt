@@ -1,18 +1,4 @@
-# Listing pages the parity gate renders on both paths.
-# One path per line, relative to the base URL. Blank lines and # comments ignored.
-#
-# Cover the two collection providers separately: the category layer and the search
-# layer both come through ItemCollectionProvider, but only the category one is
-# exercised by browsing.
-
-# Configurable-heavy: the page the configurable seams were built for.
-/women/tops-women
-
-# The same page deeper, so a per-product defect shows up where it is loudest.
-/women/tops-women?product_list_limit=36
-
-# Simple products only: the listing path with none of the configurable work.
-/gear/fitness-equipment
-
-# The search layer, which shares the seam but not the category code path.
+/women/tops-women.html
+/women/tops-women.html?product_list_limit=36
+/gear/fitness-equipment.html
 /catalogsearch/result/?q=shirt
