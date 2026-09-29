@@ -76,6 +76,9 @@ class ChildPriceRanges
                 }
                 $byTaxClass = [];
                 foreach ($bucket[$mode]['taxClasses']['buckets'] ?? [] as $class) {
+                    if (!empty($class['fixedTaxes']['sum_other_doc_count'])) {
+                        throw new \RuntimeException('Composite fixed product tax groups exceed the aggregation limit.');
+                    }
                     if (!empty($class['fixedTaxes']['buckets'])) {
                         foreach ($class['fixedTaxes']['buckets'] as $taxes) {
                             $classStats = $taxes['prices']['group'];

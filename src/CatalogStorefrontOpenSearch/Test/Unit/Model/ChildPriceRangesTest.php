@@ -108,4 +108,16 @@ class ChildPriceRangesTest extends TestCase
         self::assertSame(2, $ranges[7]['salable'][4]['2:tax-key']['taxClassId']);
         self::assertSame([10.0, 8.0, 20.0, 18.0], array_slice($ranges[7]['salable'][4]['2:tax-key'], 0, 4));
     }
+
+    public function testIncompleteTaxGroupsFail(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        (new ChildPriceRanges())->parse(['aggregations' => ['parents' => ['buckets' => [[
+            'key' => 7,
+            'salable' => [
+                'prices' => ['group' => ['minFinal' => ['value' => 8.0]]],
+                'taxClasses' => ['buckets' => [['fixedTaxes' => ['sum_other_doc_count' => 1]]]],
+            ],
+        ]]]]]);
+    }
 }

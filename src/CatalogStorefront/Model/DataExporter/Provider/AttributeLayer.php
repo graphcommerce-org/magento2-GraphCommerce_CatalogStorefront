@@ -4,9 +4,6 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefront\Model\DataExporter\Provider;
 
 use Magento\Framework\App\ResourceConnection;
-use Magento\Catalog\Model\ResourceModel\Product\Attribute\CollectionFactory;
-use Magento\Catalog\Model\ResourceModel\Eav\Attribute;
-use Magento\Store\Model\StoreManagerInterface;
 
 /**
  * The attribute columns the exporter's own metadata record leaves out or rewrites: the layer
@@ -17,8 +14,6 @@ class AttributeLayer
 {
     public function __construct(
         private readonly ResourceConnection $resourceConnection,
-        private readonly CollectionFactory $collectionFactory,
-        private readonly StoreManagerInterface $storeManager,
     ) {
     }
 
@@ -38,21 +33,6 @@ class AttributeLayer
                 ->join(['eav' => $this->resourceConnection->getTableName('eav_attribute')], 'eav.attribute_id = cea.attribute_id', ['frontend_class', 'default_value', 'backend_type'])
                 ->where('cea.attribute_id IN (?)', $ids)
         );
-        $orders = [];
-        foreach (array_unique(array_column($values, 'storeViewCode')) as $code) {
-            foreach (['category', 'search'] as $layer) {
-                $collection = $this->collectionFactory->create();
-                $collection->setItemObjectClass(Attribute::class)
-                    ->addStoreLabel($this->storeManager->getStore($code)->getId())
-                    ->setOrder('position', 'ASC');
-                if ($layer === 'search') {
-                    $collection->addIsFilterableInSearchFilter()->addVisibleFilter();
-                } else {
-                    $collection->addIsFilterableFilter();
-                }
-                $orders[$code][$layer] = array_flip(array_keys($collection->getItems()));
-            }
-        }
         $output = [];
         foreach ($values as $value) {
             $id = (int)$value['id'];
@@ -62,8 +42,6 @@ class AttributeLayer
                 'storeViewCode' => $value['storeViewCode'],
                 'attributeId' => $id,
                 'position' => (int)($row['position'] ?? 0),
-                'categoryFilterOrder' => $orders[$value['storeViewCode']]['category'][$id] ?? null,
-                'searchFilterOrder' => $orders[$value['storeViewCode']]['search'][$id] ?? null,
                 'filterableMode' => (int)($row['is_filterable'] ?? 0),
                 'frontendClass' => $row['frontend_class'] ?? null,
                 'defaultValue' => $row['default_value'] ?? null,
