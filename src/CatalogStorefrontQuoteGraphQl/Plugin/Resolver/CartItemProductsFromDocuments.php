@@ -86,8 +86,6 @@ class CartItemProductsFromDocuments
             $this->hydration->prefill($store, $context, $served, $documents, $this->selectedFields->of($info));
         } catch (\Throwable $e) {
             $this->strict->exception(self::class, $e);
-
-            return $result;
         }
 
         foreach ($items as $index => $item) {

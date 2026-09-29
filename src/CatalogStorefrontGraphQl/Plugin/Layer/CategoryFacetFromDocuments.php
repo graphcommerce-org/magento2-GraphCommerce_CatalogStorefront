@@ -26,7 +26,6 @@ use GraphCommerce\CatalogStorefrontGraphQl\Model\Read\FacetDocuments;
  * core's category collection and attribute queries, and the direct-children
  * filter of a category-filtered query reads the requested categories'
  * children and their activity from the documents instead of loading them.
- * A missing document falls back to core.
  */
 class CategoryFacetFromDocuments implements ResetAfterRequestInterface
 {
@@ -77,7 +76,6 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
             $parents = $this->storage->get('category', $storeCode, $requested, ['children']);
             if (count($parents) !== count($requested)) {
                 $this->strict->fallback(self::class, 'category documents missing for the filtered categories');
-                return $proceed($aggregation, $storeId);
             }
             $childIds = array_map('intval', array_merge([], ...array_map(
                 static fn(array $parent) => (array)($parent['children'] ?? []),
@@ -89,8 +87,6 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
             );
         } catch (\Throwable $e) {
             $this->strict->exception(self::class, $e);
-
-            return $proceed($aggregation, $storeId);
         }
         $values = array_values(array_filter(
             $bucket->getValues(),
@@ -119,8 +115,6 @@ class CategoryFacetFromDocuments implements ResetAfterRequestInterface
                 ?? $this->storage->get('category', $store->getCode(), $ids, ['name', 'path']);
         } catch (\Throwable $e) {
             $this->strict->exception(self::class, $e);
-
-            return $proceed($aggregation, $storeId);
         }
         $labels = [];
         foreach ($documents as $id => $document) {

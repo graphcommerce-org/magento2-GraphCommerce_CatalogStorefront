@@ -4,6 +4,9 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontSalesGraphQl\Test\Unit\Plugin\Resolver;
 
 use GraphCommerce\CatalogStorefront\Model\Strict;
+use GraphCommerce\CatalogStorefront\Model\DocumentReadException;
+use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
+use Psr\Log\LoggerInterface;
 use GraphCommerce\CatalogStorefrontGraphQl\Model\Query\SelectedProductFields;
 use GraphCommerce\CatalogStorefrontGraphQl\Model\Read\ItemProducts;
 use GraphCommerce\CatalogStorefrontSalesGraphQl\Plugin\Resolver\OrderItemProducts;
@@ -39,13 +42,12 @@ class OrderItemProductsTest extends TestCase
         ));
     }
 
-    public function testTheProductOfAnItemIsServedAndAMissingDocumentGoesToCore(): void
+    public function testTheProductOfAnItemIsServedAndAMissingDocumentFails(): void
     {
         $items = $this->createMock(ItemProducts::class);
         $items->method('enabled')->willReturn(true);
         $items->method('value')->willReturnMap([[1, ['sku' => '24-MB01']], [46, null]]);
-        $strict = $this->createMock(Strict::class);
-        $strict->expects(self::once())->method('fallback')->with(ProductFromDocument::class, 'no document for product 46');
+        $strict = new Strict($this->createStub(StorefrontKey::class), $this->createStub(LoggerInterface::class));
         $plugin = new ProductFromDocument($items, $strict);
         $subject = $this->createStub(ProductResolver::class);
         $proceed = static fn(): array => ['sku' => 'from core'];
@@ -58,14 +60,15 @@ class OrderItemProductsTest extends TestCase
             $this->createStub(ResolveInfo::class),
             ['model' => $this->orderItem(1)]
         ));
-        self::assertSame(['sku' => 'from core'], $plugin->aroundResolve(
+        $this->expectException(DocumentReadException::class);
+        $plugin->aroundResolve(
             $subject,
             $proceed,
             $this->createStub(Field::class),
             null,
             $this->createStub(ResolveInfo::class),
             ['model' => $this->orderItem(46)]
-        ));
+        );
     }
 
     public function testTheCorePathIsLeftAlone(): void

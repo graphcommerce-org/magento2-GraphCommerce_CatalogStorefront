@@ -1,4 +1,4 @@
-# @header Content-Currency: EUR
+# @header Content-Currency: {{currency}}
 query {
   products(filter: { sku: { in: [{{skus:any:7}}] } }, pageSize: 20) {
     items {

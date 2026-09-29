@@ -93,7 +93,7 @@ which an install without Adobe keys adds as composer `path` repositories, as
 
 9. Read one request's own answer. The key plus `X-Catalog-Storefront: documents` picks the
    path for that request alone, and `extensions.catalogStorefront` carries the path and
-   every fallback to core with its reason.
+   every document read failure with its reason.
 
    ```sh
    curl -s https://shop.example/graphql \
@@ -116,7 +116,9 @@ which an install without Adobe keys adds as composer `path` repositories, as
     [`Model/Parity/Picks`](src/CatalogStorefrontGraphQl/Model/Parity/Picks.php) fills from
     the catalog: `{{sku:configurable}}`, `{{skus:any:6}}`, `{{url_key:configurable}}`,
     `{{category_id:simple:special-price}}`, `{{category_url_path:any:children}}`,
-    `{{option_uid:configurable}}`, `{{search_term}}` and `{{cart_id}}`. A kind is a product
+    `{{option_uid:configurable}}`, `{{search_term}}`, `{{currency}}` and `{{cart_id}}`.
+    `{{currency}}` selects an allowed alternate currency with an exchange rate.
+    Product picks use the core stock visibility filter. A kind is a product
     type or `any`, with a trait: `special-price`, `tier-price`, `reviewed`, `links`, `fixed`
     or `fpt`. A query the catalog cannot fill is skipped with the reason, as is a query
     whose `# @requires-field ProductInterface.activity` the schema does not hold. Add your
@@ -204,8 +206,8 @@ group arrive in one batch and the document keeps one nested entry per group.
 
 **"A read model gets out of sync."** Three mechanisms answer for it. The exporter compares
 the hash of every row with its last export, so a full reindex re-sends what changed and
-writes nothing for the rest. A read the documents cannot answer falls back to the core
-resolver, and a request with the storefront key names every fallback with its reason.
+writes nothing for the rest. A document read failure stops the read. A request with the
+storefront key also reports its reason. Every fallback report fails the parity gate.
 `catalog-storefront:parity` diffs both paths query by query, and `--soak` repeats the
 accepted queries with the customer, the page size, the sku list and the path order varied
 per request: 3 000 requests, 0 differences, memory slope 250.7 KB per 100 requests against
@@ -219,24 +221,26 @@ The path header and the setting decide per request. Every plugin below gates on
 [`Model/Mode`](src/CatalogStorefront/Model/Mode.php) first, so `X-Catalog-Storefront: core`
 runs core alone.
 
-| Read path | Module | Falls back to core when |
+| Read path | Module | Required document data |
 | --- | --- | --- |
-| `products` search, filter and sort | `...GraphQl` | a listed product has no document |
-| `categories`, `categoryList`, a product's `categories` | `...GraphQl` | the filter is one the category documents do not answer, or the page is past the last |
-| `aggregations`, layered navigation labels, price step | `...GraphQl`, base | the store view has no attribute documents, or the filtered categories have no document |
-| `custom_attributesV2`, `attributesList` | `...GraphQl` | the filter names a property the attribute documents do not carry |
-| `media_gallery`, `url_rewrites` | `...GraphQl` | the document carries none |
-| `related_products`, `upsell_products`, `crosssell_products` | `...GraphQl` | the product of the query has no document |
-| `price_range`, `price`, `price_tiers`, `tier_prices`, `fixed_product_taxes` | `...PriceGraphQl` | fixed product taxes are active on a composite product |
-| `stock_status`, `only_x_left_in_stock`, `quantity`, `min_sale_qty`, `max_sale_qty` | `...InventoryGraphQl` | the product has no document |
-| `configurable_options`, `variants`, `configurable_product_options_selection` | `...ConfigurableProductGraphQl` | the configurable document carries no `configurableOptions` |
-| `items` and `price_details` of a bundle | `...BundleProductGraphQl` | the product has no document |
-| `items` of a grouped product | `...GroupedProductGraphQl` | the product has no document |
-| `downloadable_product_links`, `downloadable_product_samples` | `...DownloadableGraphQl` | a sample carries no `sample_id` |
-| `rating_summary`, `review_count`, `reviews` | `...ReviewGraphQl` | the page is past the last |
-| The products of cart items, wish list items and order items | `...QuoteGraphQl`, `...WishlistGraphQl`, `...SalesGraphQl` | an item's product has no document |
-| Rendered category and search listing pages, product detail pages | `...ProductFrontend` | one product of the page has no document, and the page then loads from the database with the ids logged |
-| A configurable's children, super attributes and lowest price on a rendered page | `...ConfigurableProductFrontend` | the product has no document |
+| `products` search, filter and sort | `...GraphQl` | every selected product |
+| `categories`, `categoryList`, a product's `categories` | `...GraphQl` | supported category filters and page bounds |
+| `aggregations`, layered navigation labels, price step | `...GraphQl`, base | store attributes and selected categories |
+| `custom_attributesV2`, `attributesList` | `...GraphQl` | supported attribute filters |
+| `media_gallery`, `url_rewrites` | `...GraphQl` | media URLs and URL rewrites |
+| `related_products`, `upsell_products`, `crosssell_products` | `...GraphQl` | linked products |
+| `price_range`, `price`, `price_tiers`, `tier_prices`, `fixed_product_taxes` | `...PriceGraphQl` | prices; composite fixed product taxes raise an error |
+| `stock_status`, `only_x_left_in_stock`, `quantity`, `min_sale_qty`, `max_sale_qty` | `...InventoryGraphQl` | product stock fields |
+| `configurable_options`, `variants`, `configurable_product_options_selection` | `...ConfigurableProductGraphQl` | configurable options and variants |
+| `items` and `price_details` of a bundle | `...BundleProductGraphQl` | bundle options and selections |
+| `items` of a grouped product | `...GroupedProductGraphQl` | grouped children |
+| `downloadable_product_links`, `downloadable_product_samples` | `...DownloadableGraphQl` | links and sample ids |
+| `rating_summary`, `review_count`, `reviews` | `...ReviewGraphQl` | reviews and page bounds |
+| The products of cart items, wish list items and order items | `...QuoteGraphQl`, `...WishlistGraphQl`, `...SalesGraphQl` | every requested item product |
+| Rendered category and search listing pages, product detail pages | `...ProductFrontend` | every selected product; unsupported detail option types raise an error |
+| A configurable's children, super attributes and lowest price on a rendered page | `...ConfigurableProductFrontend` | variant documents and configurable attributes |
+| Bundle options, selections and price ranges on a rendered page | `...BundleProductFrontend` | child documents, price rows and stock limits |
+| Grouped children and quantity validation on a rendered page | `...GroupedProductFrontend` | child documents and stock limits |
 
 ## Reference
 
@@ -483,8 +487,8 @@ the base module and the GraphQl module.
 | [`...Price`](src/CatalogStorefrontPrice) / [`...PriceGraphQl`](src/CatalogStorefrontPriceGraphQl) | Display currency and tax at read time through core's tax service / the prices prefiller and the customer's tax address |
 | [`...Inventory`](src/CatalogStorefrontInventory) / [`...InventoryGraphQl`](src/CatalogStorefrontInventoryGraphQl) | The stock slice / the stock fields |
 | [`...ConfigurableProduct`](src/CatalogStorefrontConfigurableProduct) / [`...GraphQl`](src/CatalogStorefrontConfigurableProductGraphQl) / [`...Frontend`](src/CatalogStorefrontConfigurableProductFrontend) | Variants and the configurable range / options, variants, selection / a configurable on a rendered page |
-| [`...BundleProduct`](src/CatalogStorefrontBundleProduct) / [`...GraphQl`](src/CatalogStorefrontBundleProductGraphQl) | Bundle feed fields and the bundle range / bundle items and price details |
-| [`...GroupedProduct`](src/CatalogStorefrontGroupedProduct) / [`...GraphQl`](src/CatalogStorefrontGroupedProductGraphQl) | The grouped range / grouped items |
+| [`...BundleProduct`](src/CatalogStorefrontBundleProduct) / [`...GraphQl`](src/CatalogStorefrontBundleProductGraphQl) / [`...Frontend`](src/CatalogStorefrontBundleProductFrontend) | Bundle feed fields and range / bundle items and price details / rendered bundle options and prices |
+| [`...GroupedProduct`](src/CatalogStorefrontGroupedProduct) / [`...GraphQl`](src/CatalogStorefrontGroupedProductGraphQl) / [`...Frontend`](src/CatalogStorefrontGroupedProductFrontend) | Grouped range / grouped items / rendered children and quantity validation |
 | [`...Downloadable`](src/CatalogStorefrontDownloadable) / [`...GraphQl`](src/CatalogStorefrontDownloadableGraphQl) | The downloadable range / links and samples |
 | [`...Review`](src/CatalogStorefrontReview) / [`...GraphQl`](src/CatalogStorefrontReviewGraphQl) / [`...Frontend`](src/CatalogStorefrontReviewFrontend) | Review and rating feeds / rating summary, breakdown and reviews / the rating collection of the rendered review form |
 | [`...QuoteGraphQl`](src/CatalogStorefrontQuoteGraphQl) | The display fields of a cart item's product |

@@ -19,7 +19,7 @@ class UrlRewritesFromDocumentsTest extends TestCase
 
     private bool $coreAsked = false;
 
-    private function plugin(): UrlRewritesFromDocuments
+    private function plugin(bool $documents = true): UrlRewritesFromDocuments
     {
         $this->listing = new ListingDocuments();
         $this->listing->add('default', [
@@ -38,7 +38,9 @@ class UrlRewritesFromDocumentsTest extends TestCase
         $factory = $this->createMock(UrlRewriteFactory::class);
         $factory->method('create')->willReturnCallback(static fn () => new UrlRewrite([], new Json()));
 
-        return new UrlRewritesFromDocuments($this->listing, $storeManager, $factory);
+        $mode = $this->createStub(\GraphCommerce\CatalogStorefrontProductFrontend\Model\Mode::class);
+        $mode->method('listing')->willReturn($documents);
+        return new UrlRewritesFromDocuments($this->listing, $storeManager, $factory, $mode);
     }
 
     /**
@@ -78,11 +80,28 @@ class UrlRewritesFromDocumentsTest extends TestCase
         $this->assertSame([1 => 'gear/bag.html'], $paths);
     }
 
-    public function testAProductWithoutADocumentSendsTheListToCore(): void
+    public function testAMissingProductDocumentFails(): void
     {
-        $this->find($this->plugin(), ['entity_type' => 'product', 'entity_id' => [1, 9], 'store_id' => 1]);
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        try {
+            $this->find($this->plugin(), ['entity_type' => 'product', 'entity_id' => [1, 9], 'store_id' => 1]);
+        } finally {
+            self::assertFalse($this->coreAsked);
+        }
+    }
 
-        $this->assertTrue($this->coreAsked);
+    public function testCoreModeUsesCore(): void
+    {
+        $this->find($this->plugin(false), ['entity_type' => 'product', 'entity_id' => [1, 9], 'store_id' => 1]);
+        self::assertTrue($this->coreAsked);
+    }
+
+    public function testARequestWithoutADocumentListingUsesCore(): void
+    {
+        $plugin = $this->plugin();
+        $this->listing->_resetState();
+        $this->find($plugin, ['entity_type' => 'product', 'entity_id' => [1], 'store_id' => 1]);
+        self::assertTrue($this->coreAsked);
     }
 
     public function testACategoryLookupIsUntouched(): void

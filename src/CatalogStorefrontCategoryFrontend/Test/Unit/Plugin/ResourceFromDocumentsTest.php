@@ -147,4 +147,15 @@ class ResourceFromDocumentsTest extends TestCase
 
         $this->assertSame('core', $plugin->aroundLoad($this->createMock(CategoryResource::class), $this->proceed(), $this->model([]), 10));
     }
+
+    public function testAMissingCategoryDocumentFails(): void
+    {
+        $plugin = $this->plugin([]);
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        try {
+            $plugin->aroundLoad($this->createMock(CategoryResource::class), $this->proceed(), $this->model([]), 10);
+        } finally {
+            self::assertFalse($this->coreAsked);
+        }
+    }
 }

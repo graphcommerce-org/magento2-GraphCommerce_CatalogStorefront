@@ -5,6 +5,8 @@ namespace GraphCommerce\CatalogStorefrontGraphQl\Model\Parity;
 
 use Magento\Catalog\Model\Category;
 use Magento\Catalog\Model\Product;
+use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory;
+use Magento\CatalogInventory\Helper\Stock;
 use Magento\Eav\Model\Config as EavConfig;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\DB\Select;
@@ -18,8 +20,9 @@ use Magento\Store\Model\StoreManagerInterface;
  * trait: `special-price`, `tier-price`, `reviewed`, `links`, `fixed` (a
  * bundle with a fixed price), `fpt` (a fixed product tax) or `child` (a
  * simple product under a configurable one). Only enabled products on the
- * default website count, visible unless the trait is `child`, in ascending
- * entity id. A category kind names the products it holds: the active
+ * default website count, with the core stock visibility filter. The trait
+ * `child` includes hidden products. Products use ascending entity id.
+ * A category kind names the products it holds: the active
  * category of the default store view with the most of them wins, and the
  * trait `children` limits it to categories with child categories.
  */
@@ -32,6 +35,8 @@ class Picks
         private readonly EavConfig $eavConfig,
         private readonly Uid $uidEncoder,
         private readonly StoreManagerInterface $storeManager,
+        private readonly CollectionFactory $collectionFactory,
+        private readonly Stock $stock,
     ) {
     }
 
@@ -118,25 +123,33 @@ class Picks
         if (!in_array($type, self::TYPES, true)) {
             throw new \InvalidArgumentException(sprintf('Unknown product kind "%s"', $kind));
         }
-        $connection = $this->connection();
-        $select = $connection->select()
-            ->from(['e' => $this->resource->getTableName('catalog_product_entity')], [])
-            ->join(
-                ['w' => $this->resource->getTableName('catalog_product_website')],
-                'w.product_id = e.entity_id AND w.website_id = ' . (int)$this->storeManager->getDefaultStoreView()->getWebsiteId(),
-                []
-            )
-            ->order('e.entity_id ASC');
-        $this->joinAttribute($select, 'e', Product::ENTITY, 'status', 'status', 'status.value = ' . \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_ENABLED, 'catalog_product_entity_int');
+        $store = $this->storeManager->getDefaultStoreView();
+        $collection = $this->collectionFactory->create()
+            ->setStoreId($store->getId())
+            ->addStoreFilter($store)
+            ->addAttributeToFilter('status', \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_ENABLED);
         if ($trait !== 'child') {
-            $this->joinAttribute($select, 'e', Product::ENTITY, 'visibility', 'visibility', 'visibility.value IN (2, 3, 4)', 'catalog_product_entity_int');
+            $collection->addAttributeToFilter('visibility', ['in' => [2, 3, 4]]);
         }
+        $this->stock->addIsInStockFilterToCollection($collection);
+        $select = $collection->getSelect()->reset(Select::COLUMNS)->reset(Select::ORDER)->order('e.entity_id ASC');
         if ($type !== 'any') {
             $select->where('e.type_id = ?', $type);
         }
         $this->trait($select, $trait);
 
         return $select;
+    }
+
+    public function currency(): ?string
+    {
+        $store = $this->storeManager->getDefaultStoreView();
+        foreach ($store->getAvailableCurrencyCodes(true) as $currency) {
+            if ($currency !== $store->getBaseCurrencyCode() && (float)$store->getBaseCurrency()->getRate($currency) > 0) {
+                return $currency;
+            }
+        }
+        return null;
     }
 
     private function trait(Select $select, string $trait): void

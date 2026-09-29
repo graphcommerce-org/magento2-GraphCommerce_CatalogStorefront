@@ -62,7 +62,6 @@ class ReviewsFromDocument
             $maxPages = (int)ceil($total / $pageSize);
             if ($currentPage > $maxPages && $total > 0) {
                 $this->strict->fallback(self::class, 'page past the last page');
-                return $proceed($field, $context, $info, $value, $args);
             }
 
             $items = [];
@@ -92,8 +91,6 @@ class ReviewsFromDocument
             }
         } catch (\Throwable $e) {
             $this->strict->exception(self::class, $e);
-
-            return $proceed($field, $context, $info, $value, $args);
         }
 
         return [

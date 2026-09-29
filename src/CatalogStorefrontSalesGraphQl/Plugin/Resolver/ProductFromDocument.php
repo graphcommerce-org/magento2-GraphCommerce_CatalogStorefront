@@ -39,8 +39,6 @@ class ProductFromDocument
         $product = $this->itemProducts->value($productId);
         if ($product === null) {
             $this->strict->fallback(self::class, 'no document for product ' . $productId);
-
-            return $proceed($field, $context, $info, $value, $args);
         }
 
         return $product;

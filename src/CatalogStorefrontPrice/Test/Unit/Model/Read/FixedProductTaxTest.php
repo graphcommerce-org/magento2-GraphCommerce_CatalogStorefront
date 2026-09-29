@@ -105,4 +105,17 @@ class FixedProductTaxTest extends TestCase
         self::assertSame([0.0, 0.0], $this->fixedProductTax(false, true, WeeeTax::DISPLAY_EXCL)->adjustments(self::ROWS, $product, $this->store()));
         self::assertSame([0.0, 0.0], $this->fixedProductTax(false, true, WeeeTax::DISPLAY_INCL)->adjustments([], $product, $this->store()));
     }
+
+    public function testCompositeParentAdjustments(): void
+    {
+        foreach (['configurable' => [0, 0.0], 'bundle' => [0, 0.0], 'fixed' => [1, 6.25]] as $type => [$priceType, $expected]) {
+            $product = $this->getMockBuilder(Product::class)->disableOriginalConstructor()->onlyMethods([])->getMock();
+            $product->setTypeId($type === 'fixed' ? 'bundle' : $type)->setPriceType($priceType);
+            [$weee, $tax] = $this->fixedProductTax(false, true, WeeeTax::DISPLAY_INCL_DESCR)
+                ->adjustments(self::ROWS, $product, $this->store());
+
+            self::assertSame($expected, $weee);
+            self::assertEqualsWithDelta(12.5 * 0.0825 * 0.5, $tax, 1e-9);
+        }
+    }
 }

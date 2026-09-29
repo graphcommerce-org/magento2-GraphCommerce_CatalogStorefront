@@ -77,8 +77,8 @@ class FilterableAttributesFromDocumentsTest extends TestCase
     private function documents(): array
     {
         return [
-            'color' => ['attributeCode' => 'color', 'attributeId' => 93, 'filterableMode' => 1, 'filterableInSearch' => true, 'visible' => true, 'position' => 2, 'label' => 'Kleur'],
-            'size' => ['attributeCode' => 'size', 'attributeId' => 141, 'filterableMode' => 2, 'filterableInSearch' => false, 'visible' => true, 'position' => 1, 'label' => 'Maat'],
+            'color' => ['attributeCode' => 'color', 'attributeId' => 93, 'filterableMode' => 1, 'filterableInSearch' => true, 'visible' => true, 'position' => 0, 'categoryFilterOrder' => 1, 'searchFilterOrder' => 0, 'label' => 'Kleur'],
+            'size' => ['attributeCode' => 'size', 'attributeId' => 141, 'filterableMode' => 2, 'filterableInSearch' => false, 'visible' => true, 'position' => 0, 'categoryFilterOrder' => 0, 'label' => 'Maat'],
             'cost' => ['attributeCode' => 'cost', 'attributeId' => 81, 'filterableMode' => 0, 'filterableInSearch' => true, 'visible' => false, 'position' => 0, 'label' => 'Cost'],
         ];
     }
@@ -92,7 +92,7 @@ class FilterableAttributesFromDocumentsTest extends TestCase
         };
     }
 
-    public function testTheCategoryLayerListsTheFilterableAttributesByPosition(): void
+    public function testEqualPositionsUseTheExportedCoreOrder(): void
     {
         $plugin = $this->plugin($this->documents(), ['color' => 93, 'size' => 141]);
 
@@ -122,11 +122,26 @@ class FilterableAttributesFromDocumentsTest extends TestCase
         $this->assertSame(2, $this->reads);
     }
 
-    public function testAnAttributeTheEavConfigDoesNotKnowSendsTheListToCore(): void
+    public function testAnUnresolvedAttributeFails(): void
     {
         $plugin = $this->plugin($this->documents(), ['color' => 93]);
 
-        $this->assertSame('core', $plugin->aroundGetList($this->createMock(CategoryList::class), $this->proceed()));
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        try {
+            $plugin->aroundGetList($this->createMock(CategoryList::class), $this->proceed());
+        } finally {
+            self::assertFalse($this->coreAsked);
+        }
+    }
+
+    public function testMissingFilterOrderFails(): void
+    {
+        $documents = $this->documents();
+        unset($documents['color']['categoryFilterOrder']);
+        $plugin = $this->plugin($documents, ['color' => 93, 'size' => 141]);
+
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        $plugin->aroundGetList($this->createMock(CategoryList::class), $this->proceed());
     }
 
     public function testALayerWithoutAFilterableAttributeIsAnEmptyList(): void
@@ -139,10 +154,15 @@ class FilterableAttributesFromDocumentsTest extends TestCase
         $this->assertFalse($this->coreAsked);
     }
 
-    public function testAStoreViewWithoutAttributeDocumentsAsksCore(): void
+    public function testMissingAttributeDocumentsFail(): void
     {
         $plugin = $this->plugin([], []);
 
-        $this->assertSame('core', $plugin->aroundGetList($this->createMock(CategoryList::class), $this->proceed()));
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        try {
+            $plugin->aroundGetList($this->createMock(CategoryList::class), $this->proceed());
+        } finally {
+            self::assertFalse($this->coreAsked);
+        }
     }
 }

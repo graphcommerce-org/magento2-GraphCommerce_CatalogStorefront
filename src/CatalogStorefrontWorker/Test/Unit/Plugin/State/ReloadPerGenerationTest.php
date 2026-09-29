@@ -210,7 +210,11 @@ class ReloadPerGenerationTest extends TestCase
         $keyHeader = 'new-key';
         $plugin->afterInitFromSuperGlobals($registry);
         self::assertTrue($strict->enabled(), 'the current header is checked against config loaded by the preflight');
-        $strict->fallback(self::class, 'proof');
+        try {
+            $strict->fallback(self::class, 'proof');
+        } catch (\GraphCommerce\CatalogStorefront\Model\DocumentReadException) {
+            self::assertNotEmpty($strict->report()['fallbacks']);
+        }
 
         $keyHeader = 'old-key';
         $plugin->afterInitFromSuperGlobals($registry);

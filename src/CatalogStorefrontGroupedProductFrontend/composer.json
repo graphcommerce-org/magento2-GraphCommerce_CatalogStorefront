@@ -1,0 +1,22 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-grouped-product-frontend",
+    "description": "Serves grouped product pages from catalog documents",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-grouped-product": "*",
+        "graphcommerce/module-catalog-storefront-product-frontend": "self.version",
+        "graphcommerce/module-catalog-storefront-grouped-product": "self.version",
+        "graphcommerce/module-catalog-storefront-inventory": "self.version"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontGroupedProductFrontend\\": ""
+        }
+    }
+}

@@ -39,6 +39,6 @@ class ServeFilterFromDocuments
             $searchCriteria,
             $context,
             $attributes
-        ) ?? $result;
+        );
     }
 }

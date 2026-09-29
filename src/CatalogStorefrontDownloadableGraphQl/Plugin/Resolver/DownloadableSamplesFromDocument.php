@@ -42,7 +42,6 @@ class DownloadableSamplesFromDocument
         foreach ((array)($document['samples'] ?? []) as $sample) {
             if (!preg_match('~/sample_id/(\d+)~', (string)($sample['resource']['url'] ?? ''), $match)) {
                 $this->strict->fallback(self::class, 'sample url without sample_id');
-            return $proceed($field, $context, $info, $value, $args);
             }
             $samples[] = [
                 'id' => (int)$match[1],

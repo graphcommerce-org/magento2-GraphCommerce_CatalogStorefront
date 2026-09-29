@@ -8,7 +8,15 @@
         <field name="value" type="String"/>
     </record>
     <record name="Product">
-        <field name="attributeSetId" type="Int" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeSet">
+        <field name="attributeSetId" type="Int" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\EntityData">
+            <using field="productId"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="hasOptions" type="Boolean" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\EntityData">
+            <using field="productId"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="requiredOptions" type="Boolean" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\EntityData">
             <using field="productId"/>
             <using field="storeViewCode"/>
         </field>

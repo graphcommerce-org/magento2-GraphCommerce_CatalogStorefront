@@ -16,8 +16,7 @@ use Magento\Store\Model\StoreManagerInterface;
  * is listed when one of the requested option ids is its own, when it is
  * filterable without results (then with every option), or when it is a
  * requested boolean or price attribute. The documents come from the primed
- * facet read, or from one query. Falls back to core while the store view has
- * no attribute documents.
+ * facet read, or from one query.
  */
 class AttributeOptionsFromDocuments
 {
@@ -49,11 +48,9 @@ class AttributeOptionsFromDocuments
                 ?? $this->storage->any('attribute', $storeCode, FacetDocuments::alternatives($optionIds, $attributeCodes));
             if (!$attributes && $this->storage->count('attribute', $storeCode) === 0) {
                 $this->strict->fallback(self::class, 'no attribute documents for the store view');
-                return $proceed($optionIds, $storeId, $attributeCodes);
             }
         } catch (\Throwable $e) {
             $this->strict->exception(self::class, $e);
-            return $proceed($optionIds, $storeId, $attributeCodes);
         }
         $requested = array_fill_keys(array_map('strval', $optionIds), true);
         $result = [];

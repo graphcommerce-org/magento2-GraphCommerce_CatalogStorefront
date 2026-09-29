@@ -72,8 +72,6 @@ class GroupedItemsFromDocument
             usort($items, static fn(array $a, array $b) => [$a['position'], $a['sku']] <=> [$b['position'], $b['sku']]);
         } catch (\Throwable $e) {
             $this->strict->exception(self::class, $e);
-
-            return $proceed($field, $context, $info, $value, $args);
         }
 
         return $items;

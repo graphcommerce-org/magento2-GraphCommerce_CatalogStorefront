@@ -36,8 +36,6 @@ class UrlRewritesFromDocument
         }
         if (!array_key_exists('urlRewrites', $document)) {
             $this->strict->fallback(self::class, 'document without urlRewrites');
-
-            return $proceed($field, $context, $info, $value, $args);
         }
 
         $urlRewrites = [];

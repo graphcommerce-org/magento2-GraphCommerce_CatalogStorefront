@@ -5,6 +5,9 @@ namespace GraphCommerce\CatalogStorefrontGraphQl\Test\Unit\Plugin\Layer;
 
 use GraphCommerce\CatalogStorefront\Model\Mode;
 use GraphCommerce\CatalogStorefront\Model\Strict;
+use GraphCommerce\CatalogStorefront\Model\DocumentReadException;
+use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
+use Psr\Log\LoggerInterface;
 use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
 use GraphCommerce\CatalogStorefrontGraphQl\Model\Read\FacetDocuments;
 use GraphCommerce\CatalogStorefrontGraphQl\Plugin\Layer\AttributeOptionsFromDocuments;
@@ -24,7 +27,7 @@ class AttributeOptionsFromDocumentsTest extends TestCase
     {
         $this->storage = $this->createMock(MetadataDocumentStorageInterface::class);
         $this->facets = $this->createMock(FacetDocuments::class);
-        $this->strict = $this->createMock(Strict::class);
+        $this->strict = new Strict($this->createStub(StorefrontKey::class), $this->createStub(LoggerInterface::class));
         $store = $this->createMock(StoreInterface::class);
         $store->method('getCode')->willReturn('default');
         $storeManager = $this->createMock(StoreManagerInterface::class);
@@ -78,7 +81,6 @@ class AttributeOptionsFromDocumentsTest extends TestCase
             ],
             'new' => ['attributeId' => 95, 'label' => 'New', 'frontendInput' => 'boolean', 'filterableMode' => 1, 'options' => []],
         ]);
-        $this->strict->expects(self::never())->method('fallback');
 
         $result = $this->plugin->aroundGetOptions(
             $this->createMock(AttributeOptionProvider::class),
@@ -168,14 +170,20 @@ class AttributeOptionsFromDocumentsTest extends TestCase
         self::assertSame('', $result['material']['options'][35]);
     }
 
-    public function testAnEmptyStoreViewFallsBackToCoreAndAnEmptyMatchDoesNot(): void
+    public function testAnEmptyStoreViewFails(): void
     {
         $this->storage->method('any')->willReturn([]);
-        $this->storage->method('count')->willReturnOnConsecutiveCalls(0, 12);
-        $this->strict->expects(self::once())->method('fallback');
+        $this->storage->method('count')->willReturn(0);
+        $this->expectException(DocumentReadException::class);
+        $this->plugin->aroundGetOptions($this->createMock(AttributeOptionProvider::class), static fn() => ['core'], [5], 1);
+    }
+
+    public function testAnEmptyMatchReturnsNoOptions(): void
+    {
+        $this->storage->method('any')->willReturn([]);
+        $this->storage->method('count')->willReturn(12);
         $subject = $this->createMock(AttributeOptionProvider::class);
 
-        self::assertSame(['core'], $this->plugin->aroundGetOptions($subject, static fn() => ['core'], [5], 1));
         self::assertSame([], $this->plugin->aroundGetOptions($subject, static fn() => ['core'], [5], 1));
         self::assertSame([], $this->plugin->aroundGetOptions($subject, static fn() => ['core'], [], 1));
     }

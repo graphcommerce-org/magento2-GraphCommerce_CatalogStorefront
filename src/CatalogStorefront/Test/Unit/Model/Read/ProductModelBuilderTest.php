@@ -85,6 +85,14 @@ class ProductModelBuilderTest extends TestCase
         $this->assertSame([], $this->data['options']);
     }
 
+    public function testOptionFlagsAndWebsitesUseEntityValues(): void
+    {
+        $this->build(['hasOptions' => true, 'requiredOptions' => true, 'websiteIds' => [1, 2]]);
+        self::assertSame('1', $this->data['has_options']);
+        self::assertSame('1', $this->data['required_options']);
+        self::assertSame(['1', '2'], $this->data['website_ids']);
+    }
+
     public function testTheDocumentBecomesTheOriginalValues(): void
     {
         // Without them every comparison against them reads as a change: getIdentities() takes a

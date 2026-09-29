@@ -14,7 +14,7 @@ use Magento\Framework\GraphQl\Schema\Type\ResolveInfo;
 /**
  * The product attributes list from the attribute documents of the store view: one read of the
  * index instead of the attribute repository with its label join and an option load per select
- * attribute. Other entity types and filters outside the catalog flags stay with core.
+ * attribute. Core serves other entity types.
  */
 class AttributesListFromDocuments
 {
@@ -58,16 +58,12 @@ class AttributesListFromDocuments
         foreach ((array)($args['filters'] ?? []) as $name => $wanted) {
             if ($name !== 'is_filterable' && !isset(self::FLAGS[$name])) {
                 $this->strict->fallback(self::class, 'unsupported attribute filter');
-
-                return $proceed($field, $context, $info, $value, $args);
             }
             $filters[$name === 'is_filterable' ? 'filterableMode' : self::FLAGS[$name]] = (int)$wanted;
         }
         $documents = $this->attributeDocuments->all($context->getExtensionAttributes()->getStore()->getCode());
         if (!$documents) {
             $this->strict->fallback(self::class, 'no attribute documents for the store view');
-
-            return $proceed($field, $context, $info, $value, $args);
         }
 
         $items = [];

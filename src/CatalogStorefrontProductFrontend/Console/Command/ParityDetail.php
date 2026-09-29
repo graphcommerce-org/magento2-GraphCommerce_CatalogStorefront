@@ -25,10 +25,7 @@ use Symfony\Component\Console\Output\OutputInterface;
  * that a load would have filled answers null for anything the document does not carry, and the
  * page renders that as an empty section rather than as an error. Only a diff finds those.
  *
- * What it proves: the two paths render the same bytes. What it does not prove: that the document
- * path served at all. A plugin that quietly handed over to core renders exactly like core and
- * passes. Read the fallbacks in the log, or the OpenSearch count in a profiler trace, to know the
- * document path ran.
+ * A profiler trace identifies the reads on each path.
  */
 class ParityDetail extends Command
 {

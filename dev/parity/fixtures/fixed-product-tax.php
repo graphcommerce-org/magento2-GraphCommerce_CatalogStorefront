@@ -1,9 +1,8 @@
 <?php
 /**
  * A fixed product tax attribute "Eco tax" on every attribute set, with a
- * US amount for all regions and a Michigan amount for website 1 on two
- * simple products and one variant of WJ02: a destination in Michigan sees
- * both rows, as core's weee query lists them, and a composite falls back.
+ * US amount for all regions and a Michigan amount for website 1 on a bundle,
+ * a simple product and one variant of WJ02. Michigan uses both rows.
  * Run from the Magento root, then reindex. Does nothing when the attribute
  * exists.
  */

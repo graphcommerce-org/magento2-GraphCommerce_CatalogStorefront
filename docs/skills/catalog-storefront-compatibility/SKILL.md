@@ -49,7 +49,7 @@ copy the pattern, not the code.
   record (`Product`, `Category`, `StockItemStatus`, `Review`, ...). A provider
   receives the `using` fields of every row of the batch and MUST return every
   `using` field back on each row it emits, or the exporter drops the batch with
-  "child provider: <class>". Examples: `Model/DataExporter/Provider/AttributeSet`
+  "child provider: <class>". Examples: `Model/DataExporter/Provider/EntityData`
   (one scalar), `Model/DataExporter/Provider/CustomAttributes` (a repeated
   record). A feed row re-exports only when its hash changes: after an
   `et_schema.xml` change, truncate the feed table and reindex the feed.

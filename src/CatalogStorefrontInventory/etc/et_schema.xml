@@ -1,6 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_DataExporter:etc/et_schema.xsd">
     <record name="StockItemStatus">
+        <field name="isQtyDecimal" type="Boolean" provider="GraphCommerce\CatalogStorefrontInventory\Model\DataExporter\Provider\StockItem">
+            <using field="productId"/><using field="stockId"/>
+        </field>
+        <field name="itemQty" type="Float" provider="GraphCommerce\CatalogStorefrontInventory\Model\DataExporter\Provider\StockItem">
+            <using field="productId"/><using field="stockId"/>
+        </field>
+        <field name="itemInStock" type="Boolean" provider="GraphCommerce\CatalogStorefrontInventory\Model\DataExporter\Provider\StockItem">
+            <using field="productId"/><using field="stockId"/>
+        </field>
+        <field name="qtyIncrements" type="Float" provider="GraphCommerce\CatalogStorefrontInventory\Model\DataExporter\Provider\StockItem">
+            <using field="productId"/><using field="stockId"/>
+        </field>
+        <field name="enableQtyIncrements" type="Boolean" provider="GraphCommerce\CatalogStorefrontInventory\Model\DataExporter\Provider\StockItem">
+            <using field="productId"/><using field="stockId"/>
+        </field>
+        <field name="manageStock" type="Boolean" provider="GraphCommerce\CatalogStorefrontInventory\Model\DataExporter\Provider\StockItem">
+            <using field="productId"/><using field="stockId"/>
+        </field>
+        <field name="backorders" type="Int" provider="GraphCommerce\CatalogStorefrontInventory\Model\DataExporter\Provider\StockItem">
+            <using field="productId"/><using field="stockId"/>
+        </field>
         <field name="minQty" type="Float" provider="GraphCommerce\CatalogStorefrontInventory\Model\DataExporter\Provider\StockItem">
             <using field="productId"/>
             <using field="stockId"/>

@@ -25,7 +25,16 @@ class ChildPriceRangesTest extends TestCase
         ]]];
         $prices = ['prices' => $group, 'taxClasses' => [
             'terms' => ['field' => 'taxClassId', 'size' => 100, 'missing' => '0'],
-            'aggs' => ['prices' => $group],
+            'aggs' => ['plain' => [
+                'filter' => ['bool' => ['must_not' => [['exists' => ['field' => 'fixedProductTaxKey']]]]],
+                'aggs' => ['prices' => $group],
+            ], 'fixedTaxes' => [
+                'terms' => ['field' => 'fixedProductTaxKey', 'size' => 1000],
+                'aggs' => [
+                    'prices' => $group,
+                    'document' => ['top_hits' => ['size' => 1, '_source' => ['fixedProductTaxes']]],
+                ],
+            ]],
         ]];
         $expected = [
             'size' => 0,
@@ -61,8 +70,8 @@ class ChildPriceRangesTest extends TestCase
             'salable' => [
                 'prices' => ['group' => $stats(90.125)],
                 'taxClasses' => ['buckets' => [
-                    ['key' => '2', 'prices' => ['group' => $stats(90.125)]],
-                    ['key' => '4', 'prices' => ['group' => $stats(null, 10)]],
+                    ['key' => '2', 'plain' => ['prices' => ['group' => $stats(90.125)]]],
+                    ['key' => '4', 'plain' => ['prices' => ['group' => $stats(null, 10)]]],
                 ]],
             ],
             'all' => [
@@ -77,5 +86,38 @@ class ChildPriceRangesTest extends TestCase
                 'all' => null,
             ],
         ], (new ChildPriceRanges())->parse($response));
+    }
+
+    public function testFixedTaxesKeepSeparateBoundsWithinOneTaxClass(): void
+    {
+        $stats = ['minRegular' => ['value' => 10], 'minFinal' => ['value' => 8], 'maxRegular' => ['value' => 20], 'maxFinal' => ['value' => 18]];
+        $taxes = [['country' => 'US', 'value' => 5]];
+        $mode = ['prices' => ['group' => $stats], 'taxClasses' => ['buckets' => [[
+            'key' => 2,
+            'plain' => ['prices' => ['group' => $stats]],
+            'fixedTaxes' => ['buckets' => [
+                ['key' => 'tax-key', 'prices' => ['group' => $stats], 'document' => ['hits' => ['hits' => [['_source' => ['fixedProductTaxes' => $taxes]]]]]],
+            ]],
+        ]]]];
+        $ranges = (new ChildPriceRanges())->parse(['aggregations' => ['parents' => ['buckets' => [[
+            'key' => 7, 'salable' => $mode, 'all' => $mode,
+        ]]]]]);
+
+        self::assertSame([10.0, 8.0, 20.0, 18.0], $ranges[7]['salable'][4][2]);
+        self::assertSame($taxes, $ranges[7]['salable'][4]['2:tax-key']['fixedProductTaxes']);
+        self::assertSame(2, $ranges[7]['salable'][4]['2:tax-key']['taxClassId']);
+        self::assertSame([10.0, 8.0, 20.0, 18.0], array_slice($ranges[7]['salable'][4]['2:tax-key'], 0, 4));
+    }
+
+    public function testIncompleteTaxGroupsFail(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        (new ChildPriceRanges())->parse(['aggregations' => ['parents' => ['buckets' => [[
+            'key' => 7,
+            'salable' => [
+                'prices' => ['group' => ['minFinal' => ['value' => 8.0]]],
+                'taxClasses' => ['buckets' => [['fixedTaxes' => ['sum_other_doc_count' => 1]]]],
+            ],
+        ]]]]]);
     }
 }

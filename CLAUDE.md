@@ -147,7 +147,7 @@ passes.
   destination: display incl, excl or both, catalog prices incl tax,
   cross-border trade and the tax classes follow core config; fixed product
   taxes from the document's `fixedProductTaxes` rows through `FixedProductTax`,
-  composites fall back while they are active), `PriceRanges` (di.xml `ranges`, by type id; the type
+  composite ranges include fixed product taxes), `PriceRanges` (di.xml `ranges`, by type id; the type
   modules add theirs) / the prices prefiller with its fields and routes (a
   type GraphQl module whose prefiller rewrites a price field sequences after
   `PriceGraphQl`, so the prices prefiller runs first), and
@@ -218,11 +218,9 @@ passes.
   child, related and bundle collections stay on core. The collection's select
   still runs: its joins carry `minimal_price` and `max_price`, which the
   configurable regular price needs and which an order by price refers to;
-  leaving `_itemsById` empty is what skips the attribute load. One product
-  without a document loads the whole page from the database (a plugin cannot
-  fill `_itemsById`, so a row by row merge would leave bare rows), with the
-  ids logged: all of them points at the store code or the cluster, a few at
-  the feeds. `catalog-storefront:parity:listing <base url>` renders
+  leaving `_itemsById` empty skips the attribute load. Every selected product
+  requires a usable document. A missing document stops the page.
+  `catalog-storefront:parity:listing <base url>` renders
   `dev/parity/listing-pages.txt` on both paths and compares the lines with
   the form key, the uniqid element id suffixes and the private content
   stamps normalised, plus what a theme module adds to the command's
@@ -296,17 +294,8 @@ registers all modules through composer autoload.
 
 ## Rules
 
-- This package runs in the monolith: a GraphQL request SHOULD take everything
-  it needs from the OpenSearch document, and MAY read the database where the
-  document cannot answer or where a lookup is cheaper than carrying the data
-  on the document. Index-time feed processing (the `ExportFeedInterface`
-  implementation and feed plugins, run by `indexer:reindex`) assembles the
-  documents and uses SQL freely. A deployment whose read side has no catalog
-  database turns the SHOULD into a MUST NOT, so a lookup added here MUST be
-  replaceable by a document field. The statements a request runs show in a
-  MageOS_Profiler trace; this package records none itself.
-- The read path MUST fall back to the core resolver whenever the document lacks
-  what a field needs, never to a database read written into a document plugin.
+- Document readers MUST use indexed data. A missing document, unsupported field
+  or storage error MUST stop the read. Feed processing assembles documents with SQL.
 - Parity is the gate: `bin/magento catalog-storefront:parity <endpoint>` MUST
   stay green before a change ships. It sends the storefront key (saved once
   in the configuration; `config:set catalog/storefront_documents/key ""`
@@ -316,8 +305,7 @@ registers all modules through composer autoload.
   (`https://worker.localhost.reachdigital.io/graphql`; the backend host name
   goes to the host PHP-FPM). Every query runs twice unjudged first, and a
   failing query is requested again up to `--attempts` times (three), so the
-  gate sees the steady state and not the memo fill of a cold worker thread. A fallback is printed, not failed: it is allowed when the
-  document cannot answer, and the reason says whether that is so. Add a query
+  gate checks the steady state. Every fallback report fails the gate. Add a query
   for every field a new plugin serves. A poison test (edit a document in
   OpenSearch, see the change in the response) proves a field is live; the gate
   alone cannot. Product `sku` filters accept only `eq` and `in`; the gate fails
@@ -336,10 +324,9 @@ registers all modules through composer autoload.
   `# @requires-field ProductInterface.activity`; a query whose requirement the
   run does not meet is skipped, which is how the signed-in queries and the
   guest cart query share one directory.
-- Every fallback to core in a document plugin goes through `Model/Strict`:
-  `fallback(self::class, reason)` where the document cannot answer,
-  `exception(self::class, $e)` where the plugin failed (it logs a warning).
-  The keyed report is what makes a silent fallback visible outside the gate.
+- `Model/Strict::fallback(self::class, reason)` throws `DocumentReadException`.
+  `exception(self::class, $e)` logs a storage or reader error and throws with its
+  cause. Both stop ordinary and keyed requests. Keyed requests also report the reason.
 - Every request-time document read gates on `Model/Mode::documents()` before
   it touches a document or the store: a resolver plugin, a layer plugin, a
   data provider, a hydration, a prefill. Under `X-Catalog-Storefront: core`

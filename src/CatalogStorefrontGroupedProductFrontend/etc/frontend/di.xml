@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Detail\ProductDocument">
+        <arguments><argument name="supportedOptionTypes" xsi:type="array"><item name="grouped" xsi:type="boolean">true</item></argument></arguments>
+    </type>
+    <type name="Magento\GroupedProduct\Model\Product\Type\Grouped">
+        <plugin name="catalog_storefront_grouped_documents" type="GraphCommerce\CatalogStorefrontGroupedProductFrontend\Plugin\AssociatedProductsFromDocument"/>
+    </type>
+    <type name="Magento\GroupedProduct\ViewModel\ValidateQuantity">
+        <plugin name="catalog_storefront_grouped_quantity" type="GraphCommerce\CatalogStorefrontGroupedProductFrontend\Plugin\QuantityFromDocument"/>
+    </type>
+</config>

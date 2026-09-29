@@ -58,7 +58,9 @@
         "graphcommerce/module-catalog-storefront-review-graph-ql": "self.version",
         "graphcommerce/module-catalog-storefront-review-frontend": "self.version",
         "graphcommerce/module-catalog-storefront-profiler": "self.version",
-        "graphcommerce/module-catalog-storefront-search": "self.version"
+        "graphcommerce/module-catalog-storefront-search": "self.version",
+        "graphcommerce/module-catalog-storefront-bundle-product-frontend": "self.version",
+        "graphcommerce/module-catalog-storefront-grouped-product-frontend": "self.version"
     },
     "suggest": {
         "ext-simdjson_plus": "GraphCommerce_CatalogStorefrontOpenSearch decodes document store responses about twice as fast",
@@ -106,7 +108,9 @@
             "src/CatalogStorefrontDownloadableGraphQl/registration.php",
             "src/CatalogStorefrontReview/registration.php",
             "src/CatalogStorefrontReviewGraphQl/registration.php",
-            "src/CatalogStorefrontReviewFrontend/registration.php"
+            "src/CatalogStorefrontReviewFrontend/registration.php",
+            "src/CatalogStorefrontBundleProductFrontend/registration.php",
+            "src/CatalogStorefrontGroupedProductFrontend/registration.php"
         ],
         "psr-4": {
             "GraphCommerce\\CatalogStorefrontApi\\": "src/CatalogStorefrontApi/",
@@ -140,7 +144,9 @@
             "GraphCommerce\\CatalogStorefrontReview\\": "src/CatalogStorefrontReview/",
             "GraphCommerce\\CatalogStorefrontReviewGraphQl\\": "src/CatalogStorefrontReviewGraphQl/",
             "GraphCommerce\\CatalogStorefrontReviewFrontend\\": "src/CatalogStorefrontReviewFrontend/",
-            "GraphCommerce\\CatalogStorefrontSearch\\": "src/CatalogStorefrontSearch/"
+            "GraphCommerce\\CatalogStorefrontSearch\\": "src/CatalogStorefrontSearch/",
+            "GraphCommerce\\CatalogStorefrontBundleProductFrontend\\": "src/CatalogStorefrontBundleProductFrontend/",
+            "GraphCommerce\\CatalogStorefrontGroupedProductFrontend\\": "src/CatalogStorefrontGroupedProductFrontend/"
         }
     }
 }

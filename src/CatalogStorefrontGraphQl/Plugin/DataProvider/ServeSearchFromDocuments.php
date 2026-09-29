@@ -33,14 +33,12 @@ class ServeSearchFromDocuments
             return $proceed($searchCriteria, $searchResult, $attributes, $context);
         }
 
-        $rebuilt = $this->hydration->rebuildFromIds(
+        return $this->hydration->rebuildFromIds(
             array_map(static fn($item) => (int)$item->getId(), $searchResult->getItems()),
             (int)$searchResult->getTotalCount(),
             $searchCriteria,
             $context,
             $attributes
         );
-
-        return $rebuilt ?? $proceed($searchCriteria, $searchResult, $attributes, $context);
     }
 }

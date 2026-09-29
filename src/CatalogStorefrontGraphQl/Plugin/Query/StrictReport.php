@@ -8,8 +8,7 @@ use GraphCommerce\CatalogStorefront\Model\Mode;
 use Magento\Framework\GraphQl\Query\QueryProcessor;
 
 /**
- * In strict mode, the response extensions carry the request's path, its
- * fallbacks and its SQL statements under `catalogStorefront`.
+ * Keyed responses carry the request path and document failures under `catalogStorefront`.
  */
 class StrictReport
 {

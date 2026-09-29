@@ -90,8 +90,6 @@ class LinkedProductsFromDocuments
             }
         } catch (\Throwable $e) {
             $this->strict->exception(self::class, $e);
-
-            return $proceed($context, $field, $requests);
         }
 
         $response = new BatchResponse();

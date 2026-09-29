@@ -23,7 +23,7 @@ class SpecialPriceMapFromDocumentsTest extends TestCase
 
     private bool $coreAsked = false;
 
-    private function plugin(): SpecialPriceMapFromDocuments
+    private function plugin(bool $documents = true): SpecialPriceMapFromDocuments
     {
         $this->listing = new ListingDocuments();
         $this->coreAsked = false;
@@ -39,7 +39,9 @@ class SpecialPriceMapFromDocumentsTest extends TestCase
         $stock = $this->createMock(StockConfigurationInterface::class);
         $stock->method('isShowOutOfStock')->willReturnCallback(fn () => $this->showOutOfStock);
 
-        return new SpecialPriceMapFromDocuments($this->listing, new ProductPrice(), $session, $storeManager, $stock);
+        $mode = $this->createStub(\GraphCommerce\CatalogStorefrontProductFrontend\Model\Mode::class);
+        $mode->method('listing')->willReturn($documents);
+        return new SpecialPriceMapFromDocuments($this->listing, new ProductPrice(), $session, $storeManager, $stock, $mode);
     }
 
     private function map(array $ids, bool $flagged = true): array
@@ -89,13 +91,23 @@ class SpecialPriceMapFromDocumentsTest extends TestCase
         $this->assertSame([3 => true], $this->mapWith($plugin, [3]));
     }
 
-    public function testAProductWithoutADocumentSendsTheListingToCore(): void
+    public function testAMissingProductDocumentFails(): void
     {
         $plugin = $this->plugin();
         $this->documents();
 
-        $this->assertSame(['core' => true], $this->mapWith($plugin, [1, 9]));
-        $this->assertTrue($this->coreAsked);
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        try {
+            $this->mapWith($plugin, [1, 9]);
+        } finally {
+            self::assertFalse($this->coreAsked);
+        }
+    }
+
+    public function testCoreModeUsesCore(): void
+    {
+        self::assertSame(['core' => true], $this->mapWith($this->plugin(false), [1]));
+        self::assertTrue($this->coreAsked);
     }
 
     public function testACoreListingIsUntouched(): void

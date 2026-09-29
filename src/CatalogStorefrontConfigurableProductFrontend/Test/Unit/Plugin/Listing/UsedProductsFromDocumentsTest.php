@@ -32,10 +32,9 @@ class UsedProductsFromDocumentsTest extends TestCase
      */
     private function plugin(array $documents, ?ListingDocuments $page = null): UsedProductsFromDocuments
     {
+        $documents = array_map(static fn(array $document) => $document + ['prices' => [['group' => '0', 'regular' => 10.0]]], $documents);
         $this->products = $this->createMock(ProductDocumentsInterface::class);
         $this->products->method('documents')->willReturn($documents);
-        // build() answers a model for every document it was given, keyed by product id — the
-        // missing ones are what the plugin's whole-page fallback keys on.
         $this->products->method('build')->willReturnCallback(
             function ($store, array $docs): array {
                 $models = [];
@@ -126,17 +125,15 @@ class UsedProductsFromDocumentsTest extends TestCase
         $this->assertSame(['memoised'], $result);
     }
 
-    public function testFallsBackWhenSpecificAttributesAreRequested(): void
+    public function testUnsupportedAttributeSelectionFails(): void
     {
-        // A filtered request is not the listing path; core handles it.
-        $result = $this->plugin([])->aroundGetUsedProducts(
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        $this->plugin([])->aroundGetUsedProducts(
             $this->createMock(Configurable::class),
             $this->proceed(),
             $this->parent(['v1' => 1]),
             [42]
         );
-
-        $this->assertSame(['from core'], $result);
     }
 
     public function testFallsBackWithoutADocument(): void
@@ -150,16 +147,14 @@ class UsedProductsFromDocumentsTest extends TestCase
         $this->assertSame(['from core'], $result);
     }
 
-    public function testFallsBackWhenAnyListedVariantHasNoDocument(): void
+    public function testAMissingVariantDocumentFails(): void
     {
-        // A configurable rendering a short option list is worse than a slow one.
-        $result = $this->plugin([1 => []])->aroundGetUsedProducts(
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        $this->plugin([1 => []])->aroundGetUsedProducts(
             $this->createMock(Configurable::class),
             $this->proceed(),
             $this->parent(['v1' => 1, 'v2' => 2])
         );
-
-        $this->assertSame(['from core'], $result);
     }
 
     public function testChildrenComeBackInAscendingIdOrder(): void
@@ -202,22 +197,29 @@ class UsedProductsFromDocumentsTest extends TestCase
         $this->assertContains(['tier_price', []], $this->written[7]);
     }
 
-    public function testTierPriceIsLeftToCoreWhenTheDocumentHasSome(): void
+    public function testUnsupportedTierPricesFail(): void
     {
-        // The feed's tier price shape lacks the website and group fields Magento's structure
-        // carries, so a product that genuinely has them is left alone rather than rebuilt.
         $plugin = $this->plugin([
             7 => ['prices' => [['group' => '0', 'regular' => 10.0, 'tierPrices' => [['qty' => 2]]]]],
         ]);
 
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
         $plugin->aroundGetUsedProducts(
             $this->createMock(Configurable::class),
             $this->proceed(),
             $this->parent(['v7' => 7])
         );
+    }
 
-        $written = array_column($this->written[7], 0);
-        $this->assertNotContains('tier_price', $written);
+    public function testMissingPriceDataFails(): void
+    {
+        $plugin = $this->plugin([7 => ['prices' => []]]);
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        $plugin->aroundGetUsedProducts(
+            $this->createMock(Configurable::class),
+            $this->proceed(),
+            $this->parent(['v7' => 7])
+        );
     }
 
     public function testCatalogRulePriceIsSetToNullWhenNoRuleApplies(): void

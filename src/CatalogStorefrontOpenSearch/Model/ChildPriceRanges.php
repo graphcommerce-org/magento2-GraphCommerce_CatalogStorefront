@@ -32,7 +32,16 @@ class ChildPriceRanges
         ]]];
         $prices = ['prices' => $group, 'taxClasses' => [
             'terms' => ['field' => 'taxClassId', 'size' => 100, 'missing' => '0'],
-            'aggs' => ['prices' => $group],
+            'aggs' => ['plain' => [
+                'filter' => ['bool' => ['must_not' => [['exists' => ['field' => 'fixedProductTaxKey']]]]],
+                'aggs' => ['prices' => $group],
+            ], 'fixedTaxes' => [
+                'terms' => ['field' => 'fixedProductTaxKey', 'size' => 1000],
+                'aggs' => [
+                    'prices' => $group,
+                    'document' => ['top_hits' => ['size' => 1, '_source' => ['fixedProductTaxes']]],
+                ],
+            ]],
         ]];
 
         return [
@@ -67,7 +76,25 @@ class ChildPriceRanges
                 }
                 $byTaxClass = [];
                 foreach ($bucket[$mode]['taxClasses']['buckets'] ?? [] as $class) {
-                    $classStats = $class['prices']['group'];
+                    if (!empty($class['fixedTaxes']['sum_other_doc_count'])) {
+                        throw new \RuntimeException('Composite fixed product tax groups exceed the aggregation limit.');
+                    }
+                    if (!empty($class['fixedTaxes']['buckets'])) {
+                        foreach ($class['fixedTaxes']['buckets'] as $taxes) {
+                            $classStats = $taxes['prices']['group'];
+                            if (isset($classStats['minFinal']['value'])) {
+                                $byTaxClass[$class['key'] . ':' . $taxes['key']] = [
+                                    (float)$classStats['minRegular']['value'],
+                                    (float)$classStats['minFinal']['value'],
+                                    (float)$classStats['maxRegular']['value'],
+                                    (float)$classStats['maxFinal']['value'],
+                                    'taxClassId' => (int)$class['key'],
+                                    'fixedProductTaxes' => $taxes['document']['hits']['hits'][0]['_source']['fixedProductTaxes'] ?? [],
+                                ];
+                            }
+                        }
+                    }
+                    $classStats = $class['plain']['prices']['group'];
                     if (isset($classStats['minFinal']['value'])) {
                         $byTaxClass[(int)$class['key']] = [
                             (float)$classStats['minRegular']['value'],

@@ -19,7 +19,7 @@ The base module: feed rows in, documents out, product models for any frontend.
   documents.
 - [`Model/Mode`](Model/Mode.php) answers the path of the request, and every request-time
   plugin of the package asks it before it reads a document.
-  [`Model/Strict`](Model/Strict.php) collects the fallbacks a keyed request reports.
+  [`Model/Strict`](Model/Strict.php) stops failed document reads and reports the reason on keyed requests.
 - The commands `catalog-storefront:rebuild` and `catalog-storefront:status`, and the
   settings under Catalog > Catalog > Catalog Storefront Document Store.
 

@@ -5,6 +5,9 @@ namespace GraphCommerce\CatalogStorefrontQuoteGraphQl\Test\Unit\Plugin\Resolver;
 
 use GraphCommerce\CatalogStorefront\Model\Mode;
 use GraphCommerce\CatalogStorefront\Model\Strict;
+use GraphCommerce\CatalogStorefront\Model\DocumentReadException;
+use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
+use Psr\Log\LoggerInterface;
 use GraphCommerce\CatalogStorefrontGraphQl\Model\Query\SelectedProductFields;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\HydrationInterface;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
@@ -38,7 +41,7 @@ class CartItemProductsFromDocumentsTest extends TestCase
         $this->info = $this->createStub(ResolveInfo::class);
         $this->info->method('getFieldSelection')->willReturn(['product' => ['sku' => true, 'small_image' => true]]);
         $this->hydration = $this->createMock(HydrationInterface::class);
-        $this->strict = $this->createMock(Strict::class);
+        $this->strict = new Strict($this->createStub(StorefrontKey::class), $this->createStub(LoggerInterface::class));
     }
 
     public function testTheDocumentFieldsLandOnTheItemProductAndThePricesStay(): void
@@ -83,23 +86,21 @@ class CartItemProductsFromDocumentsTest extends TestCase
         self::assertArrayHasKey(PrefillerInterface::KEY, $result['items'][0]['product']);
     }
 
-    public function testAProductWithoutADocumentIsReportedAndKeepsTheCoreValue(): void
+    public function testAMissingProductDocumentFails(): void
     {
         $model = $this->product(46);
         $this->hydration->method('documents')->willReturn([]);
-        $this->hydration->expects(self::once())->method('prefill')->with(self::anything(), self::anything(), [], [], self::anything());
-        $this->strict->expects(self::once())->method('fallback')->with(CartItemProductsFromDocuments::class, 'no document for product 46');
+        $this->hydration->expects(self::never())->method('prefill');
 
         $items = [['quantity' => 1.0, 'prices' => self::PRICES, 'product' => ['sku' => '24-WG080', 'model' => $model]]];
-        $result = $this->plugin()->afterResolve(
+        $this->expectException(DocumentReadException::class);
+        $this->plugin()->afterResolve(
             $this->createStub(ResolverInterface::class),
             $items,
             $this->createStub(Field::class),
             $this->context,
             $this->info
         );
-
-        self::assertSame($items, $result);
     }
 
     public function testTheCorePathIsLeftAlone(): void

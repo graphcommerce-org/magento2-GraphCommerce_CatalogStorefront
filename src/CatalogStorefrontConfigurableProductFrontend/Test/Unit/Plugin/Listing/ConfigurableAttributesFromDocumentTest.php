@@ -160,10 +160,8 @@ class ConfigurableAttributesFromDocumentTest extends TestCase
         $this->assertSame(['memoised'], $result);
     }
 
-    public function testFallsBackWithoutConfigurableOptions(): void
+    public function testACoreProductUsesCore(): void
     {
-        // The field is written by the GraphQl module today, so a store without it gets no key
-        // and must degrade to core rather than render a card with no options.
         $result = $this->plugin()->aroundGetConfigurableAttributes(
             $this->createMock(Configurable::class),
             $this->proceed(),
@@ -173,28 +171,26 @@ class ConfigurableAttributesFromDocumentTest extends TestCase
         $this->assertSame('from core', $result);
     }
 
-    public function testFallsBackWhenAnAttributeCannotBeResolved(): void
+    public function testAnUnresolvedAttributeFails(): void
     {
-        $result = $this->plugin(false)->aroundGetConfigurableAttributes(
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        $this->plugin(false)->aroundGetConfigurableAttributes(
             $this->createMock(Configurable::class),
             $this->proceed(),
             $this->product([$this->option()])
         );
-
-        $this->assertSame('from core', $result, 'a partial attribute set is worse than a slow one');
     }
 
-    public function testFallsBackWhenAnOptionCarriesNoAttributeCode(): void
+    public function testAMissingAttributeCodeFails(): void
     {
         $option = $this->option();
         unset($option['code']);
 
-        $result = $this->plugin()->aroundGetConfigurableAttributes(
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        $this->plugin()->aroundGetConfigurableAttributes(
             $this->createMock(Configurable::class),
             $this->proceed(),
             $this->product([$option])
         );
-
-        $this->assertSame('from core', $result);
     }
 }

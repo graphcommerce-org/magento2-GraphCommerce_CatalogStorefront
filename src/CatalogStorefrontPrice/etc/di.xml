@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="GraphCommerce\CatalogStorefrontApi\Storage\EntityMappings">
+        <arguments>
+            <argument name="mappings" xsi:type="array">
+                <item name="product" xsi:type="array">
+                    <item name="fixedProductTaxKey" xsi:type="string">keyword</item>
+                </item>
+            </argument>
+        </arguments>
+    </type>
     <!-- The range of a product by type id; a type module adds its own. -->
     <type name="GraphCommerce\CatalogStorefrontPrice\Model\Read\PriceRanges">
         <arguments>

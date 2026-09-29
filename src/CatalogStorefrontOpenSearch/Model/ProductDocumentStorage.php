@@ -190,7 +190,7 @@ class ProductDocumentStorage implements ProductDocumentStorageInterface
                         ['terms' => ['bundleParentIds' => $parentIds]],
                         ['term' => ['status' => 'Enabled']],
                     ]]],
-                    '_source' => ['sku', 'bundleParentIds', 'stock.isSalable', 'priceIndex', 'taxClassId'],
+                    '_source' => ['sku', 'bundleParentIds', 'stock.isSalable', 'priceIndex', 'taxClassId', 'fixedProductTaxes'],
                 ],
             ],
             array_map(

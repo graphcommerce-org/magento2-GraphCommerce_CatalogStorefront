@@ -21,6 +21,6 @@
 # Simple: the detail path with none of the configurable work.
 /push-it-messenger-bag{product_suffix}
 
-# Grouped and bundle: their children come from link collections the package does not flag.
+# Grouped and bundle: document children, options, prices and quantity validation.
 /set-of-sprite-yoga-straps{product_suffix}
 /sprite-yoga-companion-kit{product_suffix}

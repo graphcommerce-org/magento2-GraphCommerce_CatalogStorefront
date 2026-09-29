@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Plugin\Listing;
 
 use GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Read\ConfigurableOptions;
+use GraphCommerce\CatalogStorefront\Model\DocumentReadException;
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
 use Magento\Catalog\Model\Product;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
@@ -54,24 +55,27 @@ class ConfigurableAttributesFromDocument
         }
 
         $document = $product->getData(ProductDocumentsInterface::DOCUMENT_KEY);
-        $options = is_array($document) ? $this->configurableOptions->attributes($document) : null;
-        if ($options === null) {
+        if (!is_array($document)) {
             return $proceed($product);
+        }
+        $options = $this->configurableOptions->attributes($document);
+        if ($options === null) {
+            throw new DocumentReadException('Catalog configurable document requires configurableOptions.');
         }
 
         try {
             $attributes = $this->build($options);
         } catch (\Throwable $e) {
-            $this->logger->warning(
-                'catalog-storefront configurable attribute fallback: ' . $e->getMessage(),
+            $this->logger->error(
+                'catalog-storefront configurable attribute read: ' . $e->getMessage(),
                 ['exception' => $e]
             );
 
-            return $proceed($product);
+            throw new DocumentReadException('Catalog configurable attributes could not be read.', 0, $e);
         }
 
         if ($attributes === null) {
-            return $proceed($product);
+            throw new DocumentReadException('Catalog configurable document contains unresolved attributes.');
         }
 
         $product->setData(self::CACHE_KEY, $attributes);
@@ -81,7 +85,7 @@ class ConfigurableAttributesFromDocument
 
     /**
      * @return \Magento\ConfigurableProduct\Model\Product\Type\Configurable\Attribute[]|null
-     *         null when an attribute cannot be resolved, so the caller falls back whole
+     *         null when an attribute cannot be resolved
      */
     private function build(array $options): ?array
     {

@@ -168,6 +168,13 @@ class Parity extends Command
                 ));
                 continue;
             }
+            try {
+                $headers = array_map(fn(string $value) => $this->resolve($value, $endpoint, $key, $shared), $headers);
+            } catch (\RuntimeException $e) {
+                $skipped++;
+                $output->writeln(sprintf('SKIP  %s: %s', $name, $e->getMessage()));
+                continue;
+            }
             preg_match_all('/^#\s*@requires-field\s+(\w+)\.(\w+)\s*$/m', $query, $fields, PREG_SET_ORDER);
             $missing = array_filter($fields, fn(array $field) => !$this->hasField($endpoint, $key, $headers, $field[1], $field[2]));
             if ($missing) {
@@ -301,6 +308,7 @@ class Parity extends Command
                     continue;
                 }
                 try {
+                    $headers = array_map(fn(string $value) => $this->resolve($value, $endpoints[Mode::CORE], $key, $shared), $headers);
                     $query = $this->resolve($entry['query'], $endpoints[Mode::CORE], $key, $shared);
                 } catch (\RuntimeException) {
                     continue;
@@ -576,10 +584,14 @@ class Parity extends Command
                     'category_url_path' => $this->picks->categoryUrlPath($kind),
                     'option_uid' => str_contains($argument, ':') ? $this->namedOptionUid($argument) : $this->picks->optionUid($kind),
                     'search_term' => $this->picks->searchTerm(),
+                    'currency' => $this->picks->currency(),
                     'cart_id' => $this->cartId ??= $this->cartId($endpoint, $key, $headers),
                     default => throw new \RuntimeException(sprintf('unknown placeholder {{%s}}', $name)),
                 };
                 if ($value === null || $value === '') {
+                    if ($name === 'currency') {
+                        throw new \RuntimeException('the store has no alternate currency with an exchange rate');
+                    }
                     throw new \RuntimeException(sprintf('the catalog has no %s for {{%s}}', str_replace(':', ' ', $kind), $match[1] . ($argument === '' ? '' : ':' . $argument)));
                 }
 
@@ -693,7 +705,7 @@ class Parity extends Command
         foreach ((array)($report['fallbacks'] ?? []) as $fallback) {
             $output->writeln(sprintf('FALLBACK %s: %s', $name, $fallback));
         }
-        $ok = true;
+        $ok = empty($report['fallbacks']);
         $diffs = $this->diff($this->normalize($core['data'] ?? null), $this->normalize($documents['data'] ?? null));
         if ($diffs) {
             $ok = false;
