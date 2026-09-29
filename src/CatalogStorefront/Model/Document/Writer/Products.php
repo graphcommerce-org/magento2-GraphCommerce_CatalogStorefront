@@ -83,6 +83,9 @@ class Products implements FeedWriterInterface
             $documents = [];
             foreach ($feedRows[$store] ?? [] as $id => $row) {
                 $document = array_diff_key($row, self::NOT_STORED);
+                if (isset($row['fixedProductTaxes'])) {
+                    $document['fixedProductTaxKey'] = hash('sha256', json_encode($row['fixedProductTaxes'], JSON_THROW_ON_ERROR));
+                }
                 if (isset($row['customAttributes'])) {
                     // The raw value per attribute code, which is how every reader takes it.
                     $attributes = [];

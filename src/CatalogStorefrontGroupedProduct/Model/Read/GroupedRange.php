@@ -37,14 +37,18 @@ class GroupedRange implements PriceRangeInterface
         }
         $regular = null;
         $final = null;
-        foreach ($byTaxClass as $taxClassId => [$minRegular, $minFinal]) {
+        foreach ($byTaxClass as $taxClassId => $taxRange) {
+            [$minRegular, $minFinal] = $taxRange;
+            $taxClassId = $taxRange['taxClassId'] ?? $taxClassId;
+            $taxes = $taxRange['fixedProductTaxes'] ?? [];
             $child = $this->displayPrice->forTaxClass($product, $taxClassId ?: null);
+            $child->setTypeId('simple');
             if ($minRegular <= $range[0]) {
-                $amount = $this->displayPrice->regular($minRegular, $child, $context->store);
+                $amount = $this->displayPrice->regular($minRegular, $child, $context->store, $taxes);
                 $regular = $regular === null || $amount->value < $regular->value ? $amount : $regular;
             }
             if ($minFinal <= $range[1]) {
-                $amount = $this->displayPrice->final($minFinal, $minRegular, $child, $context->store);
+                $amount = $this->displayPrice->final($minFinal, $minRegular, $child, $context->store, 4, $taxes);
                 $final = $final === null || $amount->value < $final->value ? $amount : $final;
             }
         }

@@ -65,8 +65,13 @@ class FilterableAttributesFromDocuments implements ResetAfterRequestInterface
             $this->documents[$key],
             static fn (array $document) => ($document['attributeType'] ?? Product::ENTITY) === Product::ENTITY
         );
-        usort($listed, static fn (array $a, array $b) =>
-            [(int)($a['position'] ?? 0), (int)($a['attributeId'] ?? 0)] <=> [(int)($b['position'] ?? 0), (int)($b['attributeId'] ?? 0)]);
+        $order = $search ? 'searchFilterOrder' : 'categoryFilterOrder';
+        foreach ($listed as $document) {
+            if (!isset($document[$order])) {
+                throw new DocumentReadException('Catalog listing requires ' . $order . ': ' . ($document['attributeCode'] ?? ''));
+            }
+        }
+        usort($listed, static fn (array $a, array $b) => $a[$order] <=> $b[$order]);
 
         $attributes = [];
         foreach ($listed as $document) {

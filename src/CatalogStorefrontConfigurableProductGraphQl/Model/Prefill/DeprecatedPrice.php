@@ -3,11 +3,9 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontConfigurableProductGraphQl\Model\Prefill;
 
-use GraphCommerce\CatalogStorefront\Model\Strict;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillRequest;
 use GraphCommerce\CatalogStorefrontPrice\Model\Read\DisplayPrice;
-use GraphCommerce\CatalogStorefrontPrice\Model\Read\FixedProductTax;
 use GraphCommerce\CatalogStorefrontPriceGraphQl\Model\Prefill\Prices;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 
@@ -16,15 +14,12 @@ use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
  * configurable's own tax class, the lowest variant's base prices through the
  * parent's price info, where price_range taxes every variant with its own
  * class. Runs after the core price prefiller and rewrites what it filled.
- * With fixed product taxes active the configurable went to core.
  */
 class DeprecatedPrice implements PrefillerInterface
 {
     public function __construct(
         private readonly DisplayPrice $displayPrice,
         private readonly Prices $prices,
-        private readonly FixedProductTax $fixedProductTax,
-        private readonly Strict $strict,
     ) {
     }
 
@@ -32,9 +27,6 @@ class DeprecatedPrice implements PrefillerInterface
     {
         if (!$request->selects('price')) {
             return [];
-        }
-        if ($this->fixedProductTax->active($request->store)) {
-            $this->strict->fallback(self::class, 'fixed product taxes on a configurable');
         }
         $store = $request->store;
         $showOutOfStock = $this->displayPrice->showOutOfStock($store);

@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontPriceGraphQl\Model\Prefill;
 
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
-use GraphCommerce\CatalogStorefront\Model\Strict;
 use GraphCommerce\CatalogStorefrontPrice\Model\Read\DisplayPrice;
 use GraphCommerce\CatalogStorefrontPrice\Model\Read\FixedProductTax;
 use GraphCommerce\CatalogStorefrontPrice\Model\Read\PriceRanges;
@@ -19,17 +18,8 @@ use Magento\Tax\Helper\Data as TaxHelper;
 use Magento\Tax\Model\Config as TaxConfig;
 use Magento\Weee\Model\Tax as WeeeTax;
 
-/**
- * The price range, the deprecated price and the tier prices, from the price
- * rows and the range of the product's type, in the request's display
- * currency and tax setup. With fixed product taxes active a composite
- * carries the taxes of its children, which the aggregated ranges do not
- * see, so composites go to core then.
- */
 class Prices implements PrefillerInterface
 {
-    private const OWN_PRICE_TYPES = ['simple', 'virtual', 'downloadable'];
-
     public function __construct(
         private readonly DisplayPrice $displayPrice,
         private readonly PriceCurrencyInterface $priceCurrency,
@@ -38,7 +28,6 @@ class Prices implements PrefillerInterface
         private readonly PriceRanges $priceRanges,
         private readonly FixedProductTax $fixedProductTax,
         private readonly TaxHelper $taxHelper,
-        private readonly Strict $strict,
     ) {
     }
 
@@ -53,9 +42,6 @@ class Prices implements PrefillerInterface
         $fixedProductTaxes = $this->fixedProductTax->active($store);
         $output = [];
         foreach ($models as $id => $product) {
-            if ($fixedProductTaxes && !in_array($product->getTypeId(), self::OWN_PRICE_TYPES, true)) {
-                $this->strict->fallback(self::class, 'fixed product taxes on a ' . $product->getTypeId());
-            }
             $document = $documents[$id] ?? [];
             $range = $this->priceRanges->range($product, $document, $request, $showOutOfStock);
             if ($range === null) {

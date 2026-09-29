@@ -110,6 +110,14 @@
         <field name="facetSortOrder" type="Int"/>
     </record>
     <record name="ProductAttributeMetadata">
+        <field name="categoryFilterOrder" type="Int" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeLayer">
+            <using field="id"/>
+            <using field="storeViewCode"/>
+        </field>
+        <field name="searchFilterOrder" type="Int" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeLayer">
+            <using field="id"/>
+            <using field="storeViewCode"/>
+        </field>
         <field name="attributeId" type="Int" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\AttributeLayer">
             <using field="id"/>
             <using field="storeViewCode"/>

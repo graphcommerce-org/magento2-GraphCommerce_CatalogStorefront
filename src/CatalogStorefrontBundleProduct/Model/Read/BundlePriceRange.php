@@ -112,12 +112,14 @@ class BundlePriceRange implements PriceRangeInterface
                     ];
                 } else {
                     $childProduct = $this->displayPrice->forTaxClass($product, isset($child['taxClassId']) ? (int)$child['taxClassId'] : null);
+                    $childProduct->setTypeId('simple');
+                    $taxes = (array)($child['fixedProductTaxes'] ?? []);
                     $unitRegular = round($unitRegular, 2);
                     $unitFinal = round($unitFinal, 2);
                     // Core rounds each selection's taxed amount to cents before it sums them, and the tax
                     // adjustment of a dynamic bundle is the taxed amount minus the selection's untaxed value.
-                    $taxed = function (float $base, bool $discounted) use ($childProduct, $store, $qty): Amount {
-                        $amount = $this->displayPrice->amount($base, $discounted, $childProduct, $store);
+                    $taxed = function (float $base, bool $discounted) use ($childProduct, $store, $qty, $taxes): Amount {
+                        $amount = $this->displayPrice->amount($base, $discounted, $childProduct, $store, 2, $taxes);
                         $value = round($amount->value, 2);
                         $untaxed = round((float)$this->priceCurrency->convert($base, $store), 2);
 
@@ -150,6 +152,10 @@ class BundlePriceRange implements PriceRangeInterface
         $range = [];
         foreach (['regular', 'final'] as $price) {
             $base = new Amount($price === 'regular' ? ($fixed ? $regular : 0.0) : $finalBase);
+            if (!$fixed && !empty($document['fixedProductTaxes'])) {
+                $amount = $this->displayPrice->amount(0.0, false, $product, $store, 2, $document['fixedProductTaxes']);
+                $base = new Amount(round($amount->value, 2), 0.0, round($amount->weee, 2), round($amount->weeeTax, 2));
+            }
             $minimum = $base;
             if (!$fixed && !$required) {
                 $lowest = null;
@@ -180,7 +186,7 @@ class BundlePriceRange implements PriceRangeInterface
         if ($fixed) {
             // The fixed total is one amount, taxed with the bundle's class; a final below the regular is discounted.
             $display = fn(Amount $total, Amount $regularTotal): Amount =>
-                $this->displayPrice->amount($total->value, $total->value < $regularTotal->value, $product, $store);
+                $this->displayPrice->amount($total->value, $total->value < $regularTotal->value, $product, $store, 2, (array)($document['fixedProductTaxes'] ?? []));
 
             return [
                 $display($range['regular'][0], $range['regular'][0]),

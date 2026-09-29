@@ -44,13 +44,17 @@ class ConfigurableRange implements PriceRangeInterface
             $byTaxClass = [(int)$product->getTaxClassId() => $range];
         }
         $bounds = [];
-        foreach ($byTaxClass as $taxClassId => [$minRegular, $minFinal, $maxRegular, $maxFinal]) {
+        foreach ($byTaxClass as $taxClassId => $taxRange) {
+            [$minRegular, $minFinal, $maxRegular, $maxFinal] = $taxRange;
+            $taxClassId = $taxRange['taxClassId'] ?? $taxClassId;
+            $taxes = $taxRange['fixedProductTaxes'] ?? [];
             $variant = $this->displayPrice->forTaxClass($product, $taxClassId ?: null);
+            $variant->setTypeId('simple');
             $bounds[] = [
-                $this->displayPrice->regular($minRegular, $variant, $store),
-                $this->displayPrice->final($minFinal, $minRegular, $variant, $store),
-                $this->displayPrice->regular($maxRegular, $variant, $store),
-                $this->displayPrice->final($maxFinal, $maxRegular, $variant, $store),
+                $this->displayPrice->regular($minRegular, $variant, $store, $taxes),
+                $this->displayPrice->final($minFinal, $minRegular, $variant, $store, 4, $taxes),
+                $this->displayPrice->regular($maxRegular, $variant, $store, $taxes),
+                $this->displayPrice->final($maxFinal, $maxRegular, $variant, $store, 4, $taxes),
             ];
         }
 

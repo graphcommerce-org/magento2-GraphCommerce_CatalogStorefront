@@ -25,7 +25,13 @@ class ChildPriceRangesTest extends TestCase
         ]]];
         $prices = ['prices' => $group, 'taxClasses' => [
             'terms' => ['field' => 'taxClassId', 'size' => 100, 'missing' => '0'],
-            'aggs' => ['prices' => $group],
+            'aggs' => ['prices' => $group, 'fixedTaxes' => [
+                'terms' => ['field' => 'fixedProductTaxKey', 'size' => 1000, 'missing' => ''],
+                'aggs' => [
+                    'prices' => $group,
+                    'document' => ['top_hits' => ['size' => 1, '_source' => ['fixedProductTaxes']]],
+                ],
+            ]],
         ]];
         $expected = [
             'size' => 0,
@@ -77,5 +83,26 @@ class ChildPriceRangesTest extends TestCase
                 'all' => null,
             ],
         ], (new ChildPriceRanges())->parse($response));
+    }
+
+    public function testFixedTaxesKeepSeparateBoundsWithinOneTaxClass(): void
+    {
+        $stats = ['minRegular' => ['value' => 10], 'minFinal' => ['value' => 8], 'maxRegular' => ['value' => 20], 'maxFinal' => ['value' => 18]];
+        $taxes = [['country' => 'US', 'value' => 5]];
+        $mode = ['prices' => ['group' => $stats], 'taxClasses' => ['buckets' => [[
+            'key' => 2,
+            'fixedTaxes' => ['buckets' => [
+                ['key' => '', 'prices' => ['group' => $stats], 'document' => ['hits' => ['hits' => [['_source' => []]]]]],
+                ['key' => 'tax-key', 'prices' => ['group' => $stats], 'document' => ['hits' => ['hits' => [['_source' => ['fixedProductTaxes' => $taxes]]]]]],
+            ]],
+        ]]]];
+        $ranges = (new ChildPriceRanges())->parse(['aggregations' => ['parents' => ['buckets' => [[
+            'key' => 7, 'salable' => $mode, 'all' => $mode,
+        ]]]]]);
+
+        self::assertSame([], $ranges[7]['salable'][4]['2:']['fixedProductTaxes']);
+        self::assertSame($taxes, $ranges[7]['salable'][4]['2:tax-key']['fixedProductTaxes']);
+        self::assertSame(2, $ranges[7]['salable'][4]['2:tax-key']['taxClassId']);
+        self::assertSame([10.0, 8.0, 20.0, 18.0], array_slice($ranges[7]['salable'][4]['2:tax-key'], 0, 4));
     }
 }

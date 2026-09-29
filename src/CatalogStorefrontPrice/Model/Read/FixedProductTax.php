@@ -127,6 +127,9 @@ class FixedProductTax
         $weee = $type !== WeeeTax::DISPLAY_EXCL
             ? (float)$this->priceCurrency->convert(array_sum(array_column($attributes, 'amountExclTax')), $store)
             : 0.0;
+        if ($product->getTypeId() === 'configurable' || ($product->getTypeId() === 'bundle' && !$product->getPriceType())) {
+            $weee = 0.0;
+        }
         $weeeTax = $type !== WeeeTax::DISPLAY_EXCL && $this->weeeHelper->isTaxable($store) && !$this->taxHelper->displayPriceExcludingTax()
             ? (float)$this->priceCurrency->convert(array_sum(array_column($attributes, 'taxAmount')), $store)
             : 0.0;
