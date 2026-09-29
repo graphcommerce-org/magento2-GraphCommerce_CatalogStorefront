@@ -32,8 +32,11 @@ class ChildPriceRanges
         ]]];
         $prices = ['prices' => $group, 'taxClasses' => [
             'terms' => ['field' => 'taxClassId', 'size' => 100, 'missing' => '0'],
-            'aggs' => ['prices' => $group, 'fixedTaxes' => [
-                'terms' => ['field' => 'fixedProductTaxKey', 'size' => 1000, 'missing' => ''],
+            'aggs' => ['plain' => [
+                'filter' => ['bool' => ['must_not' => [['exists' => ['field' => 'fixedProductTaxKey']]]]],
+                'aggs' => ['prices' => $group],
+            ], 'fixedTaxes' => [
+                'terms' => ['field' => 'fixedProductTaxKey', 'size' => 1000],
                 'aggs' => [
                     'prices' => $group,
                     'document' => ['top_hits' => ['size' => 1, '_source' => ['fixedProductTaxes']]],
@@ -87,9 +90,8 @@ class ChildPriceRanges
                                 ];
                             }
                         }
-                        continue;
                     }
-                    $classStats = $class['prices']['group'];
+                    $classStats = $class['plain']['prices']['group'];
                     if (isset($classStats['minFinal']['value'])) {
                         $byTaxClass[(int)$class['key']] = [
                             (float)$classStats['minRegular']['value'],

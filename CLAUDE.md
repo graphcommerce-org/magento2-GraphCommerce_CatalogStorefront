@@ -147,7 +147,7 @@ passes.
   destination: display incl, excl or both, catalog prices incl tax,
   cross-border trade and the tax classes follow core config; fixed product
   taxes from the document's `fixedProductTaxes` rows through `FixedProductTax`,
-  composite fixed product taxes raise an error), `PriceRanges` (di.xml `ranges`, by type id; the type
+  composite ranges include fixed product taxes), `PriceRanges` (di.xml `ranges`, by type id; the type
   modules add theirs) / the prices prefiller with its fields and routes (a
   type GraphQl module whose prefiller rewrites a price field sequences after
   `PriceGraphQl`, so the prices prefiller runs first), and
