@@ -52,6 +52,9 @@ class ProductModelBuilder
             'name' => $document['name'] ?? null,
             'type_id' => ($document['type'] ?? 'simple') === 'bundle_fixed' ? 'bundle' : ($document['type'] ?? 'simple'),
             'attribute_set_id' => (int)($document['attributeSetId'] ?? 0),
+            'has_options' => (string)(int)($document['hasOptions'] ?? false),
+            'required_options' => (string)(int)($document['requiredOptions'] ?? false),
+            'website_ids' => array_map('strval', (array)($document['websiteIds'] ?? [])),
             'status' => ($document['status'] ?? '') === 'Enabled'
                 ? Status::STATUS_ENABLED
                 : Status::STATUS_DISABLED,
@@ -72,8 +75,6 @@ class ProductModelBuilder
             ],
             'is_salable' => (int)($document['stock']['isSalable'] ?? $document['inStock'] ?? false),
             'tax_class_id' => $document['taxClassId'] ?? null,
-            // A loaded product carries its custom options as a list, and a detail page counts them.
-            // A document that holds any is not built at all, so the list is empty here.
             'options' => [],
         ];
 

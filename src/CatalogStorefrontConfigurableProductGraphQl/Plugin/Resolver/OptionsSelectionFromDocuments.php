@@ -51,7 +51,6 @@ class OptionsSelectionFromDocuments
         $options = (array)$this->configurableOptions->expand($document);
         if (!$options || !isset($options[0]['id'])) {
             $this->strict->fallback(self::class, 'configurableOptions without option ids');
-            return $proceed($field, $context, $info, $value, $args);
         }
 
         try {
@@ -155,8 +154,6 @@ class OptionsSelectionFromDocuments
             throw $e;
         } catch (\Throwable $e) {
             $this->strict->exception(self::class, $e);
-
-            return $proceed($field, $context, $info, $value, $args);
         }
 
         return [

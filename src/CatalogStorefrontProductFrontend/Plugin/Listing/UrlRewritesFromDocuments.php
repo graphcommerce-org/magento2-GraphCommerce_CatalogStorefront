@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing;
 
+use GraphCommerce\CatalogStorefront\Model\DocumentReadException;
+use GraphCommerce\CatalogStorefrontProductFrontend\Model\Mode;
 use GraphCommerce\CatalogStorefrontProductFrontend\Model\Read\ListingDocuments;
 use Magento\Store\Model\StoreManagerInterface;
 use Magento\UrlRewrite\Model\UrlFinderInterface;
@@ -12,8 +14,7 @@ use Magento\UrlRewrite\Service\V1\Data\UrlRewriteFactory;
 /**
  * The product URL rewrites of a listing's cards, from the documents the listing read. The
  * product collection asks for them by product id after its load, with the category id in
- * the metadata when product URLs carry the category path. A list with a product the page
- * holds no document for takes core's query.
+ * the metadata when product URLs carry the category path. Each product requires URL rewrite data.
  */
 class UrlRewritesFromDocuments
 {
@@ -21,6 +22,7 @@ class UrlRewritesFromDocuments
         private readonly ListingDocuments $listing,
         private readonly StoreManagerInterface $storeManager,
         private readonly UrlRewriteFactory $urlRewriteFactory,
+        private readonly Mode $mode,
     ) {
     }
 
@@ -39,14 +41,20 @@ class UrlRewritesFromDocuments
         }
 
         $storeId = (int)$data[UrlRewrite::STORE_ID];
+        if (!$this->mode->listing($storeId)) {
+            return $proceed($data);
+        }
         $documents = $this->listing->documents((string)$this->storeManager->getStore($storeId)->getCode());
+        if ($documents === []) {
+            return $proceed($data);
+        }
         $categoryId = (string)($data[UrlRewrite::METADATA]['category_id'] ?? '');
 
         $rewrites = [];
         foreach ($ids as $id) {
             $document = $documents[(int)$id] ?? null;
             if ($document === null || !array_key_exists('urlRewrites', $document)) {
-                return $proceed($data);
+                throw new DocumentReadException('Catalog product requires URL rewrite data: ' . (int)$id);
             }
             foreach ((array)$document['urlRewrites'] as $rewrite) {
                 $parameters = array_column((array)($rewrite['parameters'] ?? []), 'value', 'name');

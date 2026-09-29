@@ -93,6 +93,7 @@ class ParityTest extends TestCase
         yield 'wrong mode' => [['data' => ['products' => ['items' => [['sku' => 'test']]]], 'extensions' => ['catalogStorefront' => ['mode' => Mode::CORE]]]];
         yield 'empty products' => [['data' => ['products' => ['items' => []]], 'extensions' => ['catalogStorefront' => ['mode' => Mode::DOCUMENTS]]]];
         yield 'changed data' => [['data' => ['products' => ['items' => [['sku' => 'changed']]]], 'extensions' => ['catalogStorefront' => ['mode' => Mode::DOCUMENTS]]]];
+        yield 'matching data with fallback' => [['data' => ['products' => ['items' => [['sku' => 'test']]]], 'extensions' => ['catalogStorefront' => ['mode' => Mode::DOCUMENTS, 'fallbacks' => ['Reader: missing document']]]]];
         yield 'partial GraphQL error' => [['data' => ['products' => ['items' => [['sku' => 'test']]]], 'errors' => [['message' => 'partial failure']]]];
     }
 
@@ -186,6 +187,27 @@ class ParityTest extends TestCase
         self::assertStringContainsString('SKIP  04-unknown: unknown placeholder {{colour}}', $tester->getDisplay());
         self::assertStringContainsString('1 of 1 queries identical, 3 skipped', $tester->getDisplay());
         self::assertSame(3, json_decode((string)file_get_contents($this->directory . '/report.json'), true)['skipped']);
+    }
+
+    public function testCurrencyHeadersAreResolvedForSchemaChecksAndSoakRequests(): void
+    {
+        file_put_contents($this->directory . '/01-product.graphql', "# @header Content-Currency: {{currency}}\n# @requires-field ProductInterface.name\n{ products { items { sku name } } }");
+        $command = $this->command('EUR');
+        self::assertSame(0, (new CommandTester($command))->execute($this->input() + ['--warm' => '1', '--soak' => '2']));
+        self::assertGreaterThan(5, count($command->headers));
+        foreach ($command->headers as $headers) {
+            self::assertSame('EUR', $headers['Content-Currency']);
+        }
+    }
+
+    public function testAnUnavailableCurrencySkipsTheQueryBeforeAnyRequest(): void
+    {
+        file_put_contents($this->directory . '/01-product.graphql', "# @header Content-Currency: {{currency}}\n# @requires-field ProductInterface.name\n{ products { items { sku name } } }");
+        $command = $this->command();
+        $tester = new CommandTester($command);
+        self::assertSame(0, $tester->execute($this->input()));
+        self::assertSame([], $command->requests);
+        self::assertStringContainsString('SKIP  01-product: the store has no alternate currency with an exchange rate', $tester->getDisplay());
     }
 
     public function testAQueryIsSkippedWhereTheSchemaLacksTheFieldItRequires(): void
@@ -384,12 +406,15 @@ class ParityTest extends TestCase
         return ['endpoint' => 'https://reference.example/graphql', '--queries' => $this->directory];
     }
 
-    private function command(): Parity
+    private function command(?string $currency = null): Parity
     {
         $config = $this->createStub(Config::class);
         $config->method('key')->willReturn('diagnostic-key');
 
-        return new class($config, $this->createStub(EavConfig::class), $this->createStub(Uid::class), $this->picks()) extends Parity {
+        $picks = $this->picks();
+        $picks->method('currency')->willReturn($currency);
+
+        return new class($config, $this->createStub(EavConfig::class), $this->createStub(Uid::class), $picks) extends Parity {
             public array $requests = [];
             public array $queries = [];
             public array $headers = [];

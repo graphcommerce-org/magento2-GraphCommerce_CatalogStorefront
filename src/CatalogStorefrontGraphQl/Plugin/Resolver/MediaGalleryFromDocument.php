@@ -44,8 +44,6 @@ class MediaGalleryFromDocument
         }
         if (!array_key_exists('media_gallery', $document)) {
             $this->strict->fallback(self::class, 'document without media_gallery');
-
-            return $proceed($field, $context, $info, $value, $args);
         }
 
         $gallery = $document['media_gallery'] ?? [];

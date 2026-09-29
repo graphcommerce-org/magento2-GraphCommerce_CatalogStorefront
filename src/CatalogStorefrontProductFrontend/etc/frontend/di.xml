@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface">
+        <plugin name="catalog_storefront_frontend_prices" type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Detail\PricesFromDocument"/>
+    </type>
+    <type name="Magento\CatalogRule\Observer\ProcessFrontFinalPriceObserver">
+        <plugin name="catalog_storefront_frontend_catalog_rule" type="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Detail\CatalogRuleFromDocument"/>
+    </type>
+</config>

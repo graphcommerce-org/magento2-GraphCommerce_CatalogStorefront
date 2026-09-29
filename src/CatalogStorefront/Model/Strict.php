@@ -6,12 +6,7 @@ namespace GraphCommerce\CatalogStorefront\Model;
 use Magento\Framework\ObjectManager\ResetAfterRequestInterface;
 use Psr\Log\LoggerInterface;
 
-/**
- * The report of one request: every fallback to core a document plugin took,
- * with its reason. Without the report, only an exception fallback leaves a
- * trace, as a warning in the log. A request with the storefront key gets the
- * fallbacks in the GraphQL response extensions.
- */
+/** Document read failures stop the request. Keyed requests also carry the failure report. */
 class Strict implements ResetAfterRequestInterface
 {
     private ?bool $enabled = null;
@@ -30,23 +25,23 @@ class Strict implements ResetAfterRequestInterface
         return $this->enabled ??= $this->key->granted();
     }
 
-    /**
-     * A document plugin hands the field to core because the document cannot answer.
-     */
-    public function fallback(string $source, string $reason): void
+    public function fallback(string $source, string $reason, ?\Throwable $previous = null): never
     {
+        $separator = strrpos($source, '\\');
+        $message = ($separator === false ? $source : substr($source, $separator + 1)) . ': ' . $reason;
         if ($this->enabled()) {
-            $this->fallbacks[] = substr($source, strrpos($source, '\\') + 1) . ': ' . $reason;
+            $this->fallbacks[] = $message;
         }
+        throw new DocumentReadException('Catalog document read failed in ' . $message, 0, $previous);
     }
 
-    /**
-     * A document plugin hands the field to core because it failed.
-     */
-    public function exception(string $source, \Throwable $e): void
+    public function exception(string $source, \Throwable $e): never
     {
-        $this->logger->warning(sprintf('catalog-storefront fallback in %s: %s', $source, $e->getMessage()));
-        $this->fallback($source, 'exception: ' . $e->getMessage());
+        if ($e instanceof DocumentReadException) {
+            throw $e;
+        }
+        $this->logger->error(sprintf('catalog-storefront document read in %s: %s', $source, $e->getMessage()), ['exception' => $e]);
+        $this->fallback($source, $e->getMessage(), $e);
     }
 
     /**

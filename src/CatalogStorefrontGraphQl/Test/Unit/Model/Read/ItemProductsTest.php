@@ -5,6 +5,9 @@ namespace GraphCommerce\CatalogStorefrontGraphQl\Test\Unit\Model\Read;
 
 use GraphCommerce\CatalogStorefront\Model\Mode;
 use GraphCommerce\CatalogStorefront\Model\Strict;
+use GraphCommerce\CatalogStorefront\Model\DocumentReadException;
+use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
+use Psr\Log\LoggerInterface;
 use GraphCommerce\CatalogStorefrontGraphQl\Model\Read\ItemProducts;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\HydrationInterface;
 use Magento\Catalog\Model\Product;
@@ -29,7 +32,7 @@ class ItemProductsTest extends TestCase
         $this->context = $this->createStub(ContextInterface::class);
         $this->context->method('getExtensionAttributes')->willReturn($extension);
         $this->hydration = $this->createMock(HydrationInterface::class);
-        $this->strict = $this->createMock(Strict::class);
+        $this->strict = new Strict($this->createStub(StorefrontKey::class), $this->createStub(LoggerInterface::class));
     }
 
     public function testTheWholeBatchIsFetchedOnceAndAProductWithoutADocumentHasNoValue(): void
@@ -57,16 +60,16 @@ class ItemProductsTest extends TestCase
         self::assertNull($products->value(99));
     }
 
-    public function testAFailedFetchIsReportedAndLeavesEveryItemToCore(): void
+    public function testAFailedFetchStopsTheRead(): void
     {
         $mode = $this->createStub(Mode::class);
         $mode->method('documents')->willReturn(true);
         $this->hydration->method('documents')->willThrowException(new \RuntimeException('cluster down'));
-        $this->strict->expects(self::once())->method('exception');
 
         $products = new ItemProducts($mode, $this->hydration, $this->createStub(StoreManagerInterface::class), $this->strict);
         $products->expect([1], [], $this->context);
 
-        self::assertNull($products->value(1));
+        $this->expectException(DocumentReadException::class);
+        $products->value(1);
     }
 }

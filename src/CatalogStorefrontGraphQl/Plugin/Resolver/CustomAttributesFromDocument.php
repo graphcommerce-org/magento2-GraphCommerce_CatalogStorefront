@@ -17,9 +17,7 @@ use GraphCommerce\CatalogStorefront\Model\Strict;
  * Serves custom_attributesV2 from the document's raw attribute values and the
  * attribute documents of the codes the product has a value for: the visible,
  * non-static ones, by attribute id as core's attribute list comes back, a
- * select or multiselect as its selected options in option order. A filter on
- * a property the attribute documents do not carry falls back to core, which
- * also reports a filter that is not an attribute property.
+ * select or multiselect as its selected options in option order.
  */
 class CustomAttributesFromDocument
 {
@@ -58,14 +56,11 @@ class CustomAttributesFromDocument
         }
         if (!isset($document['customAttributes'])) {
             $this->strict->fallback(self::class, 'document without customAttributes');
-
-            return $proceed($field, $context, $info, $value, $args);
         }
         $filters = [];
         foreach ((array)($args['filters'] ?? []) as $filterField => $filterValue) {
             if (!isset(self::FILTERS[$filterField])) {
                 $this->strict->fallback(self::class, 'unsupported custom attribute filter');
-                return $proceed($field, $context, $info, $value, $args);
             }
             $filters[self::FILTERS[$filterField]] = (int)$filterValue;
         }
@@ -93,7 +88,6 @@ class CustomAttributesFromDocument
             );
             if (!$attributes && $values && !$this->attributeDocuments->available($storeCode)) {
                 $this->strict->fallback(self::class, 'no attribute documents for the store view');
-                return $proceed($field, $context, $info, $value, $args);
             }
             uasort($attributes, static fn(array $a, array $b) => (int)($a['attributeId'] ?? 0) <=> (int)($b['attributeId'] ?? 0));
 
@@ -122,8 +116,6 @@ class CustomAttributesFromDocument
             }
         } catch (\Throwable $e) {
             $this->strict->exception(self::class, $e);
-
-            return $proceed($field, $context, $info, $value, $args);
         }
 
         return ['items' => $items, 'errors' => []];

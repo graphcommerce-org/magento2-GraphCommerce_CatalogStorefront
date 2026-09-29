@@ -1,0 +1,22 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-bundle-product-frontend",
+    "description": "Serves bundle product pages from catalog documents",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-bundle": "*",
+        "graphcommerce/module-catalog-storefront-product-frontend": "self.version",
+        "graphcommerce/module-catalog-storefront-bundle-product": "self.version",
+        "graphcommerce/module-catalog-storefront-inventory": "self.version"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontBundleProductFrontend\\": ""
+        }
+    }
+}

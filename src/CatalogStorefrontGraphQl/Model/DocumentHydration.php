@@ -67,7 +67,7 @@ class DocumentHydration implements HydrationInterface
         SearchCriteriaInterface $searchCriteria,
         ?ContextInterface $context,
         array $requestedFields = [],
-    ): ?SearchResultsInterface {
+    ): SearchResultsInterface {
         if (!$ids) {
             $result = $this->searchResultsFactory->create();
             $result->setSearchCriteria($searchCriteria);
@@ -95,15 +95,11 @@ class DocumentHydration implements HydrationInterface
             foreach ($ids as $id) {
                 if (!isset($models[$id])) {
                     $this->strict->fallback(self::class, 'no document for product ' . $id);
-
-                    return null;
                 }
                 $items[$id] = $models[$id];
             }
         } catch (\Throwable $e) {
             $this->strict->exception(self::class, $e);
-
-            return null;
         }
 
         $result = $this->searchResultsFactory->create();

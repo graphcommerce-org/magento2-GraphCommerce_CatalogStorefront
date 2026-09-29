@@ -252,14 +252,13 @@ class DocumentLowestPriceOptionsProviderTest extends TestCase
         $this->assertSame($expected, $provider->getProducts($parent));
     }
 
-    public function testFallsBackToCoreWhenTheConfigurableHasNoChildren(): void
+    public function testAMissingChildDocumentFails(): void
     {
         $parent = $this->parent([]);
         $provider = $this->provider();
-        $expected = [$this->createMock(Product::class)];
-        $this->core->expects($this->once())->method('getProducts')->with($parent)->willReturn($expected);
-
-        $this->assertSame($expected, $provider->getProducts($parent));
+        $this->core->expects($this->never())->method('getProducts');
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        $provider->getProducts($parent);
     }
 
     public function testFallsBackToCoreForANonConfigurable(): void

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing;
 
+use GraphCommerce\CatalogStorefront\Model\DocumentReadException;
 use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
 use GraphCommerce\CatalogStorefrontProductFrontend\Model\LoadedAttributeCollectionFactory;
 use GraphCommerce\CatalogStorefrontProductFrontend\Model\Mode;
@@ -18,8 +19,7 @@ use Magento\Store\Model\StoreManagerInterface;
  * category layer lists the attributes with a filterable mode, the search layer the ones
  * filterable in search and visible, both by position. The attribute models come from the
  * EAV config, with the store label of the document. A layer that lists no attribute is an
- * empty list. A store view without attribute documents, or an attribute the EAV config does
- * not know, takes core's select.
+ * empty list. The store view requires attribute documents and resolved EAV attributes.
  */
 class FilterableAttributesFromDocuments implements ResetAfterRequestInterface
 {
@@ -59,7 +59,7 @@ class FilterableAttributesFromDocuments implements ResetAfterRequestInterface
             self::PAGE
         )['documents'];
         if ($this->documents[$key] === [] && $this->storage->count(self::ENTITY, $storeViewCode) === 0) {
-            return $proceed();
+            throw new DocumentReadException('Catalog listing requires attribute documents for store ' . $storeViewCode . '.');
         }
         $listed = array_filter(
             $this->documents[$key],
@@ -72,7 +72,7 @@ class FilterableAttributesFromDocuments implements ResetAfterRequestInterface
         foreach ($listed as $document) {
             $attribute = $this->eavConfig->getAttribute(Product::ENTITY, (string)($document['attributeCode'] ?? ''));
             if (!$attribute->getId()) {
-                return $proceed();
+                throw new DocumentReadException('Catalog listing requires a resolved attribute: ' . ($document['attributeCode'] ?? ''));
             }
             $attribute->setData('store_label', $document['label'] ?? $attribute->getDefaultFrontendLabel());
             $attributes[] = $attribute;

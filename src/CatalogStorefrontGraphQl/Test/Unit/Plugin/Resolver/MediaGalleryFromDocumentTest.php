@@ -4,11 +4,11 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontGraphQl\Test\Unit\Plugin\Resolver;
 
 use GraphCommerce\CatalogStorefront\Model\Mode;
+use GraphCommerce\CatalogStorefront\Model\DocumentReadException;
 use GraphCommerce\CatalogStorefront\Model\Strict;
 use GraphCommerce\CatalogStorefrontGraphQl\Plugin\Query\RoutePrefilledFields;
 use GraphCommerce\CatalogStorefrontGraphQl\Plugin\Resolver\MediaGalleryFromDocument;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\HydrationInterface;
-use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
 use Magento\Catalog\Model\Product;
@@ -52,15 +52,16 @@ class MediaGalleryFromDocumentTest extends TestCase
         self::assertSame('/front.jpg', $result[0]['file']);
     }
 
-    public function testMissingUrlDataUsesTheCoreUrlResolverAndReportsTheFallback(): void
+    public function testMissingUrlDataStopsTheRead(): void
     {
         $strict = $this->createMock(Strict::class);
-        $strict->expects(self::once())->method('fallback')->with(MediaGalleryFromDocument::class, 'gallery entry without image URL');
+        $strict->expects(self::once())->method('fallback')
+            ->with(MediaGalleryFromDocument::class, 'gallery entry without image URL')
+            ->willThrowException(new DocumentReadException('Gallery image URL is missing.'));
         $placeholder = $this->createMock(Placeholder::class);
         $placeholder->expects(self::never())->method('getPlaceholder');
-        $result = $this->resolve([['file' => '/front.jpg']], $strict, $placeholder);
-        self::assertArrayNotHasKey('url', $result[0][PrefillerInterface::KEY]);
-        self::assertSame('/front.jpg', $result[0]['file']);
+        $this->expectException(DocumentReadException::class);
+        $this->resolve([['file' => '/front.jpg']], $strict, $placeholder);
     }
 
     public function testCoreModeUsesTheCoreGallery(): void

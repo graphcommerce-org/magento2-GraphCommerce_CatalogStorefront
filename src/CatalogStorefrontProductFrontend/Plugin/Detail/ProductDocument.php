@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Detail;
 
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
+use GraphCommerce\CatalogStorefront\Model\DocumentReadException;
 use GraphCommerce\CatalogStorefrontProductFrontend\Model\Mode;
 use Magento\Catalog\Api\Data\ProductInterface;
 use Magento\Catalog\Api\ProductRepositoryInterface;
@@ -14,20 +15,8 @@ use Magento\Store\Model\StoreManagerInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * Builds the product a detail page renders from its document instead of loading it.
- *
- * The load is what costs, not what follows it: a repository load reads the entity row, every
- * attribute value, the media gallery, the options and, for a configurable, its links and its super
- * attributes, all before it returns. A document put on the model afterwards is never read, because
- * the work is already done and a type instance memoises what it built.
- *
- * So the load is replaced, as the listing replaces its own: serve from the document, or hand over
- * to the database and change nothing. The model carries its status, visibility, categories, type
- * and store, which is what the detail page's init asks before it renders. It carries the document
- * too, so every plugin that reads one acts on it.
- *
- * Only the product the request renders is served. The cart, the wishlist, an order, an indexer and
- * the admin share this repository; none of them is a product view, so none of them reaches this.
+ * Builds the product selected by catalog_product_view from its document.
+ * The model carries its status, visibility, categories, type and store.
  */
 class ProductDocument implements ResetAfterRequestInterface
 {
@@ -42,6 +31,7 @@ class ProductDocument implements ResetAfterRequestInterface
         private readonly StoreManagerInterface $storeManager,
         private readonly RequestInterface $request,
         private readonly LoggerInterface $logger,
+        private readonly array $supportedOptionTypes = [],
     ) {
     }
 
@@ -70,13 +60,9 @@ class ProductDocument implements ResetAfterRequestInterface
             return $proceed($productId, $editMode, $storeId, $forceReload);
         }
 
-        try {
-            $store = $storeId === null
-                ? $this->storeManager->getStore()
-                : $this->storeManager->getStore($storeId);
-        } catch (\Throwable $e) {
-            return $proceed($productId, $editMode, $storeId, $forceReload);
-        }
+        $store = $storeId === null
+            ? $this->storeManager->getStore()
+            : $this->storeManager->getStore($storeId);
 
         if (!$this->mode->detail((int)$store->getId())) {
             return $proceed($productId, $editMode, $storeId, $forceReload);
@@ -92,33 +78,39 @@ class ProductDocument implements ResetAfterRequestInterface
         try {
             $documents = $this->products->documents((string)$store->getCode(), [$id]);
 
-            // Custom, bundle, downloadable and grouped options are stored under optionsV2 and are
-            // not built into a model yet, and the detail page renders them. A product that has any
-            // comes from the database whole.
-            if (!empty($documents[$id]['optionsV2'])) {
-                return $proceed($productId, $editMode, $storeId, $forceReload);
+            $type = $documents[$id]['type'] ?? '';
+            $optionType = $type === 'bundle_fixed' ? 'bundle' : $type;
+            if (in_array($optionType, ['bundle', 'grouped'], true)
+                && (empty($this->supportedOptionTypes[$optionType])
+                    || !isset($documents[$id]['hasOptions'], $documents[$id]['requiredOptions']))) {
+                throw new DocumentReadException('Catalog product detail requires its type module and option flags: ' . $type);
+            }
+
+            foreach ((array)($documents[$id]['optionsV2'] ?? []) as $option) {
+                if (empty($this->supportedOptionTypes[$option['type'] ?? ''])) {
+                    throw new DocumentReadException('Catalog product detail requires document support for option type: ' . ($option['type'] ?? 'unknown'));
+                }
+            }
+            if (!empty($documents[$id]['shopperInputOptions'])) {
+                throw new DocumentReadException('Catalog product detail requires document support for shopper input options.');
             }
 
             $models = $this->products->build($store, $documents);
         } catch (\Throwable $e) {
-            $this->logger->warning(
-                'catalog-storefront detail fallback: ' . $e->getMessage(),
+            $this->logger->error(
+                'catalog-storefront detail document read: ' . $e->getMessage(),
                 ['exception' => $e]
             );
 
-            return $proceed($productId, $editMode, $storeId, $forceReload);
+            throw new DocumentReadException('Catalog product detail document could not be read.', 0, $e);
         }
 
         $model = $models[$id] ?? null;
         if ($model === null) {
-            // The page loads from the database, as it does with the setting off. Say so: one
-            // product points at the feeds, every product at the store code or the cluster.
-            $this->logger->info(sprintf(
-                'catalog-storefront: product %d loaded from the database, it has no document',
+            throw new DocumentReadException(sprintf(
+                'Catalog product %d requires a usable document.',
                 $id
             ));
-
-            return $proceed($productId, $editMode, $storeId, $forceReload);
         }
 
         $this->built[$key] = $model;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Model\Read;
 
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
+use GraphCommerce\CatalogStorefront\Model\DocumentReadException;
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
 use GraphCommerce\CatalogStorefrontProductFrontend\Model\Read\ListingDocuments;
 use Magento\Catalog\Api\Data\ProductInterface;
@@ -48,7 +49,7 @@ class DocumentLowestPriceOptionsProvider implements LowestPriceOptionsProviderIn
 
         $type = $product->getTypeInstance();
         if (!$type instanceof Configurable) {
-            return $this->subject->getProducts($product);
+            throw new DocumentReadException('Catalog configurable document requires the configurable product type.');
         }
 
         try {
@@ -58,21 +59,19 @@ class DocumentLowestPriceOptionsProvider implements LowestPriceOptionsProviderIn
             }
             $children = $type->getUsedProducts($product);
         } catch (\Throwable $e) {
-            $this->logger->warning(
-                'catalog-storefront lowest price fallback: ' . $e->getMessage(),
+            $this->logger->error(
+                'catalog-storefront lowest price document read: ' . $e->getMessage(),
                 ['exception' => $e]
             );
 
-            return $this->subject->getProducts($product);
+            throw new DocumentReadException('Catalog configurable prices could not be read.', 0, $e);
         }
 
         if (!$children) {
-            $this->logger->info(sprintf(
-                'catalog-storefront: product %d priced from the database, it has no children',
+            throw new DocumentReadException(sprintf(
+                'Catalog product %d requires child documents for its price.',
                 (int)$product->getId()
             ));
-
-            return $this->subject->getProducts($product);
         }
 
         return $this->cheapest($children, $product);

@@ -63,8 +63,6 @@ class CategoryListFromDocuments
         }
         if ($filter === null) {
             $this->strict->fallback(self::class, 'unsupported categories filter');
-
-            return $proceed($field, $context, $info, $value, $args);
         }
 
         try {
@@ -80,7 +78,6 @@ class CategoryListFromDocuments
             $totalPages = (int)ceil($total / $pageSize);
             if (!$list && $currentPage > $totalPages && $total > 0) {
                 $this->strict->fallback(self::class, 'page past the last page');
-                return $proceed($field, $context, $info, $value, $args);
             }
             $documents = array_combine(array_map('intval', array_keys($documents)), $documents);
             $selection = $list ? $info->getFieldSelection(20) : (array)($info->getFieldSelection(20)['items'] ?? []);
@@ -89,8 +86,6 @@ class CategoryListFromDocuments
             $this->categoryDocuments->children($store, $categories, $documents, $this->depth($selection), $this->childFields($selection));
         } catch (\Throwable $e) {
             $this->strict->exception(self::class, $e);
-
-            return $proceed($field, $context, $info, $value, $args);
         }
 
         return $list ? array_values($categories) : [

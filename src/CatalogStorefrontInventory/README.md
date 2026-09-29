@@ -8,6 +8,6 @@ Magento_InventorySales.
   only where the products feed already wrote a document. A deleted row empties the slice,
   so the products feed's `inStock` answers again.
 - [`Model/DataExporter/Provider/StockItem`](Model/DataExporter/Provider/StockItem.php) adds
-  the stock item's own minimum quantity and minimum and maximum sale quantities, null where
-  the item takes the configured value, so a changed setting needs no export.
+  stock quantity, stock status, sale limits, quantity increments, stock management and backorder settings.
+  A configured setting has a null document value; the reader uses store configuration.
   `StockWebsites` adds the website codes that route the row.

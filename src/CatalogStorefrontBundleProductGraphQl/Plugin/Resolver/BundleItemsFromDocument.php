@@ -109,8 +109,6 @@ class BundleItemsFromDocument
             usort($items, static fn(array $a, array $b) => [$a['position'], $a['option_id']] <=> [$b['position'], $b['option_id']]);
         } catch (\Throwable $e) {
             $this->strict->exception(self::class, $e);
-
-            return $proceed($field, $context, $info, $value, $args);
         }
 
         return $items;

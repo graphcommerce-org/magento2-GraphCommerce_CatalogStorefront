@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontCategoryFrontend\Plugin;
 
+use GraphCommerce\CatalogStorefront\Model\DocumentReadException;
 use GraphCommerce\CatalogStorefrontCategoryFrontend\Model\LoadedCollectionFactory;
 use GraphCommerce\CatalogStorefrontCategoryFrontend\Model\Read\CategoryDocuments;
 use GraphCommerce\CatalogStorefrontProductFrontend\Model\Mode;
@@ -13,8 +14,7 @@ use Magento\Store\Model\StoreManagerInterface;
 
 /**
  * A rendered page's categories from their documents: the category a page loads, its
- * children, its parents and its design parent. A category without a document, and every
- * category while the listing setting is off, loads from the database.
+ * children, its parents and its design parent. The document path requires the selected category document.
  */
 class ResourceFromDocuments
 {
@@ -42,7 +42,7 @@ class ResourceFromDocuments
         $storeViewCode = (string)$this->storeManager->getStore($storeId)->getCode();
         $document = $this->documents->documents($storeViewCode, [(int)$entityId])[(int)$entityId] ?? null;
         if ($document === null) {
-            return $proceed($object, $entityId, $attributes);
+            throw new DocumentReadException('Catalog category requires a document: ' . (int)$entityId);
         }
         $this->documents->fill($object, $document, $storeId);
         $object->isObjectNew(false);

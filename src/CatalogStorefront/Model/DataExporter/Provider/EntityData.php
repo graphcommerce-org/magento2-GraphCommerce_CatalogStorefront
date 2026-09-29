@@ -5,11 +5,7 @@ namespace GraphCommerce\CatalogStorefront\Model\DataExporter\Provider;
 
 use Magento\Framework\App\ResourceConnection;
 
-/**
- * Adds the attribute set id to a products feed row; the exporter carries the
- * set only by name.
- */
-class AttributeSet
+class EntityData
 {
     public function __construct(
         private readonly ResourceConnection $resourceConnection,
@@ -23,9 +19,9 @@ class AttributeSet
             return [];
         }
         $connection = $this->resourceConnection->getConnection();
-        $sets = $connection->fetchPairs(
+        $entities = $connection->fetchAssoc(
             $connection->select()
-                ->from($this->resourceConnection->getTableName('catalog_product_entity'), ['entity_id', 'attribute_set_id'])
+                ->from($this->resourceConnection->getTableName('catalog_product_entity'), ['entity_id', 'attribute_set_id', 'has_options', 'required_options'])
                 ->where('entity_id IN (?)', $ids)
         );
         $output = [];
@@ -33,7 +29,9 @@ class AttributeSet
             $output[$value['storeViewCode'] . '_' . $value['productId']] = [
                 'productId' => $value['productId'],
                 'storeViewCode' => $value['storeViewCode'],
-                'attributeSetId' => (int)($sets[(int)$value['productId']] ?? 0),
+                'attributeSetId' => (int)($entities[(int)$value['productId']]['attribute_set_id'] ?? 0),
+                'hasOptions' => (bool)($entities[(int)$value['productId']]['has_options'] ?? false),
+                'requiredOptions' => (bool)($entities[(int)$value['productId']]['required_options'] ?? false),
             ];
         }
 

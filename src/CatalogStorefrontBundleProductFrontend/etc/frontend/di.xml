@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Detail\ProductDocument">
+        <arguments><argument name="supportedOptionTypes" xsi:type="array"><item name="bundle" xsi:type="boolean">true</item></argument></arguments>
+    </type>
+    <type name="Magento\Bundle\Model\Product\Type">
+        <plugin name="catalog_storefront_bundle_documents" type="GraphCommerce\CatalogStorefrontBundleProductFrontend\Plugin\OptionsFromDocument"/>
+    </type>
+    <type name="Magento\Bundle\Pricing\Adjustment\SelectionPriceListProviderInterface">
+        <plugin name="catalog_storefront_bundle_selection_prices" type="GraphCommerce\CatalogStorefrontBundleProductFrontend\Plugin\SelectionPricesFromDocument"/>
+    </type>
+</config>

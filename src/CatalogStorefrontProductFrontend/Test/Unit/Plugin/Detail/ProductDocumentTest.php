@@ -14,6 +14,7 @@ use Magento\Framework\App\RequestInterface;
 use Magento\Store\Api\Data\StoreInterface;
 use Magento\Store\Model\StoreManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 
@@ -31,7 +32,8 @@ class ProductDocumentTest extends TestCase
         bool $serveDetail = true,
         string $action = 'catalog_product_view',
         int $requestedId = self::PRODUCT_ID,
-        ?RequestInterface $request = null
+        ?RequestInterface $request = null,
+        array $supportedOptionTypes = [],
     ): ProductDocument {
         $this->products = $this->createMock(ProductDocumentsInterface::class);
         $this->repository = $this->createMock(ProductRepositoryInterface::class);
@@ -57,7 +59,8 @@ class ProductDocumentTest extends TestCase
             $mode,
             $storeManager,
             $request,
-            $this->createMock(LoggerInterface::class)
+            $this->createMock(LoggerInterface::class),
+            $supportedOptionTypes,
         );
     }
 
@@ -181,40 +184,76 @@ class ProductDocumentTest extends TestCase
         $this->assertTrue($this->proceeded);
     }
 
-    public function testAProductWithCustomOptionsLoads(): void
+    public function testUnsupportedCustomOptionsFail(): void
     {
-        // Custom, bundle, downloadable and grouped options are not built from a document yet, and
-        // the detail page renders them.
         $plugin = $this->plugin();
         $this->products->method('documents')
             ->willReturn([self::PRODUCT_ID => ['optionsV2' => [['type' => 'custom', 'id' => 'engraving']]]]);
         $this->products->expects($this->never())->method('build');
 
-        $plugin->aroundGetById($this->repository, $this->proceed(), self::PRODUCT_ID);
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        try {
+            $plugin->aroundGetById($this->repository, $this->proceed(), self::PRODUCT_ID);
+        } finally {
+            self::assertFalse($this->proceeded);
+        }
+    }
 
-        $this->assertTrue($this->proceeded);
+    #[DataProvider('compositeDocuments')]
+    public function testCompositeDetailRequiresItsReaderAndFields(array $document, array $types, bool $supported): void
+    {
+        $plugin = $this->plugin(supportedOptionTypes: $types);
+        $model = $this->createMock(Product::class);
+        $this->products->method('documents')->willReturn([self::PRODUCT_ID => $document]);
+        if ($supported) {
+            $this->products->expects(self::once())->method('build')->willReturn([self::PRODUCT_ID => $model]);
+        } else {
+            $this->products->expects(self::never())->method('build');
+            $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        }
+        try {
+            self::assertSame($model, $plugin->aroundGetById($this->repository, $this->proceed(), self::PRODUCT_ID));
+        } finally {
+            self::assertFalse($this->proceeded);
+        }
+    }
+
+    public static function compositeDocuments(): iterable
+    {
+        foreach (['bundle', 'bundle_fixed', 'grouped'] as $type) {
+            $option = $type === 'bundle_fixed' ? 'bundle' : $type;
+            yield $type => [['type' => $type, 'hasOptions' => true, 'requiredOptions' => false, 'optionsV2' => [['type' => $option]]], [$option => true], true];
+        }
+        yield 'missing reader with empty options' => [['type' => 'bundle', 'hasOptions' => false, 'requiredOptions' => false], [], false];
+        yield 'missing option flags' => [['type' => 'bundle'], ['bundle' => true], false];
+        yield 'shopper input' => [['shopperInputOptions' => [['type' => 'text']]], [], false];
     }
 
 
-    public function testAProductWithNoDocumentLoads(): void
+    public function testAMissingDocumentFails(): void
     {
         $plugin = $this->plugin();
         $this->products->method('documents')->willReturn([]);
         $this->products->method('build')->willReturn([]);
 
-        $plugin->aroundGetById($this->repository, $this->proceed(), self::PRODUCT_ID);
-
-        $this->assertTrue($this->proceeded, 'a missing document is a database load, not an error');
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        try {
+            $plugin->aroundGetById($this->repository, $this->proceed(), self::PRODUCT_ID);
+        } finally {
+            self::assertFalse($this->proceeded);
+        }
     }
 
-    public function testAFailedFetchLoads(): void
+    public function testAFailedFetchStopsTheRead(): void
     {
-        // The document store is an optimisation. A cluster that cannot answer renders the page.
         $plugin = $this->plugin();
         $this->products->method('documents')->willThrowException(new \RuntimeException('no alive nodes'));
 
-        $plugin->aroundGetById($this->repository, $this->proceed(), self::PRODUCT_ID);
-
-        $this->assertTrue($this->proceeded);
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        try {
+            $plugin->aroundGetById($this->repository, $this->proceed(), self::PRODUCT_ID);
+        } finally {
+            self::assertFalse($this->proceeded);
+        }
     }
 }

@@ -122,11 +122,16 @@ class FilterableAttributesFromDocumentsTest extends TestCase
         $this->assertSame(2, $this->reads);
     }
 
-    public function testAnAttributeTheEavConfigDoesNotKnowSendsTheListToCore(): void
+    public function testAnUnresolvedAttributeFails(): void
     {
         $plugin = $this->plugin($this->documents(), ['color' => 93]);
 
-        $this->assertSame('core', $plugin->aroundGetList($this->createMock(CategoryList::class), $this->proceed()));
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        try {
+            $plugin->aroundGetList($this->createMock(CategoryList::class), $this->proceed());
+        } finally {
+            self::assertFalse($this->coreAsked);
+        }
     }
 
     public function testALayerWithoutAFilterableAttributeIsAnEmptyList(): void
@@ -139,10 +144,15 @@ class FilterableAttributesFromDocumentsTest extends TestCase
         $this->assertFalse($this->coreAsked);
     }
 
-    public function testAStoreViewWithoutAttributeDocumentsAsksCore(): void
+    public function testMissingAttributeDocumentsFail(): void
     {
         $plugin = $this->plugin([], []);
 
-        $this->assertSame('core', $plugin->aroundGetList($this->createMock(CategoryList::class), $this->proceed()));
+        $this->expectException(\GraphCommerce\CatalogStorefront\Model\DocumentReadException::class);
+        try {
+            $plugin->aroundGetList($this->createMock(CategoryList::class), $this->proceed());
+        } finally {
+            self::assertFalse($this->coreAsked);
+        }
     }
 }

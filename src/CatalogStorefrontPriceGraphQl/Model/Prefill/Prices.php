@@ -55,7 +55,6 @@ class Prices implements PrefillerInterface
         foreach ($models as $id => $product) {
             if ($fixedProductTaxes && !in_array($product->getTypeId(), self::OWN_PRICE_TYPES, true)) {
                 $this->strict->fallback(self::class, 'fixed product taxes on a ' . $product->getTypeId());
-                continue;
             }
             $document = $documents[$id] ?? [];
             $range = $this->priceRanges->range($product, $document, $request, $showOutOfStock);

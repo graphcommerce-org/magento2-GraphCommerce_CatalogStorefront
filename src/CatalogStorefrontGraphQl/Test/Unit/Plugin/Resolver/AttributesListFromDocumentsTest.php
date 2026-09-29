@@ -6,6 +6,9 @@ namespace GraphCommerce\CatalogStorefrontGraphQl\Test\Unit\Plugin\Resolver;
 use GraphCommerce\CatalogStorefront\Model\Mode;
 use GraphCommerce\CatalogStorefront\Model\Read\AttributeDocuments;
 use GraphCommerce\CatalogStorefront\Model\Strict;
+use GraphCommerce\CatalogStorefront\Model\DocumentReadException;
+use GraphCommerce\CatalogStorefront\Model\StorefrontKey;
+use Psr\Log\LoggerInterface;
 use GraphCommerce\CatalogStorefrontGraphQl\Plugin\Resolver\AttributesListFromDocuments;
 use Magento\EavGraphQl\Model\Resolver\AttributesList;
 use Magento\Framework\GraphQl\Config\Element\Field;
@@ -47,7 +50,7 @@ class AttributesListFromDocumentsTest extends TestCase
     protected function setUp(): void
     {
         $this->documents = $this->createMock(AttributeDocuments::class);
-        $this->strict = $this->createMock(Strict::class);
+        $this->strict = new Strict($this->createStub(StorefrontKey::class), $this->createStub(LoggerInterface::class));
         $this->mode = $this->createMock(Mode::class);
         $this->mode->method('documents')->willReturn(true);
         $store = $this->createMock(StoreInterface::class);
@@ -82,7 +85,6 @@ class AttributesListFromDocumentsTest extends TestCase
     public function testTheFilteredListComesFromTheDocumentsInAttributeIdOrder(): void
     {
         $this->documents->expects(self::once())->method('all')->with('default')->willReturn(self::DOCUMENTS);
-        $this->strict->expects(self::never())->method('fallback');
 
         $result = $this->resolve($this->plugin(), ['entityType' => 'CATALOG_PRODUCT', 'filters' => ['is_searchable' => true, 'is_filterable' => true]], static fn() => self::fail('core must not run'));
 
@@ -125,20 +127,29 @@ class AttributesListFromDocumentsTest extends TestCase
         self::assertFalse($result['items'][2]['is_filterable']);
     }
 
-    public function testCoreAnswersOtherEntitiesUnknownFiltersAndTheCoreMode(): void
+    public function testCoreAnswersOtherEntitiesAndTheCoreMode(): void
     {
         $this->documents->method('all')->willReturn([]);
         $core = static fn() => ['items' => ['core'], 'entity_type' => 'X', 'errors' => []];
 
         self::assertSame(['core'], $this->resolve($this->plugin(), ['entityType' => 'CATALOG_CATEGORY', 'filters' => []], $core)['items']);
 
-        $this->strict->expects(self::exactly(2))->method('fallback');
-        self::assertSame(['core'], $this->resolve($this->plugin(), ['entityType' => 'CATALOG_PRODUCT', 'filters' => ['is_global' => true]], $core)['items']);
-        self::assertSame(['core'], $this->resolve($this->plugin(), ['entityType' => 'CATALOG_PRODUCT', 'filters' => []], $core)['items']);
-
         $mode = $this->createMock(Mode::class);
         $mode->method('documents')->willReturn(false);
         $plugin = new AttributesListFromDocuments($this->documents, $this->createMock(EnumLookup::class), $mode, $this->strict);
         self::assertSame(['core'], $this->resolve($plugin, ['entityType' => 'CATALOG_PRODUCT', 'filters' => []], $core)['items']);
+    }
+
+    public function testAnUnsupportedFilterFails(): void
+    {
+        $this->expectException(DocumentReadException::class);
+        $this->resolve($this->plugin(), ['entityType' => 'CATALOG_PRODUCT', 'filters' => ['is_global' => true]], static fn() => ['core']);
+    }
+
+    public function testMissingDocumentsFail(): void
+    {
+        $this->documents->method('all')->willReturn([]);
+        $this->expectException(DocumentReadException::class);
+        $this->resolve($this->plugin(), ['entityType' => 'CATALOG_PRODUCT', 'filters' => []], static fn() => ['core']);
     }
 }

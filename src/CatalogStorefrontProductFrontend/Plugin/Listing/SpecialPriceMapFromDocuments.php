@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefrontProductFrontend\Plugin\Listing;
 
 use GraphCommerce\CatalogStorefront\Model\ProductPrice;
+use GraphCommerce\CatalogStorefront\Model\DocumentReadException;
+use GraphCommerce\CatalogStorefrontProductFrontend\Model\Mode;
 use GraphCommerce\CatalogStorefrontProductFrontend\Model\Read\ListingDocuments;
 use Magento\Catalog\Pricing\Price\SpecialPriceBulkResolverInterface;
 use Magento\CatalogInventory\Api\StockConfigurationInterface;
@@ -15,8 +17,7 @@ use Magento\Store\Model\StoreManagerInterface;
 /**
  * The special price map of a document listing, from the documents and the child price ranges
  * the listing read: a product with a final price under its regular price for the customer
- * group, and a composite with such a child. A listing with a product the page holds no
- * document for takes core's query.
+ * group, and a composite with such a child. Every selected product requires a document.
  */
 class SpecialPriceMapFromDocuments
 {
@@ -26,6 +27,7 @@ class SpecialPriceMapFromDocuments
         private readonly CustomerSession $customerSession,
         private readonly StoreManagerInterface $storeManager,
         private readonly StockConfigurationInterface $stockConfiguration,
+        private readonly Mode $mode,
     ) {
     }
 
@@ -38,7 +40,7 @@ class SpecialPriceMapFromDocuments
         int $storeId,
         ?AbstractCollection $productCollection
     ): array {
-        if (!$productCollection || !$productCollection->getFlag(CollectionFlag::FLAG)) {
+        if (!$productCollection || !$productCollection->getFlag(CollectionFlag::FLAG) || !$this->mode->listing($storeId)) {
             return $proceed($storeId, $productCollection);
         }
 
@@ -52,7 +54,7 @@ class SpecialPriceMapFromDocuments
         foreach ($productCollection->getLoadedIds() as $id) {
             $document = $documents[(int)$id] ?? null;
             if ($document === null) {
-                return $proceed($storeId, $productCollection);
+                throw new DocumentReadException('Catalog special prices require a product document: ' . (int)$id);
             }
             if (($document['type'] ?? null) === Configurable::TYPE_CODE) {
                 $range = $ranges[(int)$id] ?? null;

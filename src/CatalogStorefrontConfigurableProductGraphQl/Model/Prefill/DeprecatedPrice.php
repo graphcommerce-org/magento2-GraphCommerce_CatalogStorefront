@@ -35,8 +35,6 @@ class DeprecatedPrice implements PrefillerInterface
         }
         if ($this->fixedProductTax->active($request->store)) {
             $this->strict->fallback(self::class, 'fixed product taxes on a configurable');
-
-            return [];
         }
         $store = $request->store;
         $showOutOfStock = $this->displayPrice->showOutOfStock($store);

@@ -44,8 +44,6 @@ class ConfigurableOptionsFromDocument
         $options = $this->options->expand($document);
         if ($options === null) {
             $this->strict->fallback(self::class, 'configurable document without configurableOptions');
-
-            return $proceed($field, $context, $info, $value, $args);
         }
 
         $thumbnailBase = $this->swatchMedia->getSwatchMediaUrl() . '/' . Swatch::SWATCH_THUMBNAIL_NAME . '/'
