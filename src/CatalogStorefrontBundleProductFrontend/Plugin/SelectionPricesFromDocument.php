@@ -38,7 +38,7 @@ class SelectionPricesFromDocument
                     continue;
                 }
                 $storeId = $bundleProduct->getStoreId();
-                if ($fixed && !$this->stockConfig->isShowOutOfStock($storeId) && !$selection->isSalable()) {
+                if (!$this->stockConfig->isShowOutOfStock($storeId) && !$selection->isSalable()) {
                     continue;
                 }
                 if (!$all && $bundleProduct->isSalable()) {
