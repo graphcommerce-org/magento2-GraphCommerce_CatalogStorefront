@@ -5,12 +5,15 @@ namespace GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Test\Unit\P
 
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
 use GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Read\ConfigurableOptions;
+use GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Model\LoadedConfigurableAttributeCollection;
+use GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Model\LoadedConfigurableAttributeCollectionFactory;
 use GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Plugin\Listing\ConfigurableAttributesFromDocument;
 use Magento\Catalog\Model\Product;
 use Magento\Catalog\Model\ResourceModel\Eav\Attribute as ProductAttribute;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable\Attribute;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable\AttributeFactory;
+use Magento\ConfigurableProduct\Model\ResourceModel\Product\Type\Configurable\Attribute\Collection;
 use Magento\Eav\Model\Config as EavConfig;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -21,6 +24,9 @@ class ConfigurableAttributesFromDocumentTest extends TestCase
 
     /** @var array<int, array> the data each built Attribute was given */
     private array $built = [];
+
+    /** @var array<int, Attribute> the attributes the returned collection was given */
+    private array $collected = [];
 
     /**
      * @param bool $attributeResolves whether EavConfig knows the attribute code
@@ -50,11 +56,23 @@ class ConfigurableAttributesFromDocumentTest extends TestCase
         $eavConfig = $this->createMock(EavConfig::class);
         $eavConfig->method('getAttribute')->willReturn($attributeResolves ? $productAttribute : null);
 
+        $collection = $this->createMock(LoadedConfigurableAttributeCollection::class);
+        $collection->method('withItems')->willReturnCallback(
+            function (array $attributes) use ($collection): LoadedConfigurableAttributeCollection {
+                $this->collected = $attributes;
+
+                return $collection;
+            }
+        );
+        $collections = $this->createMock(LoadedConfigurableAttributeCollectionFactory::class);
+        $collections->method('create')->willReturn($collection);
+
         return new ConfigurableAttributesFromDocument(
             $factory,
             $eavConfig,
             $this->createMock(LoggerInterface::class),
-            new ConfigurableOptions()
+            new ConfigurableOptions(),
+            $collections
         );
     }
 
@@ -147,6 +165,33 @@ class ConfigurableAttributesFromDocumentTest extends TestCase
 
         $this->assertSame(['1', '2'], array_column($this->built[0]['options'], 'value_index'));
         $this->assertSame(['Red', 'Blue'], array_column($this->built[0]['options'], 'label'));
+    }
+
+    public function testReturnsAndMemoisesCoresCollectionTypeHoldingTheBuiltAttributes(): void
+    {
+        // A plugin typed against core's result (the WANDS lab catalog's configurable block
+        // plugin declares `Collection $result`) failed with a TypeError on an array.
+        $product = $this->product([$this->option(), $this->option(['id' => 6, 'code' => 'size'])]);
+        $memo = null;
+        $product->method('setData')->willReturnCallback(
+            function (string $key, $value) use (&$memo, $product): Product {
+                if ($key === self::MEMO) {
+                    $memo = $value;
+                }
+
+                return $product;
+            }
+        );
+
+        $result = $this->plugin()->aroundGetConfigurableAttributes(
+            $this->createMock(Configurable::class),
+            $this->proceed(),
+            $product
+        );
+
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertCount(2, $this->collected);
+        $this->assertSame($result, $memo);
     }
 
     public function testUsesCoresOwnMemoWhenItIsAlreadySet(): void

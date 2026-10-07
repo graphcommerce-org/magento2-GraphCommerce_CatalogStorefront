@@ -5,6 +5,7 @@ namespace GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Plugin\List
 
 use GraphCommerce\CatalogStorefrontConfigurableProduct\Model\Read\ConfigurableOptions;
 use GraphCommerce\CatalogStorefront\Model\DocumentReadException;
+use GraphCommerce\CatalogStorefrontConfigurableProductFrontend\Model\LoadedConfigurableAttributeCollectionFactory;
 use GraphCommerce\CatalogStorefrontApi\Read\ProductDocumentsInterface;
 use Magento\Catalog\Model\Product;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
@@ -27,6 +28,9 @@ use Psr\Log\LoggerInterface;
  *
  * The EAV attribute behind each one comes from EavConfig by code, which memoises, so repeat cards
  * cost nothing.
+ *
+ * The result is a loaded attribute collection, the type core returns, so a plugin on the
+ * configurable block or type that declares core's collection keeps working on this path.
  */
 class ConfigurableAttributesFromDocument
 {
@@ -38,6 +42,7 @@ class ConfigurableAttributesFromDocument
         private readonly EavConfig $eavConfig,
         private readonly LoggerInterface $logger,
         private readonly ConfigurableOptions $configurableOptions,
+        private readonly LoadedConfigurableAttributeCollectionFactory $collectionFactory,
     ) {
     }
 
@@ -78,9 +83,10 @@ class ConfigurableAttributesFromDocument
             throw new DocumentReadException('Catalog configurable document contains unresolved attributes.');
         }
 
-        $product->setData(self::CACHE_KEY, $attributes);
+        $collection = $this->collectionFactory->create()->withItems($attributes);
+        $product->setData(self::CACHE_KEY, $collection);
 
-        return $attributes;
+        return $collection;
     }
 
     /**
