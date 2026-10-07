@@ -76,6 +76,51 @@ class SelectionPricesFromDocumentTest extends TestCase
         self::assertSame($expected, array_map(static fn($price) => $priceIds[spl_object_id($price)], $result));
     }
 
+    public function testAnUnsalableBundleLeavesUnsalableSelectionsOutOfItsDynamicMinimum(): void
+    {
+        // Core's selection collection has no out of stock selection when the store hides them,
+        // also when a required option has no salable selection and the bundle itself is not salable.
+        $parent = $this->getMockBuilder(Product::class)->disableOriginalConstructor()->onlyMethods(['getTypeInstance', 'isSalable'])->getMock();
+        $parent->setData([ProductDocumentsInterface::DOCUMENT_KEY => [], 'price_type' => 0, 'store_id' => 1]);
+        $parent->method('isSalable')->willReturn(false);
+        $type = $this->createStub(Type::class);
+        $parent->method('getTypeInstance')->willReturn($type);
+        $options = (new \ReflectionClass(Options::class))->newInstanceWithoutConstructor();
+        $option = (new \ReflectionClass(Option::class))->newInstanceWithoutConstructor();
+        $option->setIdFieldName('option_id');
+        $option->setData(['option_id' => 1, 'required' => true, 'type' => 'radio']);
+        $options->addItem($option);
+        $type->method('getOptionsCollection')->willReturn($options);
+        $selections = (new \ReflectionClass(Selections::class))->newInstanceWithoutConstructor();
+        $selections->setRowIdFieldName('selection_id');
+        foreach ([[1, 5, false], [2, 9, true]] as [$id, $minimal, $salable]) {
+            $child = $this->getMockBuilder(Product::class)->disableOriginalConstructor()->onlyMethods(['isSalable'])->getMock();
+            $child->method('isSalable')->willReturn($salable);
+            $child->setData(['selection_id' => $id, 'status' => 1, 'minimal_price' => $minimal, 'selection_qty' => 1]);
+            $selections->addItem($child);
+        }
+        $type->method('getSelectionsCollection')->willReturn($selections);
+        $created = [];
+        $factory = $this->createStub(BundleSelectionFactory::class);
+        $factory->method('create')->willReturnCallback(function ($bundle, $child) use (&$created) {
+            $created[] = (int)$child->getSelectionId();
+
+            return $this->createStub(BundleSelectionPrice::class);
+        });
+        $stockConfig = $this->createStub(StockConfigurationInterface::class);
+        $stockConfig->method('isShowOutOfStock')->willReturn(false);
+
+        (new SelectionPricesFromDocument($factory, $stockConfig))->aroundGetPriceList(
+            $this->createStub(SelectionPriceListProviderInterface::class),
+            static function () { self::fail('The core price reader was called.'); },
+            $parent,
+            true,
+            false
+        );
+
+        self::assertSame([2], $created);
+    }
+
     public static function cases(): iterable
     {
         yield 'dynamic final minimum uses index price and quantity' => [false, true, true, false, false, false, [2]];
