@@ -115,9 +115,13 @@ jobs:
           git clone --depth 1 https://github.com/mage-os/mageos-commerce-data-export.git ${{ github.workspace }}/_cde
           composer config repositories.cde path '${{ github.workspace }}/_cde/*'
           composer config repositories.package path '${{ github.workspace }}'
+          # FastBoot serves the scopes, the customer groups and the tax rates from node-local
+          # entries, as a production shop runs them, so the statement gate sees catalog reads only.
+          composer config repositories.fastboot vcs https://github.com/graphcommerce-org/magento2-GraphCommerce_FastBoot.git
           composer config minimum-stability dev
           composer config prefer-stable true
           composer require --no-update graphcommerce/magento-catalog-storefront:'@dev' \
+            graphcommerce/magento-fast-boot:'dev-main' \
             mage-os/module-catalog-sample-data:'*' mage-os/module-configurable-sample-data:'*' \
             mage-os/module-bundle-sample-data:'*' mage-os/module-grouped-product-sample-data:'*' \
             mage-os/module-downloadable-sample-data:'*' mage-os/module-review-sample-data:'*' \
