@@ -21,9 +21,13 @@
                 <item name="31-wishlist-customer" xsi:type="string">wish list</item>
                 <item name="32-order-customer" xsi:type="string">order</item>
             </argument>
-            <!-- A signed-in request proves its token against the revoked list, which holds no catalog data. -->
+            <!-- A signed-in request proves its token against the revoked list and reads the tax address
+                 of the customer and its tax rates, none of which is catalog data. A key names a table or a
+                 column, as the first 200 characters of a statement hold it. -->
             <argument name="signIn" xsi:type="array">
                 <item name="jwt_auth_revoked" xsi:type="string">the token revocation check</item>
+                <item name="customer_address_entity" xsi:type="string">the tax address of the customer</item>
+                <item name="tax_calculation_rule_id" xsi:type="string">the tax rates of the customer's address</item>
             </argument>
         </arguments>
     </type>

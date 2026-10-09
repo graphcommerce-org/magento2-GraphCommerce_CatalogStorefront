@@ -191,7 +191,8 @@ passes.
   statement of a keyed request, `Plugin/Query/StatementsInReport` puts them
   under `sql` in the report, and `Console/Parity/SqlJudge` (a `judges` entry
   on the parity command) fails a document path query that ran a lookup. A
-  write is printed. Tables under `signIn` (the token revocation check) and the
+  write is printed. Tables under `signIn` (the token revocation check, the
+  tax address of a signed-in customer and its tax rates) and the
   queries under `subjects` (cart, wish list, order: their own entity on both
   paths) are printed and fail no query.
 - `CatalogStorefrontInventory` / `...InventoryGraphQl`: the stock feed writer
