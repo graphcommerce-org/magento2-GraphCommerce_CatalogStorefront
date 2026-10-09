@@ -96,6 +96,12 @@ class UrlRewritesFromDocumentsTest extends TestCase
         self::assertTrue($this->coreAsked);
     }
 
+    public function testALookupOverSeveralStoreViewsUsesCore(): void
+    {
+        $this->find($this->plugin(), ['entity_type' => 'product', 'entity_id' => [1], 'store_id' => [0, 2]]);
+        self::assertTrue($this->coreAsked);
+    }
+
     public function testARequestWithoutADocumentListingUsesCore(): void
     {
         $plugin = $this->plugin();
