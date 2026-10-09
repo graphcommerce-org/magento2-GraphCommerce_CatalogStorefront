@@ -59,6 +59,7 @@
         "graphcommerce/module-catalog-storefront-review-frontend": "self.version",
         "graphcommerce/module-catalog-storefront-profiler": "self.version",
         "graphcommerce/module-catalog-storefront-search": "self.version",
+        "graphcommerce/module-catalog-storefront-statement-gate": "self.version",
         "graphcommerce/module-catalog-storefront-bundle-product-frontend": "self.version",
         "graphcommerce/module-catalog-storefront-grouped-product-frontend": "self.version"
     },
@@ -93,6 +94,7 @@
             "src/CatalogStorefrontExplorer/registration.php",
             "src/CatalogStorefrontAdminhtml/registration.php",
             "src/CatalogStorefrontProfiler/registration.php",
+            "src/CatalogStorefrontStatementGate/registration.php",
             "src/CatalogStorefrontSearch/registration.php",
             "src/CatalogStorefrontInventory/registration.php",
             "src/CatalogStorefrontInventoryGraphQl/registration.php",
@@ -129,6 +131,7 @@
             "GraphCommerce\\CatalogStorefrontExplorer\\": "src/CatalogStorefrontExplorer/",
             "GraphCommerce\\CatalogStorefrontAdminhtml\\": "src/CatalogStorefrontAdminhtml/",
             "GraphCommerce\\CatalogStorefrontProfiler\\": "src/CatalogStorefrontProfiler/",
+            "GraphCommerce\\CatalogStorefrontStatementGate\\": "src/CatalogStorefrontStatementGate/",
             "GraphCommerce\\CatalogStorefrontInventory\\": "src/CatalogStorefrontInventory/",
             "GraphCommerce\\CatalogStorefrontInventoryGraphQl\\": "src/CatalogStorefrontInventoryGraphQl/",
             "GraphCommerce\\CatalogStorefrontConfigurableProduct\\": "src/CatalogStorefrontConfigurableProduct/",

@@ -186,6 +186,14 @@ passes.
   Database) of the GraphCommerce_GraphiQLAdminHtml explorer, through its
   `headerSwitchers` block argument; `Model/Switcher` builds it at page load so
   the Documents and Database options send the storefront key with the path.
+- `CatalogStorefrontStatementGate`: the rule of a read side without a
+  catalog database, enforced. `Plugin/Db/StatementRecorder` records every SQL
+  statement of a keyed request, `Plugin/Strict/StatementsInReport` puts them
+  under `sql` in the report, and `Console/Parity/SqlJudge` (a `judges` entry
+  on the parity command) fails a document path query that ran a lookup. A
+  write is printed. Tables under `signIn` (the token revocation check) and the
+  queries under `subjects` (cart, wish list, order: their own entity on both
+  paths) are printed and fail no query.
 - `CatalogStorefrontInventory` / `...InventoryGraphQl`: the stock feed writer
   (a stock's rows land on the store views of the websites it sells through)
   and stock item feed fields / the stock prefiller (the MSI source item
@@ -305,7 +313,8 @@ registers all modules through composer autoload.
   (`https://worker.localhost.reachdigital.io/graphql`; the backend host name
   goes to the host PHP-FPM). Every query runs twice unjudged first, and a
   failing query is requested again up to `--attempts` times (three), so the
-  gate checks the steady state. Every fallback report fails the gate. Add a query
+  gate checks the steady state. Every fallback report fails the gate, and so
+  does a catalog SQL lookup on the document path (`CatalogStorefrontStatementGate`). Add a query
   for every field a new plugin serves. A poison test (edit a document in
   OpenSearch, see the change in the response) proves a field is live; the gate
   alone cannot. Product `sku` filters accept only `eq` and `in`; the gate fails

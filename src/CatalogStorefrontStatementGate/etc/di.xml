@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\Framework\DB\Adapter\Pdo\Mysql">
+        <plugin name="graphcommerce_catalog_storefront_statement_recorder" type="GraphCommerce\CatalogStorefrontStatementGate\Plugin\Db\StatementRecorder"/>
+    </type>
+    <type name="GraphCommerce\CatalogStorefront\Model\Strict">
+        <plugin name="graphcommerce_catalog_storefront_statements_in_report" type="GraphCommerce\CatalogStorefrontStatementGate\Plugin\Strict\StatementsInReport"/>
+    </type>
+    <type name="GraphCommerce\CatalogStorefrontGraphQl\Console\Command\Parity">
+        <arguments>
+            <argument name="judges" xsi:type="array">
+                <item name="sql" xsi:type="object">GraphCommerce\CatalogStorefrontStatementGate\Console\Parity\SqlJudge</item>
+            </argument>
+        </arguments>
+    </type>
+    <!-- The cart, wish list and order queries read their subject from the database on both paths. -->
+    <type name="GraphCommerce\CatalogStorefrontStatementGate\Console\Parity\SqlJudge">
+        <arguments>
+            <argument name="subjects" xsi:type="array">
+                <item name="30-cart-guest" xsi:type="string">quote</item>
+                <item name="31-wishlist-customer" xsi:type="string">wish list</item>
+                <item name="32-order-customer" xsi:type="string">order</item>
+            </argument>
+            <!-- A signed-in request proves its token against the revoked list, which holds no catalog data. -->
+            <argument name="signIn" xsi:type="array">
+                <item name="jwt_auth_revoked" xsi:type="string">the token revocation check</item>
+            </argument>
+        </arguments>
+    </type>
+</config>
