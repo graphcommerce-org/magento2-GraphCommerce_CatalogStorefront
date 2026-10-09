@@ -611,7 +611,10 @@ image URLs come from the feed row (`Model/DataExporter/Provider/ImageUrls`).
 - With immediate export, a full `indexer:reindex` of a feed skips rows whose
   feed hash is unchanged, so it does not repair a document store.
   `bin/magento catalog-storefront:rebuild [entities]` does the whole repair:
-  it stages a fresh index per store view, truncates the feed tables
+  it first exports the two scopes feeds again into fresh global indices and
+  promotes them (a database copy carries feed tables that say every website
+  went out to a document store that never had it), then it stages a fresh
+  index per store view, truncates the feed tables
   registered for it (di.xml `feeds` on `Model/Feeds`), runs their indexers
   and promotes the fresh indices; the reads keep the old documents until then;
   about ten seconds for the demo catalog. By hand: stage or drop the index, truncate `cde_products_feed`,

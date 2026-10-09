@@ -18,7 +18,14 @@ class ScopesTest extends TestCase
 
         self::assertSame(['default', 'second', 'third'], $scopes->storeViews());
         self::assertSame(['default', 'second'], $scopes->storeViewsOfWebsite('base'));
-        self::assertSame([], $scopes->storeViewsOfWebsite('missing'));
+    }
+
+    public function testAWebsiteWithoutADocumentStopsTheWrite(): void
+    {
+        $scopes = $this->scopes([1 => ['id' => 1, 'code' => 'base', 'storeViews' => [self::storeView('default')]]], []);
+
+        $this->expectExceptionMessageMatches('/website document holds the code "wands"/');
+        $scopes->storeViewsOfWebsite('wands');
     }
 
     public function testTheMediaOfAStoreViewComesFromItsWebsiteDocument(): void
@@ -61,7 +68,7 @@ class ScopesTest extends TestCase
 
     public function testAnEmptyScopeIndexIsRefused(): void
     {
-        $this->expectExceptionMessageMatches('/scopesWebsite feed/');
+        $this->expectExceptionMessageMatches('/No website documents/');
 
         $this->scopes([], [])->storeViews();
     }

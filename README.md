@@ -39,23 +39,18 @@ which an install without Adobe keys adds as composer `path` repositories, as
    bin/magento indexer:reindex catalogsearch_fulltext
    ```
 
-3. Export the two scopes feeds. Every other writer reads the store views with their
-   media base URL, the website ids and the customer groups from their documents, and
-   refuses a batch whose scope documents are missing.
-
-   ```sh
-   bin/magento indexer:reindex scopes_website_data_exporter scopes_customergroup_data_exporter
-   ```
-
-4. Build the documents. `catalog-storefront:rebuild` stages a fresh index per entity and
-   store view, truncates the feed tables so the exporter sends every row, runs the feed
-   indexers and promotes the indices when they are through.
+3. Build the documents. `catalog-storefront:rebuild` exports the two scopes feeds again
+   first: every other writer reads the store views with their media base URL, the website
+   ids and the customer groups from their documents, and refuses a row whose website has
+   none. It then stages a fresh index per entity and store view, truncates the feed tables
+   so the exporter sends every row, runs the feed indexers and promotes the indices when
+   they are through.
 
    ```sh
    bin/magento catalog-storefront:rebuild
    ```
 
-5. Keep the documents up to date. The feed indexers follow the catalog through their mview
+4. Keep the documents up to date. The feed indexers follow the catalog through their mview
    changelogs, so cron exports each change.
 
    ```sh
@@ -67,14 +62,14 @@ which an install without Adobe keys adds as composer `path` repositories, as
      scopes_website_data_exporter scopes_customergroup_data_exporter
    ```
 
-6. Serve the catalog GraphQL of a store view from the documents.
+5. Serve the catalog GraphQL of a store view from the documents.
 
    ```sh
    bin/magento config:set --scope=stores --scope-code=default catalog/storefront_documents/serve_graphql 1
    bin/magento cache:flush
    ```
 
-7. Generate the storefront key. It unlocks the path header and the fallback report for a
+6. Generate the storefront key. It unlocks the path header and the fallback report for a
    request that sends it.
 
    ```sh
@@ -82,7 +77,7 @@ which an install without Adobe keys adds as composer `path` repositories, as
    bin/magento config:show catalog/storefront_documents/key
    ```
 
-8. Check the result. `catalog-storefront:status` prints the documents per store view
+7. Check the result. `catalog-storefront:status` prints the documents per store view
    against the products of the website, and per feed its rows, the rows a retry is pending
    for, the last export and the indexer state. It fails on waiting rows and on an invalid
    indexer, so a deployment check can call it.
@@ -91,7 +86,7 @@ which an install without Adobe keys adds as composer `path` repositories, as
    bin/magento catalog-storefront:status
    ```
 
-9. Read one request's own answer. The key plus `X-Catalog-Storefront: documents` picks the
+8. Read one request's own answer. The key plus `X-Catalog-Storefront: documents` picks the
    path for that request alone, and `extensions.catalogStorefront` carries the path and
    every document read failure with its reason.
 
@@ -103,26 +98,26 @@ which an install without Adobe keys adds as composer `path` repositories, as
      -d '{"query":"{products(search:\"bag\",pageSize:24){items{sku name price_range{minimum_price{final_price{value}}}}}}"}'
    ```
 
-10. Compare both paths over the whole query set.
-    [`catalog-storefront:parity`](src/CatalogStorefrontGraphQl/Console/Command/Parity.php)
-    runs every query of [dev/parity/queries](dev/parity/queries) on the core path and on
-    the document path and diffs the responses.
+9. Compare both paths over the whole query set.
+   [`catalog-storefront:parity`](src/CatalogStorefrontGraphQl/Console/Command/Parity.php)
+   runs every query of [dev/parity/queries](dev/parity/queries) on the core path and on
+   the document path and diffs the responses.
 
-    ```sh
-    bin/magento catalog-storefront:parity https://shop.example/graphql
-    ```
+   ```sh
+   bin/magento catalog-storefront:parity https://shop.example/graphql
+   ```
 
-    The queries name their products and categories through placeholders, which
-    [`Model/Parity/Picks`](src/CatalogStorefrontGraphQl/Model/Parity/Picks.php) fills from
-    the catalog: `{{sku:configurable}}`, `{{skus:any:6}}`, `{{url_key:configurable}}`,
-    `{{category_id:simple:special-price}}`, `{{category_url_path:any:children}}`,
-    `{{option_uid:configurable}}`, `{{search_term}}`, `{{currency}}` and `{{cart_id}}`.
-    `{{currency}}` selects an allowed alternate currency with an exchange rate.
-    Product picks use the core stock visibility filter. A kind is a product
-    type or `any`, with a trait: `special-price`, `tier-price`, `reviewed`, `links`, `fixed`
-    or `fpt`. A query the catalog cannot fill is skipped with the reason, as is a query
-    whose `# @requires-field ProductInterface.activity` the schema does not hold. Add your
-    own queries to a directory and run them with `--queries`.
+   The queries name their products and categories through placeholders, which
+   [`Model/Parity/Picks`](src/CatalogStorefrontGraphQl/Model/Parity/Picks.php) fills from
+   the catalog: `{{sku:configurable}}`, `{{skus:any:6}}`, `{{url_key:configurable}}`,
+   `{{category_id:simple:special-price}}`, `{{category_url_path:any:children}}`,
+   `{{option_uid:configurable}}`, `{{search_term}}`, `{{currency}}` and `{{cart_id}}`.
+   `{{currency}}` selects an allowed alternate currency with an exchange rate.
+   Product picks use the core stock visibility filter. A kind is a product
+   type or `any`, with a trait: `special-price`, `tier-price`, `reviewed`, `links`, `fixed`
+   or `fpt`. A query the catalog cannot fill is skipped with the reason, as is a query
+   whose `# @requires-field ProductInterface.activity` the schema does not hold. Add your
+   own queries to a directory and run them with `--queries`.
 
 ## Why a read model
 

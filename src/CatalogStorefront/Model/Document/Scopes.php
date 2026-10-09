@@ -48,22 +48,21 @@ class Scopes implements ResetAfterRequestInterface
     }
 
     /**
+     * A website without a document stops the write: its rows would otherwise
+     * reach no store view, and every document of the website would lack the
+     * slice.
+     *
      * @return string[] the store view codes of one website
      */
     public function storeViewsOfWebsite(string $websiteCode): array
     {
-        return array_keys($this->websites()[$websiteCode]['storeViews'] ?? []);
+        return array_keys($this->website($websiteCode)['storeViews']);
     }
 
     /** The id of the website a feed row names by its code. */
     public function websiteId(string $websiteCode): int
     {
-        return $this->websites()[$websiteCode]['id']
-            ?? throw new \RuntimeException(sprintf(
-                'No website document holds the code "%s": export the scopesWebsite feed '
-                . '(bin/magento indexer:reindex scopes_website_data_exporter).',
-                $websiteCode
-            ));
+        return $this->website($websiteCode)['id'];
     }
 
     /**
@@ -81,8 +80,8 @@ class Scopes implements ResetAfterRequestInterface
         }
 
         throw new \RuntimeException(sprintf(
-            'No website document holds store view "%s": export the scopesWebsite feed '
-            . '(bin/magento indexer:reindex scopes_website_data_exporter).',
+            'No website document holds store view "%s": bin/magento catalog-storefront:rebuild '
+            . 'exports the scopes feeds again.',
             $storeViewCode
         ));
     }
@@ -99,8 +98,8 @@ class Scopes implements ResetAfterRequestInterface
             $documents = $this->storage->all(self::CUSTOMER_GROUP, self::SCOPE);
             if (!$documents) {
                 throw new \RuntimeException(
-                    'No customer group documents: export the scopesCustomerGroup feed '
-                    . '(bin/magento indexer:reindex scopes_customergroup_data_exporter).'
+                    'No customer group documents: bin/magento catalog-storefront:rebuild '
+                    . 'exports the scopes feeds again.'
                 );
             }
             usort($documents, static fn(array $a, array $b) =>
@@ -121,6 +120,19 @@ class Scopes implements ResetAfterRequestInterface
     }
 
     /**
+     * @return array{id: int, storeViews: array<string, array>}
+     */
+    private function website(string $websiteCode): array
+    {
+        return $this->websites()[$websiteCode]
+            ?? throw new \RuntimeException(sprintf(
+                'No website document holds the code "%s": bin/magento catalog-storefront:rebuild '
+                . 'exports the scopes feeds again.',
+                $websiteCode
+            ));
+    }
+
+    /**
      * @return array<string, string[]>
      */
     private function websites(): array
@@ -129,8 +141,8 @@ class Scopes implements ResetAfterRequestInterface
             $documents = $this->storage->all(self::WEBSITE, self::SCOPE);
             if (!$documents) {
                 throw new \RuntimeException(
-                    'No website documents: export the scopesWebsite feed '
-                    . '(bin/magento indexer:reindex scopes_website_data_exporter).'
+                    'No website documents: bin/magento catalog-storefront:rebuild '
+                    . 'exports the scopes feeds again.'
                 );
             }
             $this->websites = [];
