@@ -496,6 +496,7 @@ the base module and the GraphQl module.
 | [`...Explorer`](src/CatalogStorefrontExplorer) | The path switcher in the GraphCommerce_GraphiQLAdminHtml API explorer |
 | [`...Adminhtml`](src/CatalogStorefrontAdminhtml) | Catalog > Catalog Storefront: the store views, customer group price keys and feed state, read-only |
 | [`...Profiler`](src/CatalogStorefrontProfiler) | A MageOS_Profiler span per document store request |
+| [`...StatementGate`](src/CatalogStorefrontStatementGate) | The SQL statements of a keyed request in its report, and the parity verdict that fails a document path which read the database |
 
 ## Tests
 

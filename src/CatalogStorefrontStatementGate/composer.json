@@ -1,0 +1,21 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-statement-gate",
+    "description": "Records every SQL statement of a keyed catalog request into the fallback report and fails the parity gate on a lookup: the rule of a read side without a catalog database",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "graphcommerce/module-catalog-storefront": "*",
+        "graphcommerce/module-catalog-storefront-graph-ql": "*",
+        "graphcommerce/module-catalog-storefront-graph-ql-api": "*"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontStatementGate\\": ""
+        }
+    }
+}

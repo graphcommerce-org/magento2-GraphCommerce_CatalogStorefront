@@ -12,6 +12,7 @@ use Magento\Store\Api\Data\StoreInterface;
 use Magento\Tax\Helper\Data as TaxHelper;
 use Magento\Tax\Model\Calculation;
 use Magento\Weee\Helper\Data as WeeeHelper;
+use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
 use Magento\Weee\Model\Tax as WeeeTax;
 use PHPUnit\Framework\TestCase;
 
@@ -44,7 +45,7 @@ class FixedProductTaxTest extends TestCase
         $priceCurrency = $this->createMock(PriceCurrencyInterface::class);
         $priceCurrency->method('convert')->willReturnCallback(static fn($amount) => $amount * 0.5);
 
-        return new FixedProductTax($calculation, $weeeHelper, $this->createMock(WeeeTax::class), $taxHelper, $priceCurrency, $this->createMock(Session::class));
+        return new FixedProductTax($calculation, $weeeHelper, $this->createMock(MetadataDocumentStorageInterface::class), $taxHelper, $priceCurrency, $this->createMock(Session::class));
     }
 
     private function store(): StoreInterface
