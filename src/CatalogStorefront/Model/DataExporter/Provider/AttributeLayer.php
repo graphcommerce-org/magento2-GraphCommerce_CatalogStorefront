@@ -9,6 +9,8 @@ use Magento\Framework\App\ResourceConnection;
  * The attribute columns the exporter's own metadata record leaves out or rewrites: the layer
  * settings, what the attributes list of GraphQL reports beyond the exporter's flags, and the
  * visibility and backend type as stored, since the exporter lifts its own pseudo attributes.
+ * `isVisible` is `is_visible`, which core's attribute lists filter on; the exporter's own
+ * `visible` is the storefront visibility.
  */
 class AttributeLayer
 {
