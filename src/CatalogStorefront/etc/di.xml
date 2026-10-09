@@ -202,7 +202,7 @@
                     <item name="frontendInput" xsi:type="string">keyword</item>
                     <item name="filterableMode" xsi:type="string">integer</item>
                     <item name="filterableInSearch" xsi:type="string">boolean</item>
-                    <item name="visible" xsi:type="string">boolean</item>
+                    <item name="isVisible" xsi:type="string">boolean</item>
                     <item name="position" xsi:type="string">integer</item>
                     <item name="options.id" xsi:type="string">keyword</item>
                 </item>

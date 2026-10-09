@@ -74,7 +74,7 @@ class CustomAttributesFromDocument
             $attributes = array_filter(
                 $this->attributeDocuments->byCodes($storeCode, array_keys($values)),
                 static function (array $attribute) use ($filters): bool {
-                    if (empty($attribute['visible']) || ($attribute['dataType'] ?? '') === 'static') {
+                    if (empty($attribute['isVisible']) || ($attribute['dataType'] ?? '') === 'static') {
                         return false;
                     }
                     foreach ($filters as $key => $expected) {

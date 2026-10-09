@@ -53,7 +53,7 @@ class FilterableAttributesFromDocuments implements ResetAfterRequestInterface
         $this->documents[$key] ??= $this->storage->find(
             self::ENTITY,
             $storeViewCode,
-            $search ? ['filterableInSearch' => ['true'], 'visible' => ['true']] : ['filterableMode' => [1, 2]],
+            $search ? ['filterableInSearch' => ['true'], 'isVisible' => ['true']] : ['filterableMode' => [1, 2]],
             [],
             0,
             self::PAGE

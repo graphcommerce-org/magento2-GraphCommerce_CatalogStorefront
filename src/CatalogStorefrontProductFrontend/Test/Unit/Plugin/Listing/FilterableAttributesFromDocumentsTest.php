@@ -36,7 +36,7 @@ class FilterableAttributesFromDocumentsTest extends TestCase
             $this->reads++;
             $found = array_filter($documents, static fn (array $document) => isset($filter['filterableMode'])
                 ? in_array((int)$document['filterableMode'], $filter['filterableMode'], true)
-                : $document['filterableInSearch'] && $document['visible']);
+                : $document['filterableInSearch'] && $document['isVisible']);
 
             return ['documents' => $found, 'total' => count($found)];
         });
@@ -77,9 +77,9 @@ class FilterableAttributesFromDocumentsTest extends TestCase
     private function documents(): array
     {
         return [
-            'color' => ['attributeCode' => 'color', 'attributeId' => 93, 'filterableMode' => 1, 'filterableInSearch' => true, 'visible' => true, 'position' => 0, 'categoryFilterOrder' => 1, 'searchFilterOrder' => 0, 'label' => 'Kleur'],
-            'size' => ['attributeCode' => 'size', 'attributeId' => 141, 'filterableMode' => 2, 'filterableInSearch' => false, 'visible' => true, 'position' => 0, 'categoryFilterOrder' => 0, 'label' => 'Maat'],
-            'cost' => ['attributeCode' => 'cost', 'attributeId' => 81, 'filterableMode' => 0, 'filterableInSearch' => true, 'visible' => false, 'position' => 0, 'label' => 'Cost'],
+            'color' => ['attributeCode' => 'color', 'attributeId' => 93, 'filterableMode' => 1, 'filterableInSearch' => true, 'isVisible' => true, 'position' => 0, 'categoryFilterOrder' => 1, 'searchFilterOrder' => 0, 'label' => 'Kleur'],
+            'size' => ['attributeCode' => 'size', 'attributeId' => 141, 'filterableMode' => 2, 'filterableInSearch' => false, 'isVisible' => true, 'position' => 0, 'categoryFilterOrder' => 0, 'label' => 'Maat'],
+            'cost' => ['attributeCode' => 'cost', 'attributeId' => 81, 'filterableMode' => 0, 'filterableInSearch' => true, 'isVisible' => false, 'position' => 0, 'label' => 'Cost'],
         ];
     }
 

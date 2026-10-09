@@ -26,9 +26,9 @@ use PHPUnit\Framework\TestCase;
 class CustomAttributesFromDocumentTest extends TestCase
 {
     private const ATTRIBUTES = [
-        'color' => ['attributeId' => 93, 'visible' => true, 'frontendInput' => 'select', 'options' => [['id' => '5', 'label' => 'Red']]],
-        'tags' => ['attributeId' => 94, 'visible' => true, 'frontendInput' => 'multiselect', 'options' => [['id' => '8', 'label' => 'Sale']]],
-        'note' => ['attributeId' => 95, 'visible' => true, 'frontendInput' => 'text'],
+        'color' => ['attributeId' => 93, 'isVisible' => true, 'frontendInput' => 'select', 'options' => [['id' => '5', 'label' => 'Red']]],
+        'tags' => ['attributeId' => 94, 'isVisible' => true, 'frontendInput' => 'multiselect', 'options' => [['id' => '8', 'label' => 'Sale']]],
+        'note' => ['attributeId' => 95, 'isVisible' => true, 'frontendInput' => 'text'],
     ];
 
     /**
