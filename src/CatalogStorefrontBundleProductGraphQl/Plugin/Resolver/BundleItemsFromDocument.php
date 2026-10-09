@@ -7,6 +7,7 @@ use GraphCommerce\CatalogStorefrontGraphQlApi\Read\HydrationInterface;
 use GraphCommerce\CatalogStorefrontGraphQlApi\Read\PrefillerInterface;
 use Magento\BundleGraphQl\Model\Resolver\BundleItems;
 use Magento\Catalog\Model\Product\Type;
+use Magento\CatalogInventory\Api\StockConfigurationInterface;
 use Magento\Framework\GraphQl\Config\Element\Field;
 use Magento\Framework\GraphQl\Query\Resolver\ContextInterface;
 use Magento\Framework\GraphQl\Query\Uid;
@@ -18,7 +19,9 @@ use GraphCommerce\CatalogStorefront\Model\Strict;
  * documents of its selections. Each item carries its options pre-filled, each
  * option its label, so the core link and label resolvers do not run; the
  * option's product is the selection's model, which the core product resolver
- * takes as is. An item's price range is the bundle's own.
+ * takes as is. A selection whose child is not salable is left out unless the
+ * store shows out of stock products, as core's selection collection does. An
+ * item's price range is the bundle's own.
  */
 class BundleItemsFromDocument
 {
@@ -28,6 +31,7 @@ class BundleItemsFromDocument
         private readonly HydrationInterface $hydration,
         private readonly Uid $uidEncoder,
         private readonly Strict $strict,
+        private readonly StockConfigurationInterface $stockConfiguration,
     ) {
     }
 
@@ -50,6 +54,11 @@ class BundleItemsFromDocument
             $requestedFields = array_keys((array)($info->getFieldSelection(2)['options']['product'] ?? []));
             $bySku = [];
             $children = $this->hydration->documents($store->getCode(), (array)($document['bundleChildIds'] ?? []));
+            $showOutOfStock = $this->stockConfiguration->isShowOutOfStock((int)$store->getId());
+            $hidden = array_column(array_filter(
+                $children,
+                static fn(array $child) => !$showOutOfStock && !($child['stock']['isSalable'] ?? $child['inStock'] ?? false)
+            ), 'sku', 'sku');
             foreach ($this->hydration->models($store, $context, $children, $requestedFields) as $model) {
                 $bySku[$model->getSku()] = $model;
             }
@@ -69,6 +78,9 @@ class BundleItemsFromDocument
                 $values = (array)($option['values'] ?? []);
                 usort($values, static fn(array $a, array $b) => (int)($a['sortOrder'] ?? 0) <=> (int)($b['sortOrder'] ?? 0));
                 foreach ($values as $selection) {
+                    if (isset($hidden[$selection['sku'] ?? ''])) {
+                        continue;
+                    }
                     [, $optionId, $selectionId, $selectionQty] = array_pad(
                         explode('/', $this->uidEncoder->decode((string)$selection['id'])),
                         4,

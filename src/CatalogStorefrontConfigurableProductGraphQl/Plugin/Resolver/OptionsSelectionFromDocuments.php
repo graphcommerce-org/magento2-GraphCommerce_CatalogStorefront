@@ -21,8 +21,9 @@ use GraphCommerce\CatalogStorefront\Model\Strict;
  * salable variants (enabled, in stock, without required customizable
  * options) and the parent's option slice: the options still open with the
  * availability of every value, the values still selectable per attribute,
- * the single variant the selection narrows to, and the media gallery entries
- * of the variants that match, as core assembles them.
+ * the variant when the selection leaves one, whether or not every option is
+ * selected, and the media gallery entries of the variants that match, as core
+ * assembles them.
  */
 class OptionsSelectionFromDocuments
 {
@@ -110,7 +111,6 @@ class OptionsSelectionFromDocuments
 
             $availableSelections = [];
             $availableProducts = [];
-            $matching = [];
             foreach ($index as $variantId => $variantValues) {
                 foreach ($selected as $attributeId => $valueIndex) {
                     if ((int)($variantValues[$attributeId] ?? 0) !== $valueIndex) {
@@ -125,9 +125,6 @@ class OptionsSelectionFromDocuments
                         $availableSelections[$attributeId]['attribute_code'] = $this->attributeCode($options, $attributeId);
                     }
                 }
-                if (count($selected) === count($variantValues)) {
-                    $matching[] = $variantId;
-                }
             }
 
             $variant = null;
@@ -138,7 +135,7 @@ class OptionsSelectionFromDocuments
                 array_intersect_key($variants, array_flip($availableProducts)),
                 $requestedFields
             );
-            if (count($availableProducts) === 1 && $matching) {
+            if (count($availableProducts) === 1) {
                 $model = $galleryProducts[$availableProducts[0]];
                 $variant = $model->getData() + ['url_path' => $variants[$availableProducts[0]]['url'] ?? null, 'model' => $model];
             }
