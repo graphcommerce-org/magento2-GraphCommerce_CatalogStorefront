@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefront\Model\DataExporter\Provider;
 
-use Magento\Catalog\Model\Product\ImageFactory;
+use GraphCommerce\CatalogStorefront\Model\DataExporter\IndexedProductImageFactory;
 use Magento\CatalogDataExporter\Model\Provider\Product\MediaGallery;
 use Magento\Framework\App\Area;
 use Magento\Framework\UrlInterface;
@@ -20,7 +20,7 @@ class ImageUrls
     public function __construct(
         private readonly Emulation $emulation,
         private readonly StoreManagerInterface $storeManager,
-        private readonly ImageFactory $imageFactory,
+        private readonly IndexedProductImageFactory $imageFactory,
     ) {
     }
 

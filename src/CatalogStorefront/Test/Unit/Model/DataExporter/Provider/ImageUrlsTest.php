@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace GraphCommerce\CatalogStorefront\Test\Unit\Model\DataExporter\Provider;
 
 use GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\ImageUrls;
-use Magento\Catalog\Model\Product\Image;
-use Magento\Catalog\Model\Product\ImageFactory;
+use GraphCommerce\CatalogStorefront\Model\DataExporter\IndexedProductImage;
+use GraphCommerce\CatalogStorefront\Model\DataExporter\IndexedProductImageFactory;
 use Magento\CatalogDataExporter\Model\Provider\Product\MediaGallery;
 use Magento\Store\Model\App\Emulation;
 use Magento\Store\Model\Store;
@@ -63,7 +63,7 @@ class ImageUrlsTest extends TestCase
         );
     }
 
-    public function testGalleryPathsUseTheImageRoleAndMarkMissingFiles(): void
+    public function testGalleryPathsUseTheImageRoleAndMarkPlaceholders(): void
     {
         $files = [];
         $provider = $this->provider($files, ['/m/b/mb01.jpg' => true]);
@@ -127,19 +127,19 @@ class ImageUrlsTest extends TestCase
     private function provider(array &$files, array $exists, array $baseUrls = ['default' => self::BASE_URL]): ImageUrls
     {
         $mediaBaseUrl = '';
-        $factory = $this->createMock(ImageFactory::class);
-        $factory->method('create')->willReturnCallback(function () use (&$files, $exists, &$mediaBaseUrl): Image {
+        $factory = $this->createMock(IndexedProductImageFactory::class);
+        $factory->method('create')->willReturnCallback(function () use (&$files, $exists, &$mediaBaseUrl): IndexedProductImage {
             $state = (object)['type' => '', 'file' => ''];
-            $image = $this->createMock(Image::class);
+            $image = $this->createMock(IndexedProductImage::class);
             $image->method('setDestinationSubdir')->willReturnCallback(
-                static function (string $type) use ($image, $state): Image {
+                static function (string $type) use ($image, $state): IndexedProductImage {
                     $state->type = $type;
 
                     return $image;
                 }
             );
             $image->method('setBaseFile')->willReturnCallback(
-                static function (string $file) use ($image, $state, &$files): Image {
+                static function (string $file) use ($image, $state, &$files): IndexedProductImage {
                     $state->file = $file;
                     $files[] = $state->type . ':' . $file;
 
