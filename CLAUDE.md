@@ -771,6 +771,11 @@ image URLs come from the feed row (`Model/DataExporter/Provider/ImageUrls`).
   amount unconverted (the final converts), and the fixed bundle range does
   the same.
 - The feed exports the special price attribute without its from and to dates.
+- The export takes every stored image path as an existing file
+  (`Model/DataExporter/IndexedProductImage`): a file check on remote storage
+  is a request per image. An image path that names no file gets its resized
+  path, where core answers the placeholder; only `no_selection` is a
+  placeholder.
 - `dev/parity/queries/19-*.graphql` selects every product field of the
   schema (`dev/parity/gen-all-fields.py <skus...>` generates it from introspection); the
   routable fields, `product_links` (its own query) and the bundle item's
