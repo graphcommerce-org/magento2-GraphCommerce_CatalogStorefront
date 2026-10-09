@@ -425,7 +425,8 @@ image URLs come from the feed row (`Model/DataExporter/Provider/ImageUrls`).
   `Model/DataExporter/Provider/BundleAttributes` adds the sku and shipment type the
   exporter lacks. The categories feed lands as one category document per
   store view (`MetadataDocumentStorageInterface`, one entity name per feed, index `<alias>_<entity>_<store view>`, read by id or all
-  at once). The product attributes feed lands the same way, keyed by attribute
+  at once; `isActive` and `includeInMenu` are the category's own values, where
+  the feed sets them false below an inactive or hidden ancestor). The product attributes feed lands the same way, keyed by attribute
   code and extended with the options in store view labels, the layer position
   and the filterable mode (`Model/DataExporter/Provider/AttributeOptions`,
   `AttributeLayer`); the rating metadata feed lands keyed by rating id,
@@ -801,8 +802,10 @@ image URLs come from the feed row (`Model/DataExporter/Provider/ImageUrls`).
   core for a filter on a property the attribute documents lack
   (`is_html_allowed_on_front`, `is_used_for_promo_rules`,
   `is_visible_in_advanced_search`, `is_wysiwyg_enabled`). Grouped items and
-  bundle selections are not filtered on required customizable options or on
-  stock, as core's collections do in some configurations. Variant attributes
+  bundle selections are not filtered on required customizable options, and
+  grouped items not on stock, as core's collections do in some configurations;
+  a bundle selection of a child that is not salable is left out unless the
+  store shows out of stock products. Variant attributes
   are listed by attribute id, the order core's super attribute index yields.
 - A configurable cart item's `configured_variant` takes the child's document,
   which no parity query covers: the query set's cart holds a simple and a
@@ -831,5 +834,10 @@ image URLs come from the feed row (`Model/DataExporter/Provider/ImageUrls`).
   ORDER BY, it changes with the query plan); the document path lists them by
   position, and lists an option's values and a category's children of equal
   position in database order where the document path sorts by value id and
-  by id; the gate sorts both before the diff. Core cannot resolve an inline
+  by id; the gate sorts both before the diff. The same holds for linked
+  products of equal position (the document path sorts them by sku) and for
+  the values still selectable of a configurable selection (the document path
+  follows the variant ids); the gate sorts these by uid. Two variants that
+  share an image file and position give the selection's media gallery the
+  label of the last one, so core's label depends on its collection order. Core cannot resolve an inline
   fragment inside a linked products selection; the document path can.
