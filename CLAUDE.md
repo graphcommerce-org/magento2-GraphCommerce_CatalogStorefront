@@ -188,7 +188,7 @@ passes.
   the Documents and Database options send the storefront key with the path.
 - `CatalogStorefrontStatementGate`: the rule of a read side without a
   catalog database, enforced. `Plugin/Db/StatementRecorder` records every SQL
-  statement of a keyed request, `Plugin/Strict/StatementsInReport` puts them
+  statement of a keyed request, `Plugin/Query/StatementsInReport` puts them
   under `sql` in the report, and `Console/Parity/SqlJudge` (a `judges` entry
   on the parity command) fails a document path query that ran a lookup. A
   write is printed. Tables under `signIn` (the token revocation check) and the
