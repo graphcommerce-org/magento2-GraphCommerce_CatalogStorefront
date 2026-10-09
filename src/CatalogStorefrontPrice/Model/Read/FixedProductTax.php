@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace GraphCommerce\CatalogStorefrontPrice\Model\Read;
 
+use GraphCommerce\CatalogStorefrontApi\Storage\MetadataDocumentStorageInterface;
 use Magento\Catalog\Model\Product;
 use Magento\Customer\Model\Session;
 use Magento\Framework\Pricing\PriceCurrencyInterface;
@@ -26,7 +27,7 @@ class FixedProductTax
     public function __construct(
         private readonly Calculation $calculation,
         private readonly WeeeHelper $weeeHelper,
-        private readonly WeeeTax $weeeTax,
+        private readonly MetadataDocumentStorageInterface $metadata,
         private readonly TaxHelper $taxHelper,
         private readonly PriceCurrencyInterface $priceCurrency,
         private readonly Session $session,
@@ -35,11 +36,13 @@ class FixedProductTax
 
     /**
      * Whether the store's fixed product taxes can move a price: enabled and
-     * at least one attribute exists.
+     * at least one attribute exists, which the attribute documents tell where
+     * core reads the attribute table on every request.
      */
     public function active(StoreInterface $store): bool
     {
-        return $this->weeeHelper->isEnabled($store) && $this->weeeTax->getWeeeTaxAttributeCodes($store) !== [];
+        return $this->weeeHelper->isEnabled($store)
+            && $this->metadata->find('attribute', (string)$store->getCode(), ['frontendInput' => 'weee'], [], 0, 1)['total'] > 0;
     }
 
     /**
