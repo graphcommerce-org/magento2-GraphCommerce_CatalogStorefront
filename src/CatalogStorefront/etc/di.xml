@@ -33,6 +33,19 @@
             </argument>
         </arguments>
     </type>
+    <!-- The feeds of the scope documents, which a rebuild exports again before any entity. -->
+    <type name="GraphCommerce\CatalogStorefront\Console\Command\Rebuild">
+        <arguments>
+            <argument name="scopeFeeds" xsi:type="array">
+                <item name="website" xsi:type="array">
+                    <item name="scopes_website_data_exporter" xsi:type="object">Magento\ScopesDataExporter\Model\Indexer\ScopesWebsiteFeedIndexMetadata</item>
+                </item>
+                <item name="customer_group" xsi:type="array">
+                    <item name="scopes_customergroup_data_exporter" xsi:type="object">Magento\ScopesDataExporter\Model\Indexer\ScopesCustomerGroupFeedIndexMetadata</item>
+                </item>
+            </argument>
+        </arguments>
+    </type>
     <!-- Write side: the writers of each feed, called in registration order. -->
     <type name="GraphCommerce\CatalogStorefront\Model\Document\Delivery">
         <arguments>
