@@ -43,7 +43,7 @@ class RouteFromDocument implements ResetAfterRequestInterface
     public function aroundFindOneByData(CompositeUrlFinder $subject, \Closure $proceed, array $data)
     {
         $path = $data[UrlRewrite::REQUEST_PATH] ?? null;
-        if (!is_string($path) || $path === '' || !isset($data[UrlRewrite::STORE_ID]) || count($data) !== 2) {
+        if (!is_string($path) || $path === '' || !is_numeric($data[UrlRewrite::STORE_ID] ?? null) || count($data) !== 2) {
             return $proceed($data);
         }
         $storeId = (int)$data[UrlRewrite::STORE_ID];

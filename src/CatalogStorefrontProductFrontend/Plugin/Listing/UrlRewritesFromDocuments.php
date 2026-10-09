@@ -15,6 +15,7 @@ use Magento\UrlRewrite\Service\V1\Data\UrlRewriteFactory;
  * The product URL rewrites of a listing's cards, from the documents the listing read. The
  * product collection asks for them by product id after its load, with the category id in
  * the metadata when product URLs carry the category path. Each product requires URL rewrite data.
+ * A lookup over several store views (the import's, which passes a list) stays with core.
  */
 class UrlRewritesFromDocuments
 {
@@ -35,7 +36,7 @@ class UrlRewritesFromDocuments
         if (($data[UrlRewrite::ENTITY_TYPE] ?? null) !== 'product'
             || !is_array($ids)
             || $ids === []
-            || !isset($data[UrlRewrite::STORE_ID])
+            || !is_numeric($data[UrlRewrite::STORE_ID] ?? null)
         ) {
             return $proceed($data);
         }
