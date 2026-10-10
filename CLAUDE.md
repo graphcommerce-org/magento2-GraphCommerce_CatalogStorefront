@@ -95,7 +95,11 @@ passes.
   script sort stands), `Plugin/FieldNameMemo` (one search index field name
   lookup per attribute code and context per request, the core mapper asks
   several times), `Plugin/SearchTermRecording` (the search term writes, off by
-  default), and the result window (`Plugin/ResultWindowSetting` puts the
+  default), the price navigation (`Plugin/AutoPriceRangeFromResponse` finds
+  core's `auto` step from the lowest and highest price in the search response,
+  where core sends a stats query and a histogram query per step it tries, and
+  `LeanPriceQuery` makes the price queries ask for aggregations only), and the
+  result window (`Plugin/ResultWindowSetting` puts the
   configured `max_result_window` on a new product search index,
   `ResultWindowPageSize` gives core's adapter the same number, the setting's
   backend model puts it on the indices that exist): beyond the window core

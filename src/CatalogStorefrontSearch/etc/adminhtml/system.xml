@@ -21,6 +21,11 @@
                     <backend_model>GraphCommerce\CatalogStorefrontSearch\Model\Config\Backend\ResultWindow</backend_model>
                     <comment>The number of hits of a listing the search engine serves with one query. Beyond it the engine walks the result in windows of 10 000 hits with a point in time, and repeats the layered navigation counts in every window: page 2000 of an unfiltered listing over 300 000 products takes 32 windows and 2.4 seconds against 0.2 seconds with a window that covers the catalog. A save applies the window to the product search index of every store view; 0 leaves the engine's own limit of 10 000. A deep page holds a sorted heap of that many hits in the engine's memory while it runs.</comment>
                 </field>
+                <field id="price_ranges_from_response" translate="label comment" type="select" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Price Ranges From The Search Response</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>The Automatic (equalize price ranges) price navigation step needs the lowest and highest price of the result, which the search response already holds. On, the step comes from the response and one histogram query counts the intervals, and the price queries of every mode ask for no products, sort or total; off, core sends a stats query and a histogram query per step it tries, each a full copy of the listing search: three queries more for every listing page. The intervals are the same.</comment>
+                </field>
             </group>
         </section>
     </system>

@@ -14,6 +14,7 @@ class Config
     public const ENTITY_ID_SORT = 'catalog/storefront_search/entity_id_sort';
     public const RECORD_SEARCH_TERMS = 'catalog/storefront_search/record_search_terms';
     public const RESULT_WINDOW = 'catalog/storefront_search/result_window';
+    public const PRICE_RANGES_FROM_RESPONSE = 'catalog/storefront_search/price_ranges_from_response';
 
     public function __construct(
         private readonly ScopeConfigInterface $scopeConfig,
@@ -36,5 +37,10 @@ class Config
     public function resultWindow(): int
     {
         return (int)$this->scopeConfig->getValue(self::RESULT_WINDOW);
+    }
+
+    public function priceRangesFromResponse(): bool
+    {
+        return $this->scopeConfig->isSetFlag(self::PRICE_RANGES_FROM_RESPONSE);
     }
 }

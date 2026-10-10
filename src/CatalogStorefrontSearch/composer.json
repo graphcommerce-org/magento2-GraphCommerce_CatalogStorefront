@@ -1,6 +1,6 @@
 {
     "name": "graphcommerce/module-catalog-storefront-search",
-    "description": "Cheaper core fulltext search listings: a field-based sort tie-break, one field name lookup per attribute per request, optional search term recording",
+    "description": "Cheaper core fulltext search listings: a field-based sort tie-break, the auto price step from the search response, one field name lookup per attribute per request, optional search term recording",
     "type": "magento2-module",
     "license": "MIT",
     "require": {

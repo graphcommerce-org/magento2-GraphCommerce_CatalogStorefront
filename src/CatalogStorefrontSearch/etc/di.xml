@@ -19,4 +19,11 @@
     <type name="Magento\Search\Model\Query">
         <plugin name="graphcommerce_catalog_storefront_search_term_recording" type="GraphCommerce\CatalogStorefrontSearch\Plugin\SearchTermRecording"/>
     </type>
+    <!-- The `auto` price navigation step comes from the search response; the price queries read aggregations only. -->
+    <type name="Magento\Elasticsearch\SearchAdapter\Aggregation\Builder\Dynamic">
+        <plugin name="graphcommerce_catalog_storefront_auto_price_range" type="GraphCommerce\CatalogStorefrontSearch\Plugin\AutoPriceRangeFromResponse"/>
+    </type>
+    <type name="Magento\Elasticsearch\SearchAdapter\QueryContainer">
+        <plugin name="graphcommerce_catalog_storefront_lean_price_query" type="GraphCommerce\CatalogStorefrontSearch\Plugin\LeanPriceQuery"/>
+    </type>
 </config>
