@@ -781,7 +781,11 @@ image URLs come from the feed row (`Model/DataExporter/Provider/ImageUrls`).
   currency other than the base, core leaves a percent selection's regular
   amount unconverted (the final converts), and the fixed bundle range does
   the same.
-- The feed exports the special price attribute without its from and to dates.
+- A special price counts only on the days of its from and to dates in the
+  website's default store view (`Plugin/DataExporter/SpecialPriceDates`, core's
+  `isScopeDateInInterval`), decided at export: `Cron/RefreshSpecialPriceWindows`
+  exports a product's prices again in the hour after its window opens or
+  closes, where core decides per request.
 - The export takes every stored image path as an existing file
   (`Model/DataExporter/IndexedProductImage`): a file check on remote storage
   is a request per image. An image path that names no file gets its resized
@@ -837,7 +841,8 @@ image URLs come from the feed row (`Model/DataExporter/Provider/ImageUrls`).
   by id; the gate sorts both before the diff. The same holds for linked
   products of equal position (the document path sorts them by sku) and for
   the values still selectable of a configurable selection (the document path
-  follows the variant ids); the gate sorts these by uid. Two variants that
-  share an image file and position give the selection's media gallery the
-  label of the last one, so core's label depends on its collection order. Core cannot resolve an inline
+  follows the variant ids); the gate sorts these by uid. The media gallery of a
+  configurable selection follows the variant order too, so the gate sorts it
+  by url; two variants that share an image file and position give it the
+  label of the last one, which on core depends on the collection order. Core cannot resolve an inline
   fragment inside a linked products selection; the document path can.

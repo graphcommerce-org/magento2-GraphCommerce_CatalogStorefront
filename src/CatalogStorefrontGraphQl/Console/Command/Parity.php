@@ -790,8 +790,8 @@ class Parity extends Command
      * options tie-break in the search engine, and configurable_options come from a
      * collection without ORDER BY, and so do an option's values and a category's
      * children of equal position, linked products of equal position, a
-     * configurable's values still selectable, and reviews of one created_at come
-     * in database order. All are sorted so the diff sees the set, not the order. Zero-count aggregation options are dropped: core's option provider joins
+     * configurable's values still selectable and the media gallery of its
+     * selection, and reviews of one created_at come in database order. All are sorted so the diff sees the set, not the order. Zero-count aggregation options are dropped: core's option provider joins
      * attributes by code across entity types, so an option of a same-named attribute
      * of another entity shows up on some runs.
      */
@@ -831,6 +831,10 @@ class Parity extends Command
             // Core lists a tax adjustment of a float remainder (1e-14) where the tax is zero.
             if ($key === 'adjustments' && is_array($child)) {
                 $node[$key] = array_values(array_filter($child, static fn($adjustment) => abs((float)($adjustment['amount']['value'] ?? 0)) >= 0.000001));
+            }
+            if ($key === 'configurable_product_options_selection' && is_array($child['media_gallery'] ?? null)) {
+                usort($child['media_gallery'], static fn($a, $b) => ($a['url'] ?? '') <=> ($b['url'] ?? ''));
+                $node[$key] = $child;
             }
             if ($key === 'option_value_uids' && is_array($child)) {
                 sort($child);
