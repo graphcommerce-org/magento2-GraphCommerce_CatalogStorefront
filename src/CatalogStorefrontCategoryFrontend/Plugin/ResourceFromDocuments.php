@@ -39,6 +39,15 @@ class ResourceFromDocuments
             return $proceed($object, $entityId, $attributes);
         }
         $storeId = (int)$object->getStoreId();
+        if ((int)$entityId === Category::TREE_ROOT_ID) {
+            // No feed exports the tree root and it holds no store data: a walk up a
+            // category's parents reads its level only, to stop there.
+            $object->addData(['entity_id' => Category::TREE_ROOT_ID, 'parent_id' => 0, 'path' => (string)Category::TREE_ROOT_ID, 'level' => 0]);
+            $object->setStoreId($storeId);
+            $object->isObjectNew(false);
+
+            return $subject;
+        }
         $storeViewCode = (string)$this->storeManager->getStore($storeId)->getCode();
         $document = $this->documents->documents($storeViewCode, [(int)$entityId])[(int)$entityId] ?? null;
         if ($document === null) {
