@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Cron:etc/crontab.xsd">
+    <group id="default">
+        <job name="graphcommerce_catalog_storefront_refresh_special_price_windows"
+             instance="GraphCommerce\CatalogStorefront\Cron\RefreshSpecialPriceWindows" method="execute">
+            <schedule>7 * * * *</schedule>
+        </job>
+    </group>
+</config>

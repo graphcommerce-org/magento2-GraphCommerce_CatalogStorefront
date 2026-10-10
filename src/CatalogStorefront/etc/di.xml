@@ -158,6 +158,7 @@
     </type>
     <type name="Magento\ProductPriceDataExporter\Model\Provider\ProductPrice">
         <plugin name="graphcommerce_catalog_storefront_tier_price_percent" type="GraphCommerce\CatalogStorefront\Plugin\DataExporter\TierPricePercent"/>
+        <plugin name="graphcommerce_catalog_storefront_special_price_dates" type="GraphCommerce\CatalogStorefront\Plugin\DataExporter\SpecialPriceDates"/>
     </type>
 
     <!-- The product documents: filtered and aggregated on sku, type, parents, status, salability and the
