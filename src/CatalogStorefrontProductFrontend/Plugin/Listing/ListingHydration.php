@@ -9,10 +9,8 @@ use GraphCommerce\CatalogStorefront\Model\ProductPrice;
 use GraphCommerce\CatalogStorefront\Model\DocumentReadException;
 use GraphCommerce\CatalogStorefrontProductFrontend\Model\Mode;
 use GraphCommerce\CatalogStorefrontProductFrontend\Model\Read\ListingDocuments;
-use Magento\Catalog\Model\Product;
 use Magento\Catalog\Model\ResourceModel\Product\Collection;
 use Magento\CatalogSearch\Model\ResourceModel\Fulltext\Collection as SearchCollection;
-use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Store\Model\StoreManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -96,8 +94,11 @@ class ListingHydration
                 $row['cat_index_position'] = $position++;
             }
             $model = $models[$id];
+            // The row's tier_price is the price index's lowest tier, which TierPrice
+            // takes for unloaded rows and reloads per product; the built rows stay.
+            $tierPrices = $model->getData('tier_price');
             $model->addData($row);
-            $this->applyCompositeTierPrice($model, $documents[$id]);
+            $model->setData('tier_price', $tierPrices);
             $model->setHasDataChanges(false);
             $subject->addItem($model);
         }
@@ -106,18 +107,6 @@ class ListingHydration
         }
 
         return $subject;
-    }
-
-    /**
-     * Empty tier prices keep MinimalTierPriceCalculator from loading configurable attributes.
-     */
-    private function applyCompositeTierPrice(Product $model, array $document): void
-    {
-        if (isset($document['prices']) || ($document['type'] ?? null) !== Configurable::TYPE_CODE) {
-            return;
-        }
-
-        $model->setData('tier_price', []);
     }
 
     /**

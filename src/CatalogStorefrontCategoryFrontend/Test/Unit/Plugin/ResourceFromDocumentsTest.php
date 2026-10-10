@@ -158,4 +158,16 @@ class ResourceFromDocumentsTest extends TestCase
             self::assertFalse($this->coreAsked);
         }
     }
+
+    public function testTheTreeRootLoadsWithoutADocument(): void
+    {
+        $plugin = $this->plugin([]);
+        $root = $this->createMock(Category::class);
+        $root->method('getStoreId')->willReturn(1);
+        $root->expects($this->once())->method('addData')->with(['entity_id' => Category::TREE_ROOT_ID, 'parent_id' => 0, 'path' => '1', 'level' => 0]);
+
+        $plugin->aroundLoad($this->createMock(CategoryResource::class), $this->proceed(), $root, Category::TREE_ROOT_ID);
+
+        self::assertFalse($this->coreAsked);
+    }
 }
