@@ -9,9 +9,11 @@ use Magento\Elasticsearch\SearchAdapter\QueryContainer;
 /**
  * The search query the price navigation sends again for its stats and its
  * histograms reads aggregations only: no hits, no sort, no page offset, no
- * total. Without hits the engine can also answer it from its shard request
- * cache. A query over a point in time (a page past the result window) stays
- * as it is.
+ * total, and no scores, so the query runs as a filter. The engine then skips
+ * the relevance scoring of a text search and answers the clauses from its
+ * filter cache; without hits it can also answer the whole query from its
+ * shard request cache. A query over a point in time (a page past the result
+ * window) stays as it is.
  */
 class LeanPriceQuery
 {
@@ -25,7 +27,11 @@ class LeanPriceQuery
         if (!isset($query['index']) || !$this->config->priceRangesFromResponse()) {
             return $query;
         }
-        unset($query['body']['from'], $query['body']['sort'], $query['body']['aggregations']);
+        unset($query['body']['from'], $query['body']['sort'], $query['body']['aggregations'],
+            $query['body']['stored_fields'], $query['body']['docvalue_fields']);
+        if (isset($query['body']['query'])) {
+            $query['body']['query'] = ['bool' => ['filter' => [$query['body']['query']]]];
+        }
         $query['body']['size'] = 0;
         $query['body']['track_total_hits'] = false;
 

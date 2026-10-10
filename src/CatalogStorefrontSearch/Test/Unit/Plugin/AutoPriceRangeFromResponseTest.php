@@ -128,11 +128,14 @@ class AutoPriceRangeFromResponseTest extends TestCase
         $container = $this->createMock(QueryContainer::class);
         $query = ['index' => 'magento2_product_1', 'body' => [
             'from' => 3456, 'size' => 48, 'sort' => [['entity_id' => ['order' => 'asc']]],
-            'query' => ['bool' => ['must' => []]], 'aggregations' => ['price_bucket' => ['extended_stats' => ['field' => 'price_0_1']]],
+            'stored_fields' => '_none_', 'docvalue_fields' => ['_id', '_score'],
+            'query' => ['bool' => ['must' => [['match' => ['name' => 'chair']]]]],
+            'aggregations' => ['price_bucket' => ['extended_stats' => ['field' => 'price_0_1']]],
         ]];
 
         self::assertEquals(['index' => 'magento2_product_1', 'body' => [
-            'query' => ['bool' => ['must' => []]], 'size' => 0, 'track_total_hits' => false,
+            'query' => ['bool' => ['filter' => [['bool' => ['must' => [['match' => ['name' => 'chair']]]]]]]],
+            'size' => 0, 'track_total_hits' => false,
         ]], $plugin->afterGetQuery($container, $query));
         $pit = ['body' => ['pit' => ['id' => 'x'], 'size' => 48]];
         self::assertSame($pit, $plugin->afterGetQuery($container, $pit));
