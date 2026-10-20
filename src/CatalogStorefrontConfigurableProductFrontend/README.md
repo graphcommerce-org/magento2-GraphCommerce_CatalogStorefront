@@ -15,5 +15,8 @@ GraphCommerce_CatalogStorefrontProductFrontend.
   the page's child price ranges, so the card prices without its variant documents. A product
   detail page, a store with fixed product taxes and a product without a range pick the
   cheapest child by final price and by regular price from `priceIndex`.
+- `getParentIdsByChild()` answers from the `parentIds` of a card's document or of a card
+  variant's document. Core's identities plugin asks it for every simple product whose cache
+  tags a card collects, a query per product on every render, also on a block cache hit.
 
 Each seam hands a product without a document to core.

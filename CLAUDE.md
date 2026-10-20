@@ -299,7 +299,10 @@ passes.
   swatch block's cache key calls before the block cache, so it is paid on
   every render; the lowest price options provider picks the cheapest child by
   final and by regular price from `priceIndex` (per-variant discounts make
-  those different children) and wraps core's provider for the rest. A child's
+  those different children) and wraps core's provider for the rest;
+  `getParentIdsByChild()` answers from the `parentIds` of the page's card and
+  variant documents, which core's identities plugin asks for every simple
+  product a card tags, a query each on every render. A child's
   `entity_id` and a super attribute's `position` are strings, since
   `getJsonConfig()` puts them into the rendered JSON as they are. Without
   the `configurableOptions` field the plugin hands over to core with nothing logged.
