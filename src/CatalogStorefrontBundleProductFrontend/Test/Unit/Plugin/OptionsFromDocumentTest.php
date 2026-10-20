@@ -14,6 +14,7 @@ use Magento\Bundle\Model\Option;
 use Magento\Bundle\Model\OptionFactory;
 use Magento\Bundle\Model\Product\Type;
 use Magento\Catalog\Model\Product;
+use Magento\CatalogInventory\Api\StockConfigurationInterface;
 use Magento\Framework\GraphQl\Query\Uid;
 use Magento\Store\Model\Store;
 use Magento\Store\Model\StoreManagerInterface;
@@ -23,7 +24,12 @@ use PHPUnit\Framework\TestCase;
 class OptionsFromDocumentTest extends TestCase
 {
     #[DataProvider('documents')]
-    public function testOptionsAndSelectionsUseDocuments(bool $missing, bool $invalidUid): void
+    public function testOptionsAndSelectionsUseDocuments(
+        bool $missing,
+        bool $invalidUid,
+        bool $salable = true,
+        bool $showOutOfStock = false
+    ): void
     {
         $parent = $this->getMockBuilder(Product::class)->disableOriginalConstructor()->onlyMethods([])->getMock();
         $parent->setIdFieldName('entity_id');
@@ -39,7 +45,8 @@ class OptionsFromDocumentTest extends TestCase
         $child->setData(['entity_id' => '4', 'required_options' => false]);
         $child->method('getSku')->willReturn('child');
         $products = $this->createMock(ProductDocumentsInterface::class);
-        $products->expects(self::once())->method('documents')->with('default', [4])->willReturn([]);
+        $products->expects(self::once())->method('documents')->with('default', [4])
+            ->willReturn([4 => ['sku' => 'child', 'stock' => ['isSalable' => $salable]]]);
         $products->method('build')->willReturn($missing ? [] : [4 => $child]);
         $store = $this->createStub(Store::class);
         $store->method('getCode')->willReturn('default');
@@ -61,7 +68,17 @@ class OptionsFromDocumentTest extends TestCase
         });
         $uid = $this->createStub(Uid::class);
         $uid->method('decode')->willReturnCallback('base64_decode');
-        $plugin = new OptionsFromDocument($products, $stores, $optionFactory, $optionsFactory, $selectionsFactory, $uid);
+        $stockConfiguration = $this->createStub(StockConfigurationInterface::class);
+        $stockConfiguration->method('isShowOutOfStock')->willReturn($showOutOfStock);
+        $plugin = new OptionsFromDocument(
+            $products,
+            $stores,
+            $optionFactory,
+            $optionsFactory,
+            $selectionsFactory,
+            $uid,
+            $stockConfiguration
+        );
         $type = $this->createStub(Type::class);
         $core = static function () { self::fail('The core option reader was called.'); };
         $options = $plugin->aroundGetOptionsCollection($type, $core, $parent);
@@ -72,6 +89,12 @@ class OptionsFromDocumentTest extends TestCase
             $this->expectException(DocumentReadException::class);
         }
         $first = $plugin->aroundGetSelectionsCollection($type, $core, [1], $parent);
+        if (!$salable && !$showOutOfStock) {
+            self::assertSame([], $first->getItems());
+            self::assertSame([], $plugin->aroundGetSelectionsCollection($type, $core, [2], $parent)->getItems());
+
+            return;
+        }
         self::assertSame([7], array_keys($first->getItems()));
         self::assertSame('1', $first->getFirstItem()->getData('selection_price_type'));
         self::assertSame(2.0, $first->getFirstItem()->getData('selection_qty'));
@@ -88,5 +111,7 @@ class OptionsFromDocumentTest extends TestCase
         yield 'complete' => [false, false];
         yield 'missing child' => [true, false];
         yield 'invalid selection option' => [false, true];
+        yield 'child not salable' => [false, false, false];
+        yield 'child not salable, out of stock products shown' => [false, false, false, true];
     }
 }

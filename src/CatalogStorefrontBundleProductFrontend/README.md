@@ -16,6 +16,6 @@
    bin/magento catalog-storefront:parity:detail https://shop.example
    ```
 
-[`OptionsFromDocument`](Plugin/OptionsFromDocument.php) builds native bundle options and selection models from documents.
+[`OptionsFromDocument`](Plugin/OptionsFromDocument.php) builds native bundle options and selection models from documents. A selection whose child is not salable is left out unless the store shows out of stock products, as core's stock filter leaves it out.
 [`SelectionPricesFromDocument`](Plugin/SelectionPricesFromDocument.php) selects the fixed or dynamic price range with document prices and stock limits.
 The readers throw [`DocumentReadException`](../CatalogStorefront/Model/DocumentReadException.php) when a required child document or stock field is missing.

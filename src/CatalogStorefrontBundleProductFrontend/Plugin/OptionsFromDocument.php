@@ -10,6 +10,7 @@ use GraphCommerce\CatalogStorefrontBundleProductFrontend\Model\Read\SelectionsFa
 use Magento\Bundle\Model\OptionFactory;
 use Magento\Bundle\Model\Product\Type;
 use Magento\Catalog\Model\Product;
+use Magento\CatalogInventory\Api\StockConfigurationInterface;
 use Magento\Framework\GraphQl\Query\Uid;
 use Magento\Store\Model\StoreManagerInterface;
 
@@ -25,6 +26,7 @@ class OptionsFromDocument
         private readonly OptionsFactory $optionsFactory,
         private readonly SelectionsFactory $selectionsFactory,
         private readonly Uid $uid,
+        private readonly StockConfigurationInterface $stockConfiguration,
     ) {
     }
 
@@ -72,9 +74,13 @@ class OptionsFromDocument
             if (array_diff($ids, array_keys($models))) {
                 throw new DocumentReadException('Catalog bundle requires all child documents: ' . $product->getId());
             }
+            // A child that is not salable is a null entry, so its selections are left out as core's
+            // stock filter leaves them out, unless the store shows out of stock products.
+            $showOutOfStock = $this->stockConfiguration->isShowOutOfStock((int)$store->getId());
             $children = [];
-            foreach ($models as $model) {
-                $children[$model->getSku()] = $model;
+            foreach ($models as $id => $model) {
+                $salable = $documents[$id]['stock']['isSalable'] ?? $documents[$id]['inStock'] ?? false;
+                $children[$model->getSku()] = $showOutOfStock || $salable ? $model : null;
             }
             $product->setData(self::CHILDREN, $children);
         }
@@ -85,8 +91,11 @@ class OptionsFromDocument
                 continue;
             }
             foreach ((array)($option['values'] ?? []) as $value) {
-                $child = $children[$value['sku']] ?? throw new DocumentReadException('Catalog bundle child document is missing: ' . $value['sku']);
-                if ($child->getRequiredOptions()) {
+                if (!array_key_exists($value['sku'], $children)) {
+                    throw new DocumentReadException('Catalog bundle child document is missing: ' . $value['sku']);
+                }
+                $child = $children[$value['sku']];
+                if ($child === null || $child->getRequiredOptions()) {
                     continue;
                 }
                 $parts = explode('/', $this->uid->decode((string)$value['id']));
