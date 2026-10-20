@@ -9,4 +9,9 @@
         <plugin name="graphcommerce_catalog_storefront_category_has_children"
                 type="GraphCommerce\CatalogStorefrontCategoryFrontend\Plugin\HasChildrenFromDocuments"/>
     </type>
+    <!-- Before the base module's price step plugin, which reads the category document again. -->
+    <type name="Magento\Catalog\Model\Layer\Filter\Price\Range">
+        <plugin name="graphcommerce_catalog_storefront_category_price_step" sortOrder="-10"
+                type="GraphCommerce\CatalogStorefrontCategoryFrontend\Plugin\PriceStepFromCategory"/>
+    </type>
 </config>

@@ -96,4 +96,30 @@ class CategoryDocumentsTest extends TestCase
         $this->assertFalse($category->hasDataChanges());
         $this->assertSame(['cat_c_25'], $category->getIdentities());
     }
+
+    public function testACategoryReadAloneBringsItsParentsAndChildrenInOneMoreRead(): void
+    {
+        $documents = $this->documents([
+            1 => ['categoryId' => '1'],
+            3 => ['categoryId' => '3'],
+            10 => ['categoryId' => '10', 'path' => '1/3/10', 'children' => ['11', '12']],
+            11 => ['categoryId' => '11'],
+            12 => ['categoryId' => '12'],
+        ]);
+
+        $documents->documents('default', [10]);
+        $documents->documents('default', [1, 3]);
+        $documents->documents('default', [11, 12]);
+
+        $this->assertSame([[10], [1, 3, 11, 12]], $this->reads);
+    }
+
+    public function testSeveralCategoriesReadTogetherBringNothingAlong(): void
+    {
+        $documents = $this->documents([10 => ['categoryId' => '10', 'path' => '1/10', 'children' => ['11']]]);
+
+        $documents->documents('default', [10, 20]);
+
+        $this->assertSame([[10, 20]], $this->reads);
+    }
 }

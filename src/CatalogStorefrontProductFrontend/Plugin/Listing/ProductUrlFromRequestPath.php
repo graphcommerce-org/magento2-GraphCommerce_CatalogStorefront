@@ -36,13 +36,28 @@ class ProductUrlFromRequestPath implements ResetAfterRequestInterface
      */
     public function aroundGetUrl(ProductUrl $subject, \Closure $proceed, Product $product, $params = [])
     {
-        $requestPath = $product->getData('request_path');
-        if (!is_string($requestPath)
-            || $requestPath === ''
+        $document = $product->getData(ProductDocumentsInterface::DOCUMENT_KEY);
+        if (!is_array($document)
             || $product->hasData('url_data_object')
             || array_diff_key((array)$params, self::OWN_PARAMETERS) !== []
-            || !is_array($product->getData(ProductDocumentsInterface::DOCUMENT_KEY))
         ) {
+            return $proceed($product, $params);
+        }
+        $requestPath = $product->getData('request_path');
+        $categoryApplies = !isset($params['_ignore_category'])
+            && $product->getCategoryId()
+            && !$product->getDoNotUseCategoryId();
+        if ((!is_string($requestPath) || $requestPath === '') && !$categoryApplies) {
+            // A product page and a row of linked products set no request path. Without a category,
+            // core asks the url finder for the product's own rewrite, which the document carries:
+            // the rewrite whose only parameter is the product id.
+            $own = array_values(array_filter(
+                (array)($document['urlRewrites'] ?? []),
+                static fn($rewrite) => array_column((array)($rewrite['parameters'] ?? []), 'name') === ['id']
+            ));
+            $requestPath = count($own) === 1 ? ($own[0]['url'] ?? null) : null;
+        }
+        if (!is_string($requestPath) || $requestPath === '') {
             return $proceed($product, $params);
         }
         $storeId = (int)$product->getStoreId();

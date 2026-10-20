@@ -36,9 +36,10 @@ class ProductUrlFromRequestPathTest extends TestCase
         return new ProductUrlFromRequestPath($storeManager, $request);
     }
 
-    private function product(?array $document, mixed $requestPath, int $storeId = 1): Product
+    private function product(?array $document, mixed $requestPath, int $storeId = 1, ?int $categoryId = null): Product
     {
         $product = $this->createMock(Product::class);
+        $product->method('getCategoryId')->willReturn($categoryId);
         $product->method('getData')->willReturnCallback(
             static fn (string $key) => $key === ProductDocumentsInterface::DOCUMENT_KEY ? $document : ($key === 'request_path' ? $requestPath : null)
         );
@@ -81,5 +82,31 @@ class ProductUrlFromRequestPathTest extends TestCase
 
         $this->assertSame('core', $this->url($plugin, $this->product(['id' => 1], 'bag.html'), ['_query' => ['a' => 1]]));
         $this->assertSame('core', $this->url($plugin, $this->product(['id' => 1], 'bag.html', 2)));
+    }
+
+    public function testAProductWithoutARequestPathTakesItsOwnRewriteFromTheDocument(): void
+    {
+        $plugin = $this->plugin();
+        $document = ['id' => 1, 'urlRewrites' => [
+            ['parameters' => [['name' => 'id', 'value' => '1'], ['name' => 'category', 'value' => '5']], 'url' => 'shoes/bag.html'],
+            ['parameters' => [['name' => 'id', 'value' => '1']], 'url' => 'bag.html'],
+        ]];
+
+        $this->assertSame('https://shop.example/bag.html', $this->url($plugin, $this->product($document, null)));
+        $this->assertFalse($this->coreAsked);
+    }
+
+    public function testAProductWhoseUrlTakesACategoryOrHasNoSingleOwnRewriteAsksCore(): void
+    {
+        $plugin = $this->plugin();
+        $own = ['parameters' => [['name' => 'id', 'value' => '1']], 'url' => 'bag.html'];
+
+        $this->assertSame('core', $this->url($plugin, $this->product(['urlRewrites' => [$own]], null, 1, 5)));
+        $this->assertSame('core', $this->url($plugin, $this->product(['urlRewrites' => [$own, $own]], null)));
+        $this->assertSame('core', $this->url($plugin, $this->product(['urlRewrites' => []], null)));
+        $this->assertSame(
+            'https://shop.example/bag.html',
+            $this->url($plugin, $this->product(['urlRewrites' => [$own]], null, 1, 5), ['_ignore_category' => true])
+        );
     }
 }

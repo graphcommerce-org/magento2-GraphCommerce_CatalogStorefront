@@ -51,7 +51,9 @@ under Catalog > Catalog > Catalog Storefront Document Store:
   arithmetic of the GraphQL path, instead of core's tax calculator per amount.
 - [`Plugin/Listing/ProductUrlFromRequestPath`](Plugin/Listing/ProductUrlFromRequestPath.php)
   answers a document product's URL as the store's link base URL and the request path, without
-  a URL builder per link.
+  a URL builder per link. A product without a request path (the product page, a row of linked
+  products) takes its own rewrite from the document's `urlRewrites` when no category applies, where
+  core asks the url finder once per product.
 - [`Plugin/Detail/ProductDocument`](Plugin/Detail/ProductDocument.php) builds the product of
   a `catalog_product_view` request from its document instead of loading it, so a
   configurable builds its children, its options and its price without a query. The cart,

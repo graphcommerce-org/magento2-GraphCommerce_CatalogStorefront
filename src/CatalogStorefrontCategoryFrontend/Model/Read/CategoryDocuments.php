@@ -46,6 +46,24 @@ class CategoryDocuments implements ResetAfterRequestInterface
             foreach ($missing as $id) {
                 $this->documents[$storeViewCode][$id] = $read[$id] ?? null;
             }
+            // A page asks for the parents and the children of its category one after the other
+            // (design, page layout, breadcrumbs), so they come along with a category read alone.
+            if (count($missing) === 1 && isset($read[$missing[0]])) {
+                $related = array_diff(
+                    array_map('intval', array_merge(
+                        explode('/', (string)($read[$missing[0]]['path'] ?? '')),
+                        (array)($read[$missing[0]]['children'] ?? [])
+                    )),
+                    [0],
+                    array_keys($this->documents[$storeViewCode])
+                );
+                if ($related !== []) {
+                    $read = $this->storage->get(self::ENTITY, $storeViewCode, array_values($related));
+                    foreach ($related as $id) {
+                        $this->documents[$storeViewCode][$id] = $read[$id] ?? null;
+                    }
+                }
+            }
         }
 
         $found = [];
