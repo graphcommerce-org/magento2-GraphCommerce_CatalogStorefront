@@ -1,0 +1,22 @@
+{
+    "name": "graphcommerce/module-catalog-storefront-downloadable-frontend",
+    "description": "Serves the links and samples of downloadable product pages from catalog documents",
+    "type": "magento2-module",
+    "license": "MIT",
+    "require": {
+        "php": "~8.1.0|~8.2.0|~8.3.0|~8.4.0",
+        "magento/framework": "*",
+        "magento/module-catalog": "*",
+        "magento/module-downloadable": "*",
+        "graphcommerce/module-catalog-storefront-product-frontend": "self.version",
+        "graphcommerce/module-catalog-storefront-downloadable": "self.version"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GraphCommerce\\CatalogStorefrontDownloadableFrontend\\": ""
+        }
+    }
+}

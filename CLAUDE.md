@@ -239,8 +239,10 @@ passes.
   bundle items resolver.
 - `CatalogStorefrontGroupedProduct` / `...GroupedProductGraphQl`: the grouped
   range / the deprecated price rewrite, the grouped items resolver.
-- `CatalogStorefrontDownloadable` / `...DownloadableGraphQl`: the downloadable
-  range registration / the links and samples resolvers.
+- `CatalogStorefrontDownloadable` / `...DownloadableGraphQl` / `...DownloadableFrontend`: the
+  downloadable range registration / the links and samples resolvers / the links and samples of
+  a rendered product page (`getLinks()` and `getSamples()` of the type from `optionsV2` and
+  `samples`, kept in core's memo keys; a link has a sample when the feed gives it an `infoUrl`).
 - `CatalogStorefrontReview` / `...ReviewGraphQl` / `...ReviewFrontend`: the reviews and
   rating feeds made to export like the modern ones, the review date field, the rating
   position and entity, their writers (reviews become documents of their own, declared to the

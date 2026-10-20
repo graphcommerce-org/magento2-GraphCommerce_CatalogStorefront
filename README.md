@@ -240,6 +240,7 @@ runs core alone.
 | A configurable's children, super attributes and lowest price on a rendered page | `...ConfigurableProductFrontend` | variant documents and configurable attributes |
 | Bundle options, selections and price ranges on a rendered page | `...BundleProductFrontend` | child documents, price rows and stock limits |
 | Grouped children and quantity validation on a rendered page | `...GroupedProductFrontend` | child documents and stock limits |
+| Downloadable links and samples on a rendered page | `...DownloadableFrontend` | link ids and sample ids |
 
 ## Fields the package adds
 
@@ -504,7 +505,7 @@ the base module and the GraphQl module.
 | [`...ConfigurableProduct`](src/CatalogStorefrontConfigurableProduct) / [`...GraphQl`](src/CatalogStorefrontConfigurableProductGraphQl) / [`...Frontend`](src/CatalogStorefrontConfigurableProductFrontend) | Variants and the configurable range / options, variants, selection / a configurable on a rendered page |
 | [`...BundleProduct`](src/CatalogStorefrontBundleProduct) / [`...GraphQl`](src/CatalogStorefrontBundleProductGraphQl) / [`...Frontend`](src/CatalogStorefrontBundleProductFrontend) | Bundle feed fields and range / bundle items and price details / rendered bundle options and prices |
 | [`...GroupedProduct`](src/CatalogStorefrontGroupedProduct) / [`...GraphQl`](src/CatalogStorefrontGroupedProductGraphQl) / [`...Frontend`](src/CatalogStorefrontGroupedProductFrontend) | Grouped range / grouped items / rendered children and quantity validation |
-| [`...Downloadable`](src/CatalogStorefrontDownloadable) / [`...GraphQl`](src/CatalogStorefrontDownloadableGraphQl) | The downloadable range / links and samples |
+| [`...Downloadable`](src/CatalogStorefrontDownloadable) / [`...GraphQl`](src/CatalogStorefrontDownloadableGraphQl) / [`...Frontend`](src/CatalogStorefrontDownloadableFrontend) | The downloadable range / links and samples / rendered links and samples |
 | [`...Review`](src/CatalogStorefrontReview) / [`...GraphQl`](src/CatalogStorefrontReviewGraphQl) / [`...Frontend`](src/CatalogStorefrontReviewFrontend) | Review and rating feeds / rating summary, breakdown and reviews / the rating collection of the rendered review form |
 | [`...SnowdogMenu`](src/CatalogStorefrontSnowdogMenu) | Snowdog's menus as documents from a feed, and the menus, nodes and node data of a rendered page from them, every node type. Registered only where Snowdog_Menu is installed |
 | [`...Swatches`](src/CatalogStorefrontSwatches) / [`...GraphQl`](src/CatalogStorefrontSwatchesGraphQl) | The swatch of every option on the attribute documents / the `swatch` fields of GraphQL Catalog from them |
