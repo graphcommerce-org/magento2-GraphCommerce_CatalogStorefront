@@ -6,6 +6,7 @@ namespace GraphCommerce\CatalogStorefrontWorker\Plugin\Theme;
 use GraphCommerce\CatalogStorefrontWorker\Model\Generation;
 use GraphCommerce\CatalogStorefrontWorker\Model\Memo;
 use GraphCommerce\CatalogStorefrontWorker\Model\MemoFactory;
+use Magento\Framework\App\DeploymentConfig;
 use Magento\Theme\Model\Theme\ThemeProvider;
 use Magento\Theme\Model\ThemeFactory;
 
@@ -26,12 +27,19 @@ class ThemeByPathMemo
     public function __construct(
         MemoFactory $memoFactory,
         private readonly ThemeFactory $themeFactory,
+        private readonly DeploymentConfig $deploymentConfig,
     ) {
         $this->themes = $memoFactory->create(['name' => Generation::CONFIG]);
     }
 
     public function aroundGetThemeByFullPath(ThemeProvider $subject, \Closure $proceed, $fullPath)
     {
+        // Preserves the no database fallback for CI/CD
+        // This allows for CI/CD to work as intended.
+        if (!$this->deploymentConfig->isDbAvailable()) {
+            return $proceed($fullPath);
+        }
+
         $themeId = $this->themes->get((string)$fullPath, static fn(): int => (int)$proceed($fullPath)->getId());
 
         return $themeId > 0 ? $proceed($fullPath) : $this->themeFactory->create();
