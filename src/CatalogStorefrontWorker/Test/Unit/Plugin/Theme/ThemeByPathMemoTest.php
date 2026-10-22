@@ -7,6 +7,7 @@ use GraphCommerce\CatalogStorefrontWorker\Model\Generation;
 use GraphCommerce\CatalogStorefrontWorker\Model\Memo;
 use GraphCommerce\CatalogStorefrontWorker\Model\MemoFactory;
 use GraphCommerce\CatalogStorefrontWorker\Plugin\Theme\ThemeByPathMemo;
+use Magento\Framework\App\DeploymentConfig;
 use Magento\Theme\Model\Theme;
 use Magento\Theme\Model\Theme\ThemeProvider;
 use Magento\Theme\Model\ThemeFactory;
@@ -39,8 +40,10 @@ class ThemeByPathMemoTest extends TestCase
         $found->method('getId')->willReturn(4);
         $themes = $this->createStub(ThemeFactory::class);
         $themes->method('create')->willReturnCallback(fn(): Theme => $this->createStub(Theme::class));
+        $deploymentConfiguration = $this->createStub(DeploymentConfig::class);
+        $deploymentConfiguration->method('isDbAvailable')->willReturn(true);
 
-        $plugin = new ThemeByPathMemo($factory, $themes);
+        $plugin = new ThemeByPathMemo($factory, $themes, $deploymentConfiguration);
         $subject = $this->createStub(ThemeProvider::class);
         $calls = [];
         $proceed = static function (string $path) use (&$calls, $empty, $found): Theme {
