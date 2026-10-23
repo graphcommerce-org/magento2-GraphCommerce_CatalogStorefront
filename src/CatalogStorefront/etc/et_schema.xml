@@ -29,6 +29,10 @@
             <using field="productId"/>
             <using field="storeViewCode"/>
         </field>
+        <field name="categoryAssignmentIds" type="Int" repeated="true" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\CategoryAssignments">
+            <using field="productId"/>
+            <using field="storeViewCode"/>
+        </field>
         <field name="taxClassId" type="Int" provider="GraphCommerce\CatalogStorefront\Model\DataExporter\Provider\TaxClass">
             <using field="productId"/>
             <using field="storeViewCode"/>

@@ -98,8 +98,11 @@ class ProductModelBuilder
             $data['price'] = $fallbackRow['regular'];
         }
 
-        if (!empty($document['categoryIds'])) {
-            $data['category_ids'] = array_map('strval', $document['categoryIds']);
+        // Core's getCategoryIds() reads the assignments. `categoryIds` holds the category product
+        // index, which adds the anchor ancestors: the current category of a page then applies to
+        // the model where it does not apply to core's, and the product URL takes the category path.
+        if (!empty($document['categoryAssignmentIds'])) {
+            $data['category_ids'] = array_map('strval', $document['categoryAssignmentIds']);
         }
 
         foreach ((array)($document['customAttributes'] ?? []) as $code => $value) {
