@@ -499,7 +499,10 @@ image URLs come from the feed row (`Model/DataExporter/Provider/ImageUrls`).
   names, each remaining slice in the shape its reader takes, so no value is
   stored twice and no reader parses at request time (`customAttributes` the raw
   value per attribute code, an image type and a gallery entry the media file, a
-  URL rewrite the request path, `categoryData` as `categoryIds`),
+  URL rewrite the request path, `categoryData` as `categoryIds`, the category product index with
+  the anchor ancestors; `categoryAssignmentIds` (`Model/DataExporter/Provider/CategoryAssignments`)
+  holds the rows of `catalog_category_product`, which the model takes as `category_ids` because core's
+  `getCategoryIds()` reads them),
   prices = the feed rows under `prices` with their customer
   `group` id (the feed names a group by the hash of its id; the writer maps it
   back, rows of an unknown group are dropped; the feed's all-groups row comes

@@ -118,11 +118,12 @@ class ProductModelBuilderTest extends TestCase
         $this->assertSame('1', $this->data['price_type']);
     }
 
-    public function testCategoryIdsAreTheDocumentsCategoryIdsAsStrings(): void
+    public function testCategoryIdsAreTheAssignmentsAsStringsNotTheIndex(): void
     {
-        $this->build(['categoryIds' => [24, 25]]);
+        // The index adds the anchor ancestors 24 and 25 and leaves out the root 2.
+        $this->build(['categoryIds' => [24, 25, 30, 34], 'categoryAssignmentIds' => [2, 30, 34]]);
 
-        $this->assertSame(['24', '25'], $this->data['category_ids']);
+        $this->assertSame(['2', '30', '34'], $this->data['category_ids']);
     }
 
     public function testAnAttributeValueComesFromTheCustomAttributeMap(): void
