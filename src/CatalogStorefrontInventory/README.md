@@ -37,3 +37,15 @@ Magento_InventorySales.
 - Both schedule through [`Model/StockFeedSchedule`](Model/StockFeedSchedule.php): the stock feed's
   changelog, or a reindex at once when it updates on save. A failure is logged and invalidates the
   stock feed for a full resync.
+- [`Plugin/Sales/RecheckSalabilityAfterCancel`](Plugin/Sales/RecheckSalabilityAfterCancel.php)
+  puts a product back in stock when a cancel releases its last units. MSI publishes the salability
+  update of a cancel while the order's transaction (`OrderMutex`) is open. A running consumer reads
+  the reservations before the commit and finds no change, so core and the documents keep the
+  product out of stock. After `OrderManagementInterface::cancel()` returns (the Admin, the REST API
+  and the expired order cron), the plugin compares the stored salability of the order's products
+  with their reservations (MSI's `GetSalabilityDataForUpdate`) and publishes the update again for
+  the skus that differ. MSI's check compares the default stock's raw `stock_status` value strictly
+  with a boolean and so reports every sku as changed: the plugin compares its result with the stored
+  status again as a boolean. When the consumer was faster, or the cancel changes no salability, it
+  publishes nothing. A failure is logged; the cancel stands. Other paths that place reservations
+  inside a transaction, such as a credit memo that returns items to stock, are not covered.

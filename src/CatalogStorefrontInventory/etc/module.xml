@@ -6,6 +6,7 @@
             <module name="Magento_InventoryDataExporter"/>
             <module name="Magento_InventoryIndexer"/>
             <module name="Magento_InventorySales"/>
+            <module name="Magento_Sales"/>
         </sequence>
     </module>
 </config>

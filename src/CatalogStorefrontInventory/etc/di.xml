@@ -45,4 +45,8 @@
     <type name="Magento\InventoryIndexer\Model\Queue\UpdateIndexSalabilityStatus">
         <plugin name="graphcommerce_catalog_storefront_queue_stock_of_salability_changes" type="GraphCommerce\CatalogStorefrontInventory\Plugin\InventoryIndexer\QueueStockOfSalabilityChanges" sortOrder="10"/>
     </type>
+    <!-- MSI publishes the salability update of a cancel before the cancel's transaction commits. -->
+    <type name="Magento\Sales\Api\OrderManagementInterface">
+        <plugin name="graphcommerce_catalog_storefront_recheck_salability_after_cancel" type="GraphCommerce\CatalogStorefrontInventory\Plugin\Sales\RecheckSalabilityAfterCancel" sortOrder="10"/>
+    </type>
 </config>
