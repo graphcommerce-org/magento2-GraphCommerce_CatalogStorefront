@@ -226,7 +226,10 @@ passes.
   shared table would get the plain statement of whichever view subscribes last; a full products sync
   invalidates the stock feed), `Plugin/InventoryIndexer/QueueStockOfSalabilityChanges` (the skus
   whose salability MSI's `inventory.reservations.updateSalabilityStatus` consumer changed after an
-  order, which the reservation trigger exported too early), both through `Model/StockFeedSchedule` / the stock
+  order, which the reservation trigger exported too early), both through `Model/StockFeedSchedule`,
+  `Plugin/Sales/RecheckSalabilityAfterCancel` (a cancel's salability update published again after
+  the commit for the skus whose stored salability still differs, because MSI publishes it inside the
+  cancel's transaction and a running consumer reads the reservations before the commit) / the stock
   prefiller (the MSI source item management service says which types own a quantity;
   `stock_sources` from the slice's `sources`) / `Plugin/StockItemFromDocument` (the stock registry's
   stock item of the product page's product from its slice, core's model with the use-config flags
